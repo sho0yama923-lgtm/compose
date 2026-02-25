@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>拡張可能な作曲ツール</title>
-    
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
 
 </head>
@@ -14,7 +14,7 @@
 
     <script type="module">
         // 先ほど作成した「構造体（楽器リスト）」をインポート
-        import instruments, { DRUM_MAP } from './instruments.js';
+        import instruments, { DRUM_MAP } from '../instruments.js';
 
         // 楽器を変数に取り出す
         const piano = instruments.piano;
@@ -24,7 +24,7 @@
         // --- 1. リズムパターンの作成 ---
         const kickPattern = [KICK, null, null, null, KICK, null, null, null];
         const snarePattern = [null, null, SNARE, null, null, null, SNARE, null];
-        
+
         // ピアノのコード進行
         const pianoPattern = [
             ["C4", "E4", "G4"], null, ["C4", "E4", "G4"], null,
@@ -47,15 +47,22 @@
         // --- 3. 操作部分 ---
         document.getElementById("playBtn").addEventListener("click", async () => {
             await Tone.start();
-            
-            // 楽器がすべて読み込まれているかチェック
-            const allLoaded = Object.values(instruments).every(inst => inst.loaded);
-            
-            if (allLoaded) {
-                kickSeq.start(0);
-                snareSeq.start(0);
-                pianoSeq.start(0);
-                Tone.Transport.start();
-                console.log("再生スタート！");
-            } else {
-                console.log
+            await Tone.loaded();
+
+            kickSeq.start(0);
+            snareSeq.start(0);
+            pianoSeq.start(0);
+            Tone.Transport.start();
+            console.log("再生スタート！");
+        });
+
+        document.getElementById("stopBtn").addEventListener("click", () => {
+            Tone.Transport.stop();
+            kickSeq.stop();
+            snareSeq.stop();
+            pianoSeq.stop();
+            console.log("停止");
+        });
+    </script>
+</body>
+</html>

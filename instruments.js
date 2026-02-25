@@ -37,7 +37,7 @@ const INSTRUMENT_LIST = [
     {
         id: "aco_guitar",
         type: "chromatic",
-        folder: "sounds/guitar/",
+        folder: "sounds/aco_guitar/",
         range: [2, 5]
     }
     
