@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>拡張可能な作曲ツール</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+</head>
+<body>
+    <h1>楽器追加が簡単な作曲ツール</h1>
+    <button id="playBtn" style="padding: 20px; font-size: 16px;">再生する</button>
+    <button id="stopBtn" style="padding: 20px; font-size: 16px;">停止</button>
+
+    <script type="module">
+        // 先ほど作成した「構造体（楽器リスト）」をインポート
+        import instruments, { DRUM_MAP } from './instruments.js';
+
+        // 楽器を変数に取り出す
+        const piano = instruments.piano;
+        const drums = instruments.drums;
+        const { KICK, SNARE, HIHAT } = DRUM_MAP;
+
+        // --- 1. リズムパターンの作成 ---
+        const kickPattern = [KICK, null, null, null, KICK, null, null, null];
+        const snarePattern = [null, null, SNARE, null, null, null, SNARE, null];
+        
+        // ピアノのコード進行
+        const pianoPattern = [
+            ["C4", "E4", "G4"], null, ["C4", "E4", "G4"], null,
+            ["F4", "A4", "C5"], null, ["F4", "A4", "C5"], null
+        ];
+
+        // --- 2. シーケンサーの作成 ---
+        const kickSeq = new Tone.Sequence((time, note) => {
+            drums.triggerAttackRelease(note, "8n", time);
+        }, kickPattern, "8n");
+
+        const snareSeq = new Tone.Sequence((time, note) => {
+            drums.triggerAttackRelease(note, "8n", time);
+        }, snarePattern, "8n");
+
+        const pianoSeq = new Tone.Sequence((time, chord) => {
+            piano.triggerAttackRelease(chord, "8n", time);
+        }, pianoPattern, "8n");
+
+        // --- 3. 操作部分 ---
+        document.getElementById("playBtn").addEventListener("click", async () => {
+            await Tone.start();
+            
+            // 楽器がすべて読み込まれているかチェック
+            const allLoaded = Object.values(instruments).every(inst => inst.loaded);
+            
+            if (allLoaded) {
+                kickSeq.start(0);
+                snareSeq.start(0);
+                pianoSeq.start(0);
+                Tone.Transport.start();
+                console.log("再生スタート！");
+            } else {
+                console.log
