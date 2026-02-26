@@ -14,7 +14,7 @@
 
     <script type="module">
         // 先ほど作成した「構造体（楽器リスト）」をインポート
-        import instruments, { DRUM_MAP } from './instruments.js';
+        import instruments, { DRUM_MAP } from './instruments.js?v=3';
 
         // 楽器を変数に取り出す
         const piano = instruments.piano;
@@ -49,7 +49,7 @@
             await Tone.start();
             
             // 楽器がすべて読み込まれているかチェック
-            const allLoaded = Object.values(instruments).every(inst => inst.loaded);
+            const allLoaded = instruments.piano.loaded && instruments.drums.loaded;
             
             if (allLoaded) {
                 kickSeq.start(0);
@@ -58,4 +58,17 @@
                 Tone.Transport.start();
                 console.log("再生スタート！");
             } else {
-                console.log
+                console.log("楽器の読み込み中です。少し待ってから再度押してください。");
+            }
+        });
+
+        document.getElementById("stopBtn").addEventListener("click", () => {
+            Tone.Transport.stop();
+            kickSeq.stop();
+            snareSeq.stop();
+            pianoSeq.stop();
+            console.log("停止しました。");
+        });
+    </script>
+</body>
+</html>
