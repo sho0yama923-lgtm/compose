@@ -2,73 +2,402 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>拡張可能な作曲ツール</title>
-    
+    <title>作曲ツール</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        body {
+            font-family: sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            margin: 0;
+            padding: 16px;
+        }
 
+        /* ヘッダー */
+        header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        header h1 { font-size: 18px; margin: 0; flex: 1; }
+        header label { font-size: 13px; }
+        header input[type=number] {
+            width: 64px;
+            font-size: 14px;
+            padding: 5px 8px;
+            border-radius: 4px;
+            border: 1px solid #555;
+            background: #2a2a3e;
+            color: #eee;
+        }
+        .btn {
+            font-size: 14px;
+            padding: 8px 18px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-play  { background: #4CAF50; color: #fff; }
+        .btn-stop  { background: #e53935; color: #fff; }
+        .btn-add   { background: #1565C0; color: #fff; }
+        .btn:hover { opacity: 0.85; }
+
+        /* トラック */
+        #tracks { display: flex; flex-direction: column; gap: 12px; }
+
+        .track {
+            background: #16213e;
+            border-radius: 8px;
+            padding: 10px 12px;
+        }
+        .track-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .track-name {
+            font-size: 13px;
+            font-weight: bold;
+            color: #90caf9;
+            flex: 1;
+        }
+        .btn-delete {
+            font-size: 11px;
+            padding: 3px 8px;
+            background: #37474f;
+            color: #ccc;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-delete:hover { background: #e53935; color: #fff; }
+
+        /* 行（ノート行） */
+        .row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 5px;
+        }
+        .row-label {
+            font-size: 11px;
+            color: #aaa;
+            width: 52px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+        .row-note-select {
+            font-size: 11px;
+            padding: 3px 4px;
+            background: #2a2a3e;
+            color: #eee;
+            border: 1px solid #555;
+            border-radius: 4px;
+            width: 60px;
+            flex-shrink: 0;
+        }
+
+        /* ステップボタン */
+        .steps {
+            display: flex;
+            gap: 3px;
+        }
+        .step {
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background: #2a2a3e;
+            cursor: pointer;
+            outline: none;
+            transition: background 0.1s;
+            flex-shrink: 0;
+        }
+        /* 4分音符の区切りを少し広げる */
+        .step:nth-child(4n+1) { margin-left: 4px; }
+        .step:nth-child(1)     { margin-left: 0; }
+
+        .step.on  { background: #42a5f5; border-color: #90caf9; }
+        .step:focus { box-shadow: 0 0 0 2px #fff; }
+        .step:hover:not(.on) { background: #3a3a5e; }
+
+        /* モーダル */
+        .modal-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.6);
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal {
+            background: #1e2a3a;
+            border-radius: 10px;
+            padding: 24px;
+            min-width: 240px;
+        }
+        .modal h2 { margin: 0 0 16px; font-size: 16px; }
+        .modal-options { display: flex; flex-direction: column; gap: 8px; }
+        .modal-options button {
+            padding: 10px;
+            font-size: 14px;
+            border: none;
+            border-radius: 6px;
+            background: #2a3a4a;
+            color: #eee;
+            cursor: pointer;
+            text-align: left;
+        }
+        .modal-options button:hover { background: #1565C0; }
+        .btn-cancel {
+            margin-top: 12px;
+            width: 100%;
+            padding: 8px;
+            font-size: 13px;
+            background: #37474f;
+            color: #ccc;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-    <h1>楽器追加が簡単な作曲ツール</h1>
-    <button id="playBtn" style="padding: 20px; font-size: 16px;">再生する</button>
-    <button id="stopBtn" style="padding: 20px; font-size: 16px;">停止</button>
 
-    <script type="module">
-        // 先ほど作成した「構造体（楽器リスト）」をインポート
-        import instruments, { DRUM_MAP } from './instruments.js?v=3';
+<header>
+    <h1>作曲ツール</h1>
+    <label>BPM: <input type="number" id="bpmInput" value="120" min="30" max="300"></label>
+    <button class="btn btn-play" id="playBtn">▶ 再生</button>
+    <button class="btn btn-stop" id="stopBtn">■ 停止</button>
+    <button class="btn btn-add" id="addTrackBtn">+ トラック追加</button>
+</header>
 
-        // 楽器を変数に取り出す
-        const piano = instruments.piano;
-        const drums = instruments.drums;
-        const { KICK, SNARE, HIHAT } = DRUM_MAP;
+<div id="tracks"></div>
 
-        // --- 1. リズムパターンの作成 ---
-        const kickPattern = [KICK, null, null, null, KICK, null, null, null];
-        const snarePattern = [null, null, SNARE, null, null, null, SNARE, null];
-        
-        // ピアノのコード進行
-        const pianoPattern = [
-            ["C4", "E4", "G4"], null, ["C4", "E4", "G4"], null,
-            ["F4", "A4", "C5"], null, ["F4", "A4", "C5"], null
-        ];
+<!-- 楽器選択モーダル -->
+<div class="modal-overlay" id="modal">
+    <div class="modal">
+        <h2>楽器を選択</h2>
+        <div class="modal-options">
+            <button data-inst="drums">🥁 Drums</button>
+            <button data-inst="piano">🎹 Piano</button>
+            <button data-inst="bass">🎸 Bass</button>
+            <button data-inst="aco_guitar">🎵 Acoustic Guitar</button>
+        </div>
+        <button class="btn-cancel" id="modalCancel">キャンセル</button>
+    </div>
+</div>
 
-        // --- 2. シーケンサーの作成 ---
-        const kickSeq = new Tone.Sequence((time, note) => {
-            drums.triggerAttackRelease(note, "8n", time);
-        }, kickPattern, "8n");
+<script type="module">
+    import { play, stop } from './player.js';
+    import instruments from './instruments.js';
 
-        const snareSeq = new Tone.Sequence((time, note) => {
-            drums.triggerAttackRelease(note, "8n", time);
-        }, snarePattern, "8n");
+    // -------------------------------------------------------
+    // 定数
+    // -------------------------------------------------------
+    const DRUM_ROWS = [
+        { label: 'Kick',  note: 'C1'  },
+        { label: 'Snare', note: 'D1'  },
+        { label: 'HiHat', note: 'F#1' },
+    ];
 
-        const pianoSeq = new Tone.Sequence((time, chord) => {
-            piano.triggerAttackRelease(chord, "8n", time);
-        }, pianoPattern, "8n");
+    const NOTE_MAP = {
+        piano: (() => {
+            const notes = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+            const result = [];
+            for (let oct = 1; oct <= 7; oct++) notes.forEach(n => result.push(n + oct));
+            return result;
+        })(),
+        bass: [
+            'A1','A#1','B1',
+            'C2','C#2','D2','D#2','E2','F2','F#2','G2','G#2','A2','A#2','B2',
+            'C3','C#3','D3','D#3','E3','F3','F#3','G3','G#3','A3','A#3','B3',
+            'C4','C#4','D4','D#4','E4','F4','F#4','G4',
+        ],
+        aco_guitar: [
+            'A2','A#2','B2','C3','C#3','D3','D#3','E3','F3','F#3','G3','G#3','A3',
+            'A#3','B3','C4','C#4','D4','D#4','E4','F4','F#4','G4','G#4','A4','A#4','B4',
+            'C5','C#5','D5',
+        ],
+    };
 
-        // --- 3. 操作部分 ---
-        document.getElementById("playBtn").addEventListener("click", async () => {
-            await Tone.start();
-            
-            // 楽器がすべて読み込まれているかチェック
-            const allLoaded = instruments.piano.loaded && instruments.drums.loaded;
-            
-            if (allLoaded) {
-                kickSeq.start(0);
-                snareSeq.start(0);
-                pianoSeq.start(0);
-                Tone.Transport.start();
-                console.log("再生スタート！");
-            } else {
-                console.log("楽器の読み込み中です。少し待ってから再度押してください。");
-            }
+    const INST_LABEL = {
+        drums: '🥁 Drums',
+        piano: '🎹 Piano',
+        bass: '🎸 Bass',
+        aco_guitar: '🎵 Acoustic Guitar',
+    };
+
+    // -------------------------------------------------------
+    // 状態
+    // -------------------------------------------------------
+    let tracks = [];
+    let nextId  = 0;
+
+    // -------------------------------------------------------
+    // トラック追加
+    // -------------------------------------------------------
+    function addTrack(instrument) {
+        const id = nextId++;
+        let rows;
+
+        if (instrument === 'drums') {
+            rows = DRUM_ROWS.map(r => ({
+                label: r.label,
+                note:  r.note,
+                steps: Array(16).fill(false),
+            }));
+        } else {
+            const defaultNote = NOTE_MAP[instrument][0];
+            rows = [{
+                label: null,
+                note:  defaultNote,
+                steps: Array(16).fill(false),
+            }];
+        }
+
+        tracks.push({ id, instrument, rows });
+        renderTrack(tracks[tracks.length - 1]);
+    }
+
+    // -------------------------------------------------------
+    // レンダリング
+    // -------------------------------------------------------
+    function renderTrack(track) {
+        const trackEl = document.createElement('div');
+        trackEl.className = 'track';
+        trackEl.dataset.id = track.id;
+
+        // ヘッダー
+        const header = document.createElement('div');
+        header.className = 'track-header';
+        header.innerHTML = `
+            <span class="track-name">${INST_LABEL[track.instrument]}</span>
+            <button class="btn-delete" data-id="${track.id}">✕ 削除</button>
+        `;
+        header.querySelector('.btn-delete').addEventListener('click', () => {
+            tracks = tracks.filter(t => t.id !== track.id);
+            trackEl.remove();
+        });
+        trackEl.appendChild(header);
+
+        // 行
+        track.rows.forEach((row, rowIdx) => {
+            trackEl.appendChild(renderRow(track, row, rowIdx));
         });
 
-        document.getElementById("stopBtn").addEventListener("click", () => {
-            Tone.Transport.stop();
-            kickSeq.stop();
-            snareSeq.stop();
-            pianoSeq.stop();
-            console.log("停止しました。");
+        document.getElementById('tracks').appendChild(trackEl);
+    }
+
+    function renderRow(track, row, rowIdx) {
+        const rowEl = document.createElement('div');
+        rowEl.className = 'row';
+
+        // ラベル or ノートセレクト
+        if (row.label) {
+            const lbl = document.createElement('span');
+            lbl.className = 'row-label';
+            lbl.textContent = row.label;
+            rowEl.appendChild(lbl);
+        } else {
+            const sel = document.createElement('select');
+            sel.className = 'row-note-select';
+            NOTE_MAP[track.instrument].forEach(note => {
+                const opt = document.createElement('option');
+                opt.value = opt.textContent = note;
+                sel.appendChild(opt);
+            });
+            sel.value = row.note;
+            sel.addEventListener('change', () => { row.note = sel.value; });
+            rowEl.appendChild(sel);
+        }
+
+        // ステップボタン
+        const stepsEl = document.createElement('div');
+        stepsEl.className = 'steps';
+
+        row.steps.forEach((on, stepIdx) => {
+            const btn = document.createElement('button');
+            btn.className = 'step' + (on ? ' on' : '');
+            btn.dataset.step = stepIdx;
+
+            // クリックでトグル
+            btn.addEventListener('click', () => {
+                row.steps[stepIdx] = !row.steps[stepIdx];
+                btn.classList.toggle('on', row.steps[stepIdx]);
+            });
+
+            // 矢印キーナビゲーション
+            btn.addEventListener('keydown', e => {
+                const btns = [...stepsEl.querySelectorAll('.step')];
+                const idx  = btns.indexOf(btn);
+                if (e.key === 'ArrowRight' && idx < btns.length - 1) {
+                    btns[idx + 1].focus();
+                    e.preventDefault();
+                } else if (e.key === 'ArrowLeft' && idx > 0) {
+                    btns[idx - 1].focus();
+                    e.preventDefault();
+                }
+            });
+
+            stepsEl.appendChild(btn);
         });
-    </script>
+
+        rowEl.appendChild(stepsEl);
+        return rowEl;
+    }
+
+    // -------------------------------------------------------
+    // スコア構築 & 再生
+    // -------------------------------------------------------
+    document.getElementById('playBtn').addEventListener('click', async () => {
+        const bpm = Number(document.getElementById('bpmInput').value) || 120;
+
+        const score = Array(16).fill(null);
+        tracks.forEach(track => {
+            track.rows.forEach(row => {
+                row.steps.forEach((on, i) => {
+                    if (!on) return;
+                    score[i] = score[i] || [];
+                    score[i].push({ instrument: track.instrument, notes: row.note });
+                });
+            });
+        });
+
+        await play(score, { bpm });
+    });
+
+    document.getElementById('stopBtn').addEventListener('click', () => stop());
+
+    // -------------------------------------------------------
+    // トラック追加モーダル
+    // -------------------------------------------------------
+    const modal = document.getElementById('modal');
+
+    document.getElementById('addTrackBtn').addEventListener('click', () => {
+        modal.classList.add('open');
+    });
+    document.getElementById('modalCancel').addEventListener('click', () => {
+        modal.classList.remove('open');
+    });
+    modal.querySelectorAll('[data-inst]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            addTrack(btn.dataset.inst);
+            modal.classList.remove('open');
+        });
+    });
+
+    // -------------------------------------------------------
+    // 初期トラック
+    // -------------------------------------------------------
+    addTrack('drums');
+    addTrack('piano');
+</script>
 </body>
 </html>

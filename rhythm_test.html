@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>リズムテスター</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 24px; max-width: 500px; }
+        h1 { font-size: 20px; margin-bottom: 20px; }
+
+        .row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+        label { font-size: 14px; white-space: nowrap; }
+        select, input[type=number] {
+            font-size: 14px; padding: 6px 8px;
+            border: 1px solid #ccc; border-radius: 4px;
+        }
+        button {
+            font-size: 14px; padding: 7px 14px;
+            cursor: pointer; border-radius: 4px; border: 1px solid #aaa;
+        }
+
+        #list { min-height: 28px; margin-bottom: 12px; }
+        .tag {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: #e8f0fe; border-radius: 4px;
+            padding: 4px 10px; font-size: 13px; margin: 2px;
+        }
+        .tag button {
+            font-size: 11px; padding: 2px 6px;
+            border: none; background: #c5d0e8; cursor: pointer;
+        }
+
+        #playBtn  { background: #4CAF50; color: white; border-color: #388E3C; padding: 10px 24px; font-size: 15px; }
+        #stopBtn  { background: #f44336; color: white; border-color: #c62828; padding: 10px 24px; font-size: 15px; }
+        #playBtn:disabled { background: #aaa; border-color: #888; cursor: not-allowed; }
+
+        #status {
+            margin-top: 14px; font-size: 13px; padding: 8px 12px;
+            border-radius: 4px; background: #f5f5f5;
+        }
+        .rhythm-label { margin-top: 20px; font-size: 12px; color: #999; }
+    </style>
+</head>
+<body>
+    <h1>リズムテスター（トントンウンタタ）</h1>
+
+    <!-- 楽器追加 -->
+    <div class="row">
+        <label>楽器:</label>
+        <select id="instSelect">
+            <option value="piano">piano</option>
+            <option value="drums">drums</option>
+            <option value="bass">bass</option>
+            <option value="aco_guitar">aco_guitar</option>
+        </select>
+        <label>音階:</label>
+        <select id="noteSelect"></select>
+        <button id="addBtn">追加</button>
+    </div>
+
+    <!-- 追加済みリスト -->
+    <div id="list"></div>
+
+    <!-- BPM + 再生 -->
+    <div class="row">
+        <label>BPM:</label>
+        <input id="bpmInput" type="number" value="120" min="30" max="300" style="width:70px">
+        <button id="playBtn" disabled>▶ 再生</button>
+        <button id="stopBtn">■ 停止</button>
+    </div>
+
+    <div id="status">楽器を読み込み中...</div>
+
+    <div class="rhythm-label">
+        リズム: トン(0) ・ トン(4) ・ ウン(8/休) ・ タ(12) ・ タ(14)
+    </div>
+
+    <script type="module">
+        import { play, stop } from './player.js';
+        import instruments from './instruments.js';
+
+        const NOTE_MAP = {
+            piano: (() => {
+                const notes = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+                const result = [];
+                for (let oct = 1; oct <= 7; oct++)
+                    notes.forEach(n => result.push(n + oct));
+                return result;
+            })(),
+            drums:     ["C1", "D1", "F#1"],
+            bass: [
+                // Octave 1 (A1〜B1)
+                'A1','A#1','B1',
+                // Octave 2 (C2〜B2)
+                'C2','C#2','D2','D#2','E2','F2','F#2','G2','G#2','A2','A#2','B2',
+                // Octave 3 (C3〜B3)
+                'C3','C#3','D3','D#3','E3','F3','F#3','G3','G#3','A3','A#3','B3',
+                // Octave 4 (C4〜G4)
+                'C4','C#4','D4','D#4','E4','F4','F#4','G4'
+            ],
+            aco_guitar:["A2","A3","A4","A#2","A#3","A#4","B2","B3","B4","C3","C4","C5","C#3","C#4","C#5",
+                        "D2","D3","D4","D5","D#2","D#3","D#4","E2","E3","E4",
+                        "F2","F3","F4","F#2","F#3","F#4","G2","G3","G4","G#2","G#3","G#4"]
+        };
+
+        // { step: ステップ番号, duration: 音符長 }
+        // 01,23,45 = 8分音符 / 6,7,8,9,14,15 = 16分音符 / 1011,1213 = 8分音符
+        const RHYTHM = [
+            { step: 0,  duration: '8n'  },
+            { step: 2,  duration: '8n'  },
+            { step: 4,  duration: '8n'  },
+            { step: 6,  duration: '16n' },
+            { step: 7,  duration: '16n' },
+            { step: 8,  duration: '16n' },
+            { step: 9,  duration: '16n' },
+            { step: 10, duration: '8n'  },
+            { step: 12, duration: '8n'  },
+            { step: 14, duration: '16n' },
+            { step: 15, duration: '16n' },
+        ];
+
+        const entries     = [];
+        const instSelect  = document.getElementById('instSelect');
+        const noteSelect  = document.getElementById('noteSelect');
+        const listEl      = document.getElementById('list');
+        const statusEl    = document.getElementById('status');
+        const playBtn     = document.getElementById('playBtn');
+
+        // --- 音階プルダウンを更新 ---
+        function updateNoteSelect(instId) {
+            noteSelect.innerHTML = '';
+            NOTE_MAP[instId].forEach(note => {
+                const opt = document.createElement('option');
+                opt.value = opt.textContent = note;
+                noteSelect.appendChild(opt);
+            });
+        }
+        instSelect.addEventListener('change', () => updateNoteSelect(instSelect.value));
+        updateNoteSelect(instSelect.value);
+
+        // --- 楽器の読み込み完了待ち ---
+        async function waitLoaded() {
+            statusEl.style.color = 'gray';
+            statusEl.textContent = '楽器を読み込み中...';
+            while (!Object.values(instruments).every(i => i.loaded)) {
+                await new Promise(r => setTimeout(r, 300));
+            }
+            statusEl.textContent = '読み込み完了 ✓  楽器を追加して再生してください';
+            statusEl.style.color = 'green';
+            playBtn.disabled = false;
+        }
+        waitLoaded();
+
+        // --- 追加ボタン ---
+        document.getElementById('addBtn').addEventListener('click', () => {
+            const inst = instSelect.value;
+            const note = noteSelect.value;
+            entries.push({ instrument: inst, notes: note });
+            renderList();
+        });
+
+        function renderList() {
+            listEl.innerHTML = '';
+            entries.forEach((e, i) => {
+                const tag = document.createElement('span');
+                tag.className = 'tag';
+                tag.innerHTML = `${e.instrument} / ${e.notes} <button data-i="${i}">✕</button>`;
+                listEl.appendChild(tag);
+            });
+            listEl.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    entries.splice(Number(btn.dataset.i), 1);
+                    renderList();
+                });
+            });
+        }
+
+        // --- 再生 ---
+        document.getElementById('playBtn').addEventListener('click', async () => {
+            if (entries.length === 0) {
+                statusEl.textContent = '楽器を追加してください';
+                statusEl.style.color = 'orange';
+                return;
+            }
+            const bpm = Number(document.getElementById('bpmInput').value) || 120;
+
+            const score = Array(16).fill(null);
+            RHYTHM.forEach(({ step, duration }) => {
+                score[step] = entries.map(e => ({ ...e, duration }));
+            });
+
+            await play(score, { bpm });
+            statusEl.textContent = `再生中 ▶  BPM: ${bpm}`;
+            statusEl.style.color = 'blue';
+        });
+
+        // --- 停止 ---
+        document.getElementById('stopBtn').addEventListener('click', () => {
+            stop();
+            statusEl.textContent = '停止';
+            statusEl.style.color = 'gray';
+        });
+    </script>
+</body>
+</html>
