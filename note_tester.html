@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>音階テスター</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        select, button { font-size: 16px; padding: 8px; margin: 4px; }
+        #status { margin-top: 12px; color: gray; }
+        #loaded-notes { margin-top: 16px; font-size: 13px; color: #555; }
+    </style>
+</head>
+<body>
+    <h1>音階テスター</h1>
+
+    <label>楽器:
+        <select id="instSelect">
+            <option value="piano">piano</option>
+            <option value="drums">drums</option>
+            <option value="bass">bass</option>
+            <option value="aco_guitar">aco_guitar</option>
+        </select>
+    </label>
+
+    <label>音階:
+        <select id="noteSelect"></select>
+    </label>
+
+    <button id="playBtn">▶ 再生</button>
+
+    <div id="status">読み込み中...</div>
+    <div id="loaded-notes"></div>
+
+    <script type="module">
+        import instruments, { DRUM_MAP } from './instruments.js?v=3';
+
+        // 楽器ごとの使用可能な音階を定義
+        const NOTE_MAP = {
+            piano: (() => {
+                const notes = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+                const result = [];
+                for (let oct = 1; oct <= 7; oct++)
+                    notes.forEach(n => result.push(n + oct));
+                return result;
+            })(),
+            drums: ["C1", "D1", "F#1"],
+            bass: [
+                "A#1","A#2","A#3","A#4",
+                "C#1","C#2","C#3","C#4","C#5",
+                "E1","E2","E3","E4",
+                "G1","G2","G3","G4"
+            ],
+            aco_guitar: [
+                "A2","A3","A4","A#2","A#3","A#4",
+                "B2","B3","B4",
+                "C3","C4","C5","C#3","C#4","C#5",
+                "D2","D3","D4","D5","D#2","D#3","D#4",
+                "E2","E3","E4",
+                "F2","F3","F4","F#2","F#3","F#4",
+                "G2","G3","G4","G#2","G#3","G#4"
+            ]
+        };
+
+        const instSelect = document.getElementById("instSelect");
+        const noteSelect = document.getElementById("noteSelect");
+        const statusEl   = document.getElementById("status");
+        const loadedEl   = document.getElementById("loaded-notes");
+
+        function updateNoteSelect(instId) {
+            noteSelect.innerHTML = "";
+            NOTE_MAP[instId].forEach(note => {
+                const opt = document.createElement("option");
+                opt.value = note;
+                opt.textContent = note;
+                noteSelect.appendChild(opt);
+            });
+            loadedEl.textContent = `サンプル数: ${NOTE_MAP[instId].length} 音`;
+        }
+
+        instSelect.addEventListener("change", () => updateNoteSelect(instSelect.value));
+        updateNoteSelect(instSelect.value);
+
+        // 読み込み完了を待つ
+        async function waitLoaded() {
+            const checkAll = () => Object.values(instruments).every(i => i.loaded);
+            while (!checkAll()) {
+                await new Promise(r => setTimeout(r, 300));
+            }
+            statusEl.textContent = "読み込み完了 ✓";
+            statusEl.style.color = "green";
+        }
+        waitLoaded();
+
+        document.getElementById("playBtn").addEventListener("click", async () => {
+            await Tone.start();
+            const instId = instSelect.value;
+            const note   = noteSelect.value;
+            const inst   = instruments[instId];
+
+            if (!inst.loaded) {
+                statusEl.textContent = "まだ読み込み中です...";
+                statusEl.style.color = "orange";
+                return;
+            }
+
+            inst.triggerAttackRelease(note, "4n");
+            statusEl.textContent = `再生: ${instId} / ${note}`;
+            statusEl.style.color = "blue";
+        });
+    </script>
+</body>
+</html>
