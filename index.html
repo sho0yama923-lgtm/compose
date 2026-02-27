@@ -133,51 +133,60 @@
         .track-list {
             flex: 1;
             overflow-y: auto;
-            padding: 14px 12px;
+            padding: 14px 0;
             -webkit-overflow-scrolling: touch;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;  /* 鍵盤間の隙間 */
         }
 
-        /* 黒鍵スタイルのトラックアイテム */
+        /* 白鍵 + 黒鍵の組み合わせ */
         .track-item {
             display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 14px 16px;
+            align-items: stretch;
+            background: #fff;
+            color: #111;
+            border: 1px solid #e0e0e0;
+            border-radius: 0 0 6px 6px;
             cursor: pointer;
-            background: #1a1a1a;
-            color: #ddd;
-            border-radius: 0 0 8px 8px;
-            border-left: 3px solid transparent;
-            transition: background 0.12s;
             touch-action: manipulation;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.28);
+            overflow: hidden;
+            margin: 0 12px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+            transition: box-shadow 0.1s;
         }
-        .track-item:active { background: #2e2e2e; }
+        .track-item:active { box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .track-item.active {
-            background: #2e2e2e;
-            border-left-color: #fff;
-            color: #fff;
+            border-left: 3px solid #111;
         }
+
+        /* 白鍵部分（トラック名） */
         .track-item-name {
             flex: 1;
+            padding: 15px 14px;
             font-size: 14px;
+            color: #111;
             letter-spacing: 0.02em;
         }
+        .track-item.active .track-item-name { color: #000; font-weight: 600; }
+
+        /* 黒鍵部分（削除ボタン） */
         .track-item-delete {
-            font-size: 15px;
+            width: 36px;
+            background: #111;
             color: #555;
-            background: none;
             border: none;
             cursor: pointer;
-            padding: 4px 6px;
-            border-radius: 4px;
-            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
             touch-action: manipulation;
+            flex-shrink: 0;
+            border-radius: 0 0 4px 0;
         }
-        .track-item-delete:active { color: #e53935; }
+        .track-item.active .track-item-delete { background: #222; }
+        .track-item-delete:active { background: #333; color: #e53935; }
 
         .sidebar-footer {
             padding: 14px 12px;
