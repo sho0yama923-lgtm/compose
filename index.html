@@ -2,193 +2,413 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>作曲ツール</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; }
+
         body {
             font-family: sans-serif;
             background: #1a1a2e;
             color: #eee;
             margin: 0;
-            padding: 16px;
+            height: 100dvh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
-        /* ヘッダー */
-        header {
+        /* ======= トップバー ======= */
+        .topbar {
             display: flex;
             align-items: center;
-            gap: 12px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
+            gap: 8px;
+            background: #16213e;
+            padding: 0 12px;
+            flex-shrink: 0;
+            height: 56px;
+            border-bottom: 1px solid #2a3a5e;
         }
-        header h1 { font-size: 18px; margin: 0; flex: 1; }
-        header label { font-size: 13px; }
-        header input[type=number] {
-            width: 64px;
-            font-size: 14px;
-            padding: 5px 8px;
-            border-radius: 4px;
+        .btn-menu {
+            font-size: 22px;
+            background: none;
+            border: none;
+            color: #eee;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            line-height: 1;
+            flex-shrink: 0;
+            touch-action: manipulation;
+        }
+        .btn-menu:active { background: #2a3a5e; }
+        .topbar-title {
+            font-size: 15px;
+            font-weight: bold;
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .bpm-wrap {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            color: #aaa;
+        }
+        .bpm-input {
+            width: 52px;
+            font-size: 13px;
+            padding: 5px 6px;
+            border-radius: 5px;
             border: 1px solid #555;
             background: #2a2a3e;
             color: #eee;
+            text-align: center;
         }
         .btn {
-            font-size: 14px;
-            padding: 8px 18px;
-            border-radius: 5px;
+            font-size: 20px;
+            padding: 6px 10px;
+            border-radius: 6px;
             border: none;
             cursor: pointer;
-            font-weight: bold;
+            line-height: 1;
+            touch-action: manipulation;
         }
-        .btn-play  { background: #4CAF50; color: #fff; }
-        .btn-stop  { background: #e53935; color: #fff; }
-        .btn-add   { background: #1565C0; color: #fff; }
-        .btn:hover { opacity: 0.85; }
+        .btn:active { opacity: 0.7; }
+        .btn-play { background: #4CAF50; color: #fff; }
+        .btn-stop { background: #e53935; color: #fff; }
 
-        /* トラック */
-        #tracks { display: flex; flex-direction: column; gap: 12px; }
+        /* ======= サイドバーオーバーレイ ======= */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 50;
+        }
+        .sidebar-overlay.open { display: block; }
 
-        .track {
+        /* ======= サイドバー ======= */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 280px;
+            max-width: 85vw;
+            height: 100%;
+            background: #0f1929;
+            z-index: 60;
+            display: flex;
+            flex-direction: column;
+            transform: translateX(-100%);
+            transition: transform 0.26s cubic-bezier(0.4,0,0.2,1);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        .sidebar.open { transform: translateX(0); }
+
+        .sidebar-heading {
+            font-size: 11px;
+            font-weight: bold;
+            color: #667;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            padding: 18px 16px 10px;
+            border-bottom: 1px solid #1e2e3e;
+        }
+
+        .track-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 6px 0;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .track-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px 16px;
+            cursor: pointer;
+            border-left: 3px solid transparent;
+            transition: background 0.15s;
+            touch-action: manipulation;
+        }
+        .track-item:active { background: #1e2e3e; }
+        .track-item.active {
+            background: #1a2d42;
+            border-left-color: #42a5f5;
+        }
+        .track-item-name {
+            flex: 1;
+            font-size: 15px;
+        }
+        .track-item-delete {
+            font-size: 18px;
+            color: #444;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 4px;
+            line-height: 1;
+            touch-action: manipulation;
+        }
+        .track-item-delete:active { color: #e53935; }
+
+        .sidebar-footer {
+            padding: 12px 14px;
+            border-top: 1px solid #1e2e3e;
+        }
+        .btn-add-track {
+            width: 100%;
+            padding: 15px;
+            font-size: 15px;
+            background: #1565C0;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            touch-action: manipulation;
+        }
+        .btn-add-track:active { background: #0d47a1; }
+
+        /* ======= メインエリア ======= */
+        .main {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 16px;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 240px;
+            gap: 16px;
+            color: #445;
+        }
+        .empty-state-icon { font-size: 48px; }
+        .empty-state-text { font-size: 14px; text-align: center; line-height: 1.6; }
+
+        /* ======= トラックエディタ ======= */
+        .editor-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .editor-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #90caf9;
+            flex: 1;
+        }
+        .btn-add-row {
+            font-size: 13px;
+            padding: 7px 13px;
+            background: #1e2e3e;
+            color: #90caf9;
+            border: 1px solid #2a4a6e;
+            border-radius: 8px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        .btn-add-row:active { background: #2a3a5e; }
+
+        /* ======= 行 ======= */
+        .row {
             background: #16213e;
             border-radius: 8px;
             padding: 10px 12px;
+            margin-bottom: 10px;
         }
-        .track-header {
+        .row-header {
             display: flex;
             align-items: center;
             gap: 8px;
             margin-bottom: 8px;
         }
-        .track-name {
+        .row-label {
             font-size: 13px;
+            color: #aaa;
             font-weight: bold;
-            color: #90caf9;
             flex: 1;
         }
-        .btn-delete {
-            font-size: 11px;
-            padding: 3px 8px;
-            background: #37474f;
-            color: #ccc;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .btn-delete:hover { background: #e53935; color: #fff; }
-
-        /* 行（ノート行） */
-        .row {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-bottom: 5px;
-        }
-        .row-label {
-            font-size: 11px;
-            color: #aaa;
-            width: 52px;
-            text-align: right;
-            flex-shrink: 0;
-        }
         .row-note-select {
-            font-size: 11px;
-            padding: 3px 4px;
+            font-size: 13px;
+            padding: 6px 8px;
             background: #2a2a3e;
             color: #eee;
             border: 1px solid #555;
-            border-radius: 4px;
-            width: 60px;
-            flex-shrink: 0;
+            border-radius: 6px;
+            flex: 1;
+            max-width: 110px;
         }
+        .btn-remove-row {
+            font-size: 16px;
+            color: #445;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 4px;
+            line-height: 1;
+            touch-action: manipulation;
+        }
+        .btn-remove-row:active { color: #e53935; }
 
-        /* ステップボタン */
+        /* ======= ステップシーケンサー ======= */
+        .steps-scroll {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 4px;
+        }
         .steps {
             display: flex;
-            gap: 3px;
+            gap: 4px;
+            min-width: max-content;
         }
         .step {
-            width: 28px;
-            height: 28px;
-            border-radius: 4px;
+            width: 38px;
+            height: 38px;
+            border-radius: 6px;
             border: 1px solid #444;
             background: #2a2a3e;
             cursor: pointer;
             outline: none;
             transition: background 0.1s;
             flex-shrink: 0;
+            touch-action: manipulation;
         }
-        /* 4分音符の区切りを少し広げる */
-        .step:nth-child(4n+1) { margin-left: 4px; }
-        .step:nth-child(1)     { margin-left: 0; }
+        .step:nth-child(4n+1):not(:first-child) { margin-left: 4px; }
+        .step.on { background: #42a5f5; border-color: #90caf9; }
+        .step:active { opacity: 0.6; }
+        .step.playing { background: #fff176; border-color: #fff9c4; }
 
-        .step.on  { background: #42a5f5; border-color: #90caf9; }
-        .step:focus { box-shadow: 0 0 0 2px #fff; }
-        .step:hover:not(.on) { background: #3a3a5e; }
-
-        /* モーダル */
+        /* ======= 楽器選択モーダル（下からスライドアップ）======= */
         .modal-overlay {
             display: none;
-            position: fixed; inset: 0;
+            position: fixed;
+            inset: 0;
             background: rgba(0,0,0,0.6);
-            align-items: center;
+            align-items: flex-end;
             justify-content: center;
-            z-index: 100;
+            z-index: 200;
         }
         .modal-overlay.open { display: flex; }
         .modal {
             background: #1e2a3a;
-            border-radius: 10px;
-            padding: 24px;
-            min-width: 240px;
+            border-radius: 16px 16px 0 0;
+            padding: 20px 16px;
+            width: 100%;
+            max-width: 480px;
+            padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
         }
-        .modal h2 { margin: 0 0 16px; font-size: 16px; }
-        .modal-options { display: flex; flex-direction: column; gap: 8px; }
+        .modal-handle {
+            width: 40px;
+            height: 4px;
+            background: #445;
+            border-radius: 2px;
+            margin: 0 auto 16px;
+        }
+        .modal h2 {
+            margin: 0 0 14px;
+            font-size: 15px;
+            color: #888;
+            text-align: center;
+        }
+        .modal-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
         .modal-options button {
-            padding: 10px;
-            font-size: 14px;
+            padding: 20px 12px;
+            font-size: 15px;
             border: none;
-            border-radius: 6px;
+            border-radius: 10px;
             background: #2a3a4a;
             color: #eee;
             cursor: pointer;
-            text-align: left;
+            font-weight: bold;
+            touch-action: manipulation;
         }
-        .modal-options button:hover { background: #1565C0; }
+        .modal-options button:active { background: #1565C0; }
         .btn-cancel {
-            margin-top: 12px;
+            margin-top: 10px;
             width: 100%;
-            padding: 8px;
-            font-size: 13px;
-            background: #37474f;
-            color: #ccc;
-            border: none;
-            border-radius: 6px;
+            padding: 15px;
+            font-size: 14px;
+            background: #1e2a3a;
+            color: #888;
+            border: 1px solid #2a3a4a;
+            border-radius: 10px;
             cursor: pointer;
+            touch-action: manipulation;
         }
+        .btn-cancel:active { background: #2a3a4a; }
     </style>
 </head>
 <body>
 
-<header>
-    <h1>作曲ツール</h1>
-    <label>BPM: <input type="number" id="bpmInput" value="120" min="30" max="300"></label>
-    <button class="btn btn-play" id="playBtn">▶ 再生</button>
-    <button class="btn btn-stop" id="stopBtn">■ 停止</button>
-    <button class="btn btn-add" id="addTrackBtn">+ トラック追加</button>
+<!-- ======= トップバー ======= -->
+<header class="topbar">
+    <button class="btn-menu" id="menuBtn">☰</button>
+    <span class="topbar-title" id="topbarTitle">作曲ツール</span>
+    <div class="topbar-right">
+        <div class="bpm-wrap">
+            BPM<input type="number" class="bpm-input" id="bpmInput" value="120" min="30" max="300">
+        </div>
+        <button class="btn btn-play" id="playBtn">▶</button>
+        <button class="btn btn-stop" id="stopBtn">■</button>
+    </div>
 </header>
 
-<div id="tracks"></div>
+<!-- ======= サイドバーオーバーレイ ======= -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-<!-- 楽器選択モーダル -->
+<!-- ======= サイドバー ======= -->
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-heading">トラック</div>
+    <ul class="track-list" id="trackList" style="list-style:none;margin:0;padding:0;"></ul>
+    <div class="sidebar-footer">
+        <button class="btn-add-track" id="addTrackBtn">＋ トラック追加</button>
+    </div>
+</aside>
+
+<!-- ======= メインエリア ======= -->
+<main class="main" id="main">
+    <div class="empty-state" id="emptyState">
+        <div class="empty-state-icon">🎵</div>
+        <div class="empty-state-text">
+            ☰ メニューを開いて<br>トラックを選択してください
+        </div>
+    </div>
+    <div id="trackEditor" style="display:none;"></div>
+</main>
+
+<!-- ======= 楽器選択モーダル ======= -->
 <div class="modal-overlay" id="modal">
     <div class="modal">
+        <div class="modal-handle"></div>
         <h2>楽器を選択</h2>
         <div class="modal-options">
-            <button data-inst="drums">🥁 Drums</button>
-            <button data-inst="piano">🎹 Piano</button>
-            <button data-inst="bass">🎸 Bass</button>
-            <button data-inst="aco_guitar">🎵 Acoustic Guitar</button>
+            <button data-inst="drums">🥁<br>Drums</button>
+            <button data-inst="piano">🎹<br>Piano</button>
+            <button data-inst="bass">🎸<br>Bass</button>
+            <button data-inst="aco_guitar">🎵<br>Acoustic Guitar</button>
         </div>
         <button class="btn-cancel" id="modalCancel">キャンセル</button>
     </div>
@@ -228,17 +448,94 @@
     };
 
     const INST_LABEL = {
-        drums: '🥁 Drums',
-        piano: '🎹 Piano',
-        bass: '🎸 Bass',
-        aco_guitar: '🎵 Acoustic Guitar',
+        drums:     '🥁 Drums',
+        piano:     '🎹 Piano',
+        bass:      '🎸 Bass',
+        aco_guitar:'🎵 Acoustic Guitar',
     };
 
     // -------------------------------------------------------
     // 状態
     // -------------------------------------------------------
     let tracks = [];
-    let nextId  = 0;
+    let nextId = 0;
+    let activeTrackId = null;
+
+    // -------------------------------------------------------
+    // サイドバー開閉
+    // -------------------------------------------------------
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+
+    function openSidebar() {
+        sidebar.classList.add('open');
+        overlay.classList.add('open');
+    }
+    function closeSidebar() {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('open');
+    }
+
+    document.getElementById('menuBtn').addEventListener('click', openSidebar);
+    overlay.addEventListener('click', closeSidebar);
+
+    // -------------------------------------------------------
+    // トラック選択
+    // -------------------------------------------------------
+    function selectTrack(id) {
+        activeTrackId = id;
+        renderEditor();
+        renderSidebar();
+        closeSidebar();
+
+        const track = tracks.find(t => t.id === id);
+        if (track) {
+            document.getElementById('topbarTitle').textContent = INST_LABEL[track.instrument];
+        }
+    }
+
+    // -------------------------------------------------------
+    // サイドバー描画
+    // -------------------------------------------------------
+    function renderSidebar() {
+        const list = document.getElementById('trackList');
+        list.innerHTML = '';
+        tracks.forEach(track => {
+            const li = document.createElement('li');
+            li.className = 'track-item' + (track.id === activeTrackId ? ' active' : '');
+            li.innerHTML = `
+                <span class="track-item-name">${INST_LABEL[track.instrument]}</span>
+                <button class="track-item-delete" data-id="${track.id}" title="削除">✕</button>
+            `;
+            li.addEventListener('click', (e) => {
+                if (e.target.classList.contains('track-item-delete')) return;
+                selectTrack(track.id);
+            });
+            li.querySelector('.track-item-delete').addEventListener('click', (e) => {
+                e.stopPropagation();
+                deleteTrack(track.id);
+            });
+            list.appendChild(li);
+        });
+    }
+
+    // -------------------------------------------------------
+    // トラック削除
+    // -------------------------------------------------------
+    function deleteTrack(id) {
+        tracks = tracks.filter(t => t.id !== id);
+        if (activeTrackId === id) {
+            activeTrackId = tracks.length > 0 ? tracks[tracks.length - 1].id : null;
+            if (activeTrackId) {
+                const t = tracks.find(t => t.id === activeTrackId);
+                document.getElementById('topbarTitle').textContent = INST_LABEL[t.instrument];
+            } else {
+                document.getElementById('topbarTitle').textContent = '作曲ツール';
+            }
+        }
+        renderSidebar();
+        renderEditor();
+    }
 
     // -------------------------------------------------------
     // トラック追加
@@ -254,7 +551,7 @@
                 steps: Array(16).fill(false),
             }));
         } else {
-            const defaultNote = NOTE_MAP[instrument][0];
+            const defaultNote = NOTE_MAP[instrument][24] || NOTE_MAP[instrument][0];
             rows = [{
                 label: null,
                 note:  defaultNote,
@@ -263,49 +560,72 @@
         }
 
         tracks.push({ id, instrument, rows });
-        renderTrack(tracks[tracks.length - 1]);
+        selectTrack(id);
     }
 
     // -------------------------------------------------------
-    // レンダリング
+    // メインエリア：エディタ描画
     // -------------------------------------------------------
-    function renderTrack(track) {
-        const trackEl = document.createElement('div');
-        trackEl.className = 'track';
-        trackEl.dataset.id = track.id;
+    function renderEditor() {
+        const emptyState = document.getElementById('emptyState');
+        const editorEl   = document.getElementById('trackEditor');
+
+        if (activeTrackId === null || tracks.length === 0) {
+            emptyState.style.display = '';
+            editorEl.style.display   = 'none';
+            editorEl.innerHTML       = '';
+            return;
+        }
+
+        const track = tracks.find(t => t.id === activeTrackId);
+        if (!track) return;
+
+        emptyState.style.display = 'none';
+        editorEl.style.display   = '';
+        editorEl.innerHTML       = '';
 
         // ヘッダー
         const header = document.createElement('div');
-        header.className = 'track-header';
-        header.innerHTML = `
-            <span class="track-name">${INST_LABEL[track.instrument]}</span>
-            <button class="btn-delete" data-id="${track.id}">✕ 削除</button>
-        `;
-        header.querySelector('.btn-delete').addEventListener('click', () => {
-            tracks = tracks.filter(t => t.id !== track.id);
-            trackEl.remove();
-        });
-        trackEl.appendChild(header);
+        header.className = 'editor-header';
+        header.innerHTML = `<span class="editor-title">${INST_LABEL[track.instrument]}</span>`;
 
-        // 行
+        // ドラム以外は「行を追加」ボタン
+        if (track.instrument !== 'drums') {
+            const addRowBtn = document.createElement('button');
+            addRowBtn.className = 'btn-add-row';
+            addRowBtn.textContent = '＋ 行追加';
+            addRowBtn.addEventListener('click', () => {
+                const notes = NOTE_MAP[track.instrument];
+                const defaultNote = notes[24] || notes[0];
+                track.rows.push({ label: null, note: defaultNote, steps: Array(16).fill(false) });
+                renderEditor();
+            });
+            header.appendChild(addRowBtn);
+        }
+        editorEl.appendChild(header);
+
+        // 各行
         track.rows.forEach((row, rowIdx) => {
-            trackEl.appendChild(renderRow(track, row, rowIdx));
+            editorEl.appendChild(renderRow(track, row, rowIdx));
         });
-
-        document.getElementById('tracks').appendChild(trackEl);
     }
 
     function renderRow(track, row, rowIdx) {
         const rowEl = document.createElement('div');
         rowEl.className = 'row';
 
-        // ラベル or ノートセレクト
+        // 行ヘッダー（ラベル or ノートセレクト + 削除ボタン）
+        const rowHeader = document.createElement('div');
+        rowHeader.className = 'row-header';
+
         if (row.label) {
+            // ドラムのラベル
             const lbl = document.createElement('span');
             lbl.className = 'row-label';
             lbl.textContent = row.label;
-            rowEl.appendChild(lbl);
+            rowHeader.appendChild(lbl);
         } else {
+            // 音階セレクト
             const sel = document.createElement('select');
             sel.className = 'row-note-select';
             NOTE_MAP[track.instrument].forEach(note => {
@@ -315,10 +635,27 @@
             });
             sel.value = row.note;
             sel.addEventListener('change', () => { row.note = sel.value; });
-            rowEl.appendChild(sel);
+            rowHeader.appendChild(sel);
+
+            // 削除ボタン（2行以上のとき表示）
+            if (track.rows.length > 1) {
+                const delBtn = document.createElement('button');
+                delBtn.className = 'btn-remove-row';
+                delBtn.textContent = '✕';
+                delBtn.title = 'この行を削除';
+                delBtn.addEventListener('click', () => {
+                    track.rows.splice(rowIdx, 1);
+                    renderEditor();
+                });
+                rowHeader.appendChild(delBtn);
+            }
         }
 
-        // ステップボタン
+        rowEl.appendChild(rowHeader);
+
+        // ステップボタン（横スクロール）
+        const scrollWrap = document.createElement('div');
+        scrollWrap.className = 'steps-scroll';
         const stepsEl = document.createElement('div');
         stepsEl.className = 'steps';
 
@@ -326,35 +663,20 @@
             const btn = document.createElement('button');
             btn.className = 'step' + (on ? ' on' : '');
             btn.dataset.step = stepIdx;
-
-            // クリックでトグル
             btn.addEventListener('click', () => {
                 row.steps[stepIdx] = !row.steps[stepIdx];
                 btn.classList.toggle('on', row.steps[stepIdx]);
             });
-
-            // 矢印キーナビゲーション
-            btn.addEventListener('keydown', e => {
-                const btns = [...stepsEl.querySelectorAll('.step')];
-                const idx  = btns.indexOf(btn);
-                if (e.key === 'ArrowRight' && idx < btns.length - 1) {
-                    btns[idx + 1].focus();
-                    e.preventDefault();
-                } else if (e.key === 'ArrowLeft' && idx > 0) {
-                    btns[idx - 1].focus();
-                    e.preventDefault();
-                }
-            });
-
             stepsEl.appendChild(btn);
         });
 
-        rowEl.appendChild(stepsEl);
+        scrollWrap.appendChild(stepsEl);
+        rowEl.appendChild(scrollWrap);
         return rowEl;
     }
 
     // -------------------------------------------------------
-    // スコア構築 & 再生
+    // 再生 / 停止
     // -------------------------------------------------------
     document.getElementById('playBtn').addEventListener('click', async () => {
         const bpm = Number(document.getElementById('bpmInput').value) || 120;
@@ -381,10 +703,14 @@
     const modal = document.getElementById('modal');
 
     document.getElementById('addTrackBtn').addEventListener('click', () => {
+        closeSidebar();
         modal.classList.add('open');
     });
     document.getElementById('modalCancel').addEventListener('click', () => {
         modal.classList.remove('open');
+    });
+    modal.querySelector('.modal-overlay')?.addEventListener('click', (e) => {
+        if (e.target === modal) modal.classList.remove('open');
     });
     modal.querySelectorAll('[data-inst]').forEach(btn => {
         btn.addEventListener('click', () => {
