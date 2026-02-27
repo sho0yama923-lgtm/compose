@@ -293,9 +293,54 @@
             touch-action: manipulation;
         }
         .step:nth-child(4n+1):not(:first-child) { margin-left: 4px; }
-        .step.on { background: #42a5f5; border-color: #90caf9; }
+        .step.on { background: var(--on-bg, #42a5f5); border-color: var(--on-border, #90caf9); }
         .step:active { opacity: 0.6; }
         .step.playing { background: #fff176; border-color: #fff9c4; }
+
+        /* ======= オクターブタブ ======= */
+        .oct-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+        .oct-tab {
+            padding: 7px 14px;
+            font-size: 13px;
+            border-radius: 20px;
+            border: 2px solid #2a3a5e;
+            background: #16213e;
+            color: #888;
+            cursor: pointer;
+            touch-action: manipulation;
+            font-weight: bold;
+        }
+        .oct-tab.active {
+            background: var(--tab-color, #42a5f5);
+            border-color: var(--tab-color, #42a5f5);
+            color: #fff;
+        }
+        .oct-tab:active { opacity: 0.7; }
+
+        /* ======= メロディ行 ======= */
+        .note-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 3px 0;
+            border-bottom: 1px solid #1e2e3e;
+        }
+        .note-row.black-key { background: #111a28; }
+        .note-label {
+            font-size: 11px;
+            color: #778;
+            width: 34px;
+            flex-shrink: 0;
+            text-align: right;
+            font-family: monospace;
+            padding-right: 4px;
+        }
+        .note-row.black-key .note-label { color: #556; }
 
         /* ======= 楽器選択モーダル（下からスライドアップ）======= */
         .modal-overlay {
@@ -414,316 +459,6 @@
     </div>
 </div>
 
-<script type="module">
-    import { play, stop } from './player.js';
-    import instruments from './instruments.js';
-
-    // -------------------------------------------------------
-    // 定数
-    // -------------------------------------------------------
-    const DRUM_ROWS = [
-        { label: 'Kick',  note: 'C1'  },
-        { label: 'Snare', note: 'D1'  },
-        { label: 'HiHat', note: 'F#1' },
-    ];
-
-    const NOTE_MAP = {
-        piano: (() => {
-            const notes = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-            const result = [];
-            for (let oct = 1; oct <= 7; oct++) notes.forEach(n => result.push(n + oct));
-            return result;
-        })(),
-        bass: [
-            'A1','A#1','B1',
-            'C2','C#2','D2','D#2','E2','F2','F#2','G2','G#2','A2','A#2','B2',
-            'C3','C#3','D3','D#3','E3','F3','F#3','G3','G#3','A3','A#3','B3',
-            'C4','C#4','D4','D#4','E4','F4','F#4','G4',
-        ],
-        aco_guitar: [
-            'A2','A#2','B2','C3','C#3','D3','D#3','E3','F3','F#3','G3','G#3','A3',
-            'A#3','B3','C4','C#4','D4','D#4','E4','F4','F#4','G4','G#4','A4','A#4','B4',
-            'C5','C#5','D5',
-        ],
-    };
-
-    const INST_LABEL = {
-        drums:     '🥁 Drums',
-        piano:     '🎹 Piano',
-        bass:      '🎸 Bass',
-        aco_guitar:'🎵 Acoustic Guitar',
-    };
-
-    // -------------------------------------------------------
-    // 状態
-    // -------------------------------------------------------
-    let tracks = [];
-    let nextId = 0;
-    let activeTrackId = null;
-
-    // -------------------------------------------------------
-    // サイドバー開閉
-    // -------------------------------------------------------
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebarOverlay');
-
-    function openSidebar() {
-        sidebar.classList.add('open');
-        overlay.classList.add('open');
-    }
-    function closeSidebar() {
-        sidebar.classList.remove('open');
-        overlay.classList.remove('open');
-    }
-
-    document.getElementById('menuBtn').addEventListener('click', openSidebar);
-    overlay.addEventListener('click', closeSidebar);
-
-    // -------------------------------------------------------
-    // トラック選択
-    // -------------------------------------------------------
-    function selectTrack(id) {
-        activeTrackId = id;
-        renderEditor();
-        renderSidebar();
-        closeSidebar();
-
-        const track = tracks.find(t => t.id === id);
-        if (track) {
-            document.getElementById('topbarTitle').textContent = INST_LABEL[track.instrument];
-        }
-    }
-
-    // -------------------------------------------------------
-    // サイドバー描画
-    // -------------------------------------------------------
-    function renderSidebar() {
-        const list = document.getElementById('trackList');
-        list.innerHTML = '';
-        tracks.forEach(track => {
-            const li = document.createElement('li');
-            li.className = 'track-item' + (track.id === activeTrackId ? ' active' : '');
-            li.innerHTML = `
-                <span class="track-item-name">${INST_LABEL[track.instrument]}</span>
-                <button class="track-item-delete" data-id="${track.id}" title="削除">✕</button>
-            `;
-            li.addEventListener('click', (e) => {
-                if (e.target.classList.contains('track-item-delete')) return;
-                selectTrack(track.id);
-            });
-            li.querySelector('.track-item-delete').addEventListener('click', (e) => {
-                e.stopPropagation();
-                deleteTrack(track.id);
-            });
-            list.appendChild(li);
-        });
-    }
-
-    // -------------------------------------------------------
-    // トラック削除
-    // -------------------------------------------------------
-    function deleteTrack(id) {
-        tracks = tracks.filter(t => t.id !== id);
-        if (activeTrackId === id) {
-            activeTrackId = tracks.length > 0 ? tracks[tracks.length - 1].id : null;
-            if (activeTrackId) {
-                const t = tracks.find(t => t.id === activeTrackId);
-                document.getElementById('topbarTitle').textContent = INST_LABEL[t.instrument];
-            } else {
-                document.getElementById('topbarTitle').textContent = '作曲ツール';
-            }
-        }
-        renderSidebar();
-        renderEditor();
-    }
-
-    // -------------------------------------------------------
-    // トラック追加
-    // -------------------------------------------------------
-    function addTrack(instrument) {
-        const id = nextId++;
-        let rows;
-
-        if (instrument === 'drums') {
-            rows = DRUM_ROWS.map(r => ({
-                label: r.label,
-                note:  r.note,
-                steps: Array(16).fill(false),
-            }));
-        } else {
-            const defaultNote = NOTE_MAP[instrument][24] || NOTE_MAP[instrument][0];
-            rows = [{
-                label: null,
-                note:  defaultNote,
-                steps: Array(16).fill(false),
-            }];
-        }
-
-        tracks.push({ id, instrument, rows });
-        selectTrack(id);
-    }
-
-    // -------------------------------------------------------
-    // メインエリア：エディタ描画
-    // -------------------------------------------------------
-    function renderEditor() {
-        const emptyState = document.getElementById('emptyState');
-        const editorEl   = document.getElementById('trackEditor');
-
-        if (activeTrackId === null || tracks.length === 0) {
-            emptyState.style.display = '';
-            editorEl.style.display   = 'none';
-            editorEl.innerHTML       = '';
-            return;
-        }
-
-        const track = tracks.find(t => t.id === activeTrackId);
-        if (!track) return;
-
-        emptyState.style.display = 'none';
-        editorEl.style.display   = '';
-        editorEl.innerHTML       = '';
-
-        // ヘッダー
-        const header = document.createElement('div');
-        header.className = 'editor-header';
-        header.innerHTML = `<span class="editor-title">${INST_LABEL[track.instrument]}</span>`;
-
-        // ドラム以外は「行を追加」ボタン
-        if (track.instrument !== 'drums') {
-            const addRowBtn = document.createElement('button');
-            addRowBtn.className = 'btn-add-row';
-            addRowBtn.textContent = '＋ 行追加';
-            addRowBtn.addEventListener('click', () => {
-                const notes = NOTE_MAP[track.instrument];
-                const defaultNote = notes[24] || notes[0];
-                track.rows.push({ label: null, note: defaultNote, steps: Array(16).fill(false) });
-                renderEditor();
-            });
-            header.appendChild(addRowBtn);
-        }
-        editorEl.appendChild(header);
-
-        // 各行
-        track.rows.forEach((row, rowIdx) => {
-            editorEl.appendChild(renderRow(track, row, rowIdx));
-        });
-    }
-
-    function renderRow(track, row, rowIdx) {
-        const rowEl = document.createElement('div');
-        rowEl.className = 'row';
-
-        // 行ヘッダー（ラベル or ノートセレクト + 削除ボタン）
-        const rowHeader = document.createElement('div');
-        rowHeader.className = 'row-header';
-
-        if (row.label) {
-            // ドラムのラベル
-            const lbl = document.createElement('span');
-            lbl.className = 'row-label';
-            lbl.textContent = row.label;
-            rowHeader.appendChild(lbl);
-        } else {
-            // 音階セレクト
-            const sel = document.createElement('select');
-            sel.className = 'row-note-select';
-            NOTE_MAP[track.instrument].forEach(note => {
-                const opt = document.createElement('option');
-                opt.value = opt.textContent = note;
-                sel.appendChild(opt);
-            });
-            sel.value = row.note;
-            sel.addEventListener('change', () => { row.note = sel.value; });
-            rowHeader.appendChild(sel);
-
-            // 削除ボタン（2行以上のとき表示）
-            if (track.rows.length > 1) {
-                const delBtn = document.createElement('button');
-                delBtn.className = 'btn-remove-row';
-                delBtn.textContent = '✕';
-                delBtn.title = 'この行を削除';
-                delBtn.addEventListener('click', () => {
-                    track.rows.splice(rowIdx, 1);
-                    renderEditor();
-                });
-                rowHeader.appendChild(delBtn);
-            }
-        }
-
-        rowEl.appendChild(rowHeader);
-
-        // ステップボタン（横スクロール）
-        const scrollWrap = document.createElement('div');
-        scrollWrap.className = 'steps-scroll';
-        const stepsEl = document.createElement('div');
-        stepsEl.className = 'steps';
-
-        row.steps.forEach((on, stepIdx) => {
-            const btn = document.createElement('button');
-            btn.className = 'step' + (on ? ' on' : '');
-            btn.dataset.step = stepIdx;
-            btn.addEventListener('click', () => {
-                row.steps[stepIdx] = !row.steps[stepIdx];
-                btn.classList.toggle('on', row.steps[stepIdx]);
-            });
-            stepsEl.appendChild(btn);
-        });
-
-        scrollWrap.appendChild(stepsEl);
-        rowEl.appendChild(scrollWrap);
-        return rowEl;
-    }
-
-    // -------------------------------------------------------
-    // 再生 / 停止
-    // -------------------------------------------------------
-    document.getElementById('playBtn').addEventListener('click', async () => {
-        const bpm = Number(document.getElementById('bpmInput').value) || 120;
-
-        const score = Array(16).fill(null);
-        tracks.forEach(track => {
-            track.rows.forEach(row => {
-                row.steps.forEach((on, i) => {
-                    if (!on) return;
-                    score[i] = score[i] || [];
-                    score[i].push({ instrument: track.instrument, notes: row.note });
-                });
-            });
-        });
-
-        await play(score, { bpm });
-    });
-
-    document.getElementById('stopBtn').addEventListener('click', () => stop());
-
-    // -------------------------------------------------------
-    // トラック追加モーダル
-    // -------------------------------------------------------
-    const modal = document.getElementById('modal');
-
-    document.getElementById('addTrackBtn').addEventListener('click', () => {
-        closeSidebar();
-        modal.classList.add('open');
-    });
-    document.getElementById('modalCancel').addEventListener('click', () => {
-        modal.classList.remove('open');
-    });
-    modal.querySelector('.modal-overlay')?.addEventListener('click', (e) => {
-        if (e.target === modal) modal.classList.remove('open');
-    });
-    modal.querySelectorAll('[data-inst]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            addTrack(btn.dataset.inst);
-            modal.classList.remove('open');
-        });
-    });
-
-    // -------------------------------------------------------
-    // 初期トラック
-    // -------------------------------------------------------
-    addTrack('drums');
-    addTrack('piano');
-</script>
+<script type="module" src="./app.js"></script>
 </body>
 </html>
