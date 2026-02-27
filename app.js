@@ -159,7 +159,7 @@ function renderDrumEditor(track, editorEl) {
 }
 
 // -------------------------------------------------------
-// メロディエディタ（オクターブタブ + 12行）
+// メロディエディタ（オクターブタブ + ピアノ鍵盤 + グリッド）
 // -------------------------------------------------------
 function renderMelodicEditor(track, editorEl) {
     const oct      = track.activeOctave;
@@ -178,23 +178,68 @@ function renderMelodicEditor(track, editorEl) {
     });
     editorEl.appendChild(tabsEl);
 
+    // ピアノ鍵盤 + ステップグリッドのラッパー
+    const melodicEl = document.createElement('div');
+    melodicEl.className = 'melodic-editor';
+
+    // 左: ピアノ鍵盤列
+    const keysEl = document.createElement('div');
+    keysEl.className = 'piano-keys';
+    // ヘッダー行の高さに合わせたスペーサー
+    keysEl.appendChild(Object.assign(document.createElement('div'), { className: 'piano-key-spacer' }));
+
+    // 右: ステップグリッド（全行が同期スクロール）
+    const gridScrollEl = document.createElement('div');
+    gridScrollEl.className = 'steps-grid-scroll';
+    const gridEl = document.createElement('div');
+    gridEl.className = 'steps-grid';
+    if (octStyle) {
+        gridEl.style.setProperty('--on-bg',     octStyle.on);
+        gridEl.style.setProperty('--on-border', octStyle.border);
+    }
+
+    // ビート番号ヘッダー行（1〜4）
+    const headerEl = document.createElement('div');
+    headerEl.className = 'steps-header';
+    for (let i = 0; i < 16; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'step-header-cell' + (i % 4 === 0 ? ' beat' : '');
+        cell.textContent = i % 4 === 0 ? String(i / 4 + 1) : '·';
+        headerEl.appendChild(cell);
+    }
+    gridEl.appendChild(headerEl);
+
     // 12音行（C〜B）
     CHROMATIC.forEach(noteName => {
         const fullNote = `${noteName}${oct}`;
         const steps    = track.stepsMap[fullNote];
         const isBlack  = BLACK_KEYS.has(noteName);
 
+        // ピアノ鍵（左列）
+        const keyEl = document.createElement('div');
+        keyEl.className = 'piano-key ' + (isBlack ? 'black-key' : 'white-key');
+        keyEl.textContent = noteName;
+        keysEl.appendChild(keyEl);
+
+        // ステップ行（右グリッド）
         const rowEl = document.createElement('div');
-        rowEl.className = 'note-row' + (isBlack ? ' black-key' : '');
-
-        const label = document.createElement('span');
-        label.className = 'note-label';
-        label.textContent = fullNote;
-        rowEl.appendChild(label);
-
-        rowEl.appendChild(buildSteps(steps, octStyle));
-        editorEl.appendChild(rowEl);
+        rowEl.className = 'steps-row' + (isBlack ? ' black-key' : '');
+        steps.forEach((on, stepIdx) => {
+            const btn = document.createElement('button');
+            btn.className = 'step' + (on ? ' on' : '');
+            btn.addEventListener('click', () => {
+                steps[stepIdx] = !steps[stepIdx];
+                btn.classList.toggle('on', steps[stepIdx]);
+            });
+            rowEl.appendChild(btn);
+        });
+        gridEl.appendChild(rowEl);
     });
+
+    gridScrollEl.appendChild(gridEl);
+    melodicEl.appendChild(keysEl);
+    melodicEl.appendChild(gridScrollEl);
+    editorEl.appendChild(melodicEl);
 }
 
 // -------------------------------------------------------

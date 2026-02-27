@@ -261,7 +261,7 @@
             flex: 1;
         }
 
-        /* ======= ステップシーケンサー（白鍵 / 黒鍵イメージ）======= */
+        /* ======= ステップボタン（ドラム用・共通）======= */
         .steps-scroll {
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
@@ -273,28 +273,24 @@
             min-width: max-content;
         }
         .step {
-            width: 38px;
-            height: 38px;
-            border-radius: 4px;
+            width: 36px;
+            height: 36px;
+            border-radius: 3px;
             border: 1px solid #d0d0d0;
-            background: #f8f8f8;
+            background: #f5f5f5;
             cursor: pointer;
             outline: none;
-            transition: background 0.08s, border-color 0.08s;
+            transition: background 0.06s;
             flex-shrink: 0;
             touch-action: manipulation;
-            /* 白鍵のわずかな立体感 */
-            box-shadow: inset 0 -2px 0 rgba(0,0,0,0.1);
         }
-        .step:nth-child(4n+1):not(:first-child) { margin-left: 4px; }
-        /* ON = 黒鍵を押したイメージ */
+        .step:nth-child(4n+1):not(:first-child) { margin-left: 6px; }
         .step.on {
             background: var(--on-bg, #111);
-            border-color: var(--on-border, #333);
-            box-shadow: inset 0 2px 0 rgba(255,255,255,0.06);
+            border-color: var(--on-border, #000);
         }
-        .step:active { opacity: 0.6; }
-        .step.playing { background: #f5c518; border-color: #d4a800; box-shadow: none; }
+        .step:active { opacity: 0.55; }
+        .step.playing { background: #f5c518; border-color: #d4a800; }
 
         /* ======= オクターブタブ ======= */
         .oct-tabs {
@@ -323,28 +319,109 @@
         }
         .oct-tab:active { opacity: 0.7; }
 
-        /* ======= メロディ行（ピアノ鍵盤の白鍵・黒鍵を再現）======= */
-        .note-row {
+        /* ======= メロディエディタ（ピアノ鍵盤 + 同期スクロールグリッド）======= */
+        .melodic-editor {
             display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 3px 0;
-            border-bottom: 1px solid #ebebeb;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
             background: #fff;
         }
-        /* 黒鍵の行は少し暗く */
-        .note-row.black-key { background: #e4e4e4; }
 
-        .note-label {
-            font-size: 11px;
-            color: #999;
-            width: 34px;
+        /* 左: ピアノ鍵盤列 */
+        .piano-keys {
             flex-shrink: 0;
-            text-align: right;
-            font-family: monospace;
-            padding-right: 4px;
+            display: flex;
+            flex-direction: column;
+            background: #f0f0f0;  /* 白鍵の隙間色 */
+            border-right: 2px solid #ccc;
         }
-        .note-row.black-key .note-label { color: #777; }
+        .piano-key-spacer {
+            height: 22px;
+            border-bottom: 1px solid #ddd;
+            background: #fafafa;
+        }
+        .piano-key {
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 6px;
+            font-size: 9px;
+            font-family: monospace;
+            font-weight: bold;
+            flex-shrink: 0;
+            user-select: none;
+        }
+        /* 白鍵: 全幅 */
+        .piano-key.white-key {
+            width: 52px;
+            background: #fff;
+            color: #bbb;
+            border-bottom: 1px solid #eee;
+        }
+        /* 黒鍵: 短く（右側に白鍵エリアが見える）*/
+        .piano-key.black-key {
+            width: 38px;
+            background: #1a1a1a;
+            color: #555;
+            border-bottom: 1px solid #000;
+        }
+
+        /* 右: ステップグリッド（全行が1つのスクロール領域）*/
+        .steps-grid-scroll {
+            flex: 1;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .steps-grid {
+            display: flex;
+            flex-direction: column;
+            min-width: max-content;
+        }
+
+        /* ビート番号ヘッダー */
+        .steps-header {
+            display: flex;
+            gap: 3px;
+            padding: 0 8px;
+            height: 22px;
+            align-items: center;
+            border-bottom: 1px solid #e8e8e8;
+            background: #fafafa;
+        }
+        .step-header-cell {
+            width: 28px;
+            font-size: 9px;
+            text-align: center;
+            color: #ccc;
+            flex-shrink: 0;
+        }
+        .step-header-cell.beat {
+            color: #888;
+            font-weight: 700;
+            font-size: 10px;
+        }
+        .step-header-cell:nth-child(4n+1):not(:first-child) { margin-left: 6px; }
+
+        /* ステップ行 */
+        .steps-row {
+            display: flex;
+            gap: 3px;
+            padding: 4px 8px;
+            height: 36px;
+            align-items: center;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .steps-row.black-key { background: #e8e8e8; }
+
+        /* グリッド内のステップボタン（メロディ用・少し小さく）*/
+        .steps-grid .step {
+            width: 28px;
+            height: 26px;
+            border-radius: 2px;
+        }
+        .steps-grid .step:nth-child(4n+1):not(:first-child) { margin-left: 6px; }
 
         /* ======= 楽器選択モーダル（下からスライドアップ）======= */
         .modal-overlay {
