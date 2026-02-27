@@ -292,23 +292,90 @@
         .step:active { opacity: 0.55; }
         .step.playing { background: #f5c518; border-color: #d4a800; }
 
-        /* ======= オクターブ凡例（色の説明・クリック不可）======= */
-        .oct-tabs {
+        /* ======= オクターブセレクター ======= */
+        .oct-selector {
             display: flex;
             gap: 6px;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             flex-wrap: wrap;
-            align-items: center;
         }
-        .oct-legend {
+        .oct-selector-btn {
             font-size: 11px;
             font-weight: 700;
-            color: #fff;
-            background: var(--tab-color, #888);
-            padding: 4px 10px;
-            border-radius: 3px;
+            padding: 6px 12px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            background: #e0e0e0;
+            color: #777;
+            touch-action: manipulation;
             letter-spacing: 0.04em;
+            min-height: 32px;
+        }
+        .oct-selector-btn.selected {
+            background: var(--oct-color, #888);
+            color: #fff;
+        }
+        .oct-selector-btn:active { opacity: 0.7; }
+
+        /* ======= アコーディオン（オクターブ別）======= */
+        .oct-accordion {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .oct-section {
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #e0e0e0;
+            background: #fff;
+        }
+        .oct-section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            cursor: pointer;
+            border-left: 4px solid var(--oct-color, #888);
             user-select: none;
+            touch-action: manipulation;
+            min-height: 44px;
+            background: #fafafa;
+        }
+        .oct-section.active .oct-section-header {
+            cursor: default;
+        }
+        .oct-section-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--oct-color, #888);
+            letter-spacing: 0.06em;
+            flex-shrink: 0;
+            min-width: 42px;
+        }
+
+        /* 折りたたみ時のミニプレゼンスストリップ */
+        .oct-mini-strip {
+            display: flex;
+            gap: 2px;
+            flex: 1;
+            min-width: 0;
+            align-items: center;
+            overflow: hidden;
+        }
+        .oct-mini-cell {
+            width: 12px;
+            height: 10px;
+            border-radius: 2px;
+            background: #e4e4e4;
+            flex-shrink: 0;
+        }
+        .oct-mini-cell:nth-child(4n+1):not(:first-child) { margin-left: 3px; }
+
+        /* アコーディオン内のグリッドは枠線・角丸不要 */
+        .oct-section .melodic-editor {
+            border: none;
+            border-radius: 0;
         }
 
         /* ======= メロディエディタ（ピアノ鍵盤 + 同期スクロールグリッド）======= */

@@ -88,14 +88,20 @@ function addTrack(instrument) {
             rows: DRUM_ROWS.map(r => ({ label: r.label, note: r.note, steps: Array(16).fill(false) })),
         };
     } else {
-        const octaves  = OCTAVE_RANGE[instrument];
-        const stepsMap = {};
-        octaves.forEach(oct => {
+        const allOctaves = OCTAVE_RANGE[instrument];
+        const stepsMap   = {};
+        allOctaves.forEach(oct => {
             CHROMATIC.forEach(n => { stepsMap[`${n}${oct}`] = Array(16).fill(false); });
         });
+        // デフォルト: 中央を軸に最大3オクターブを表示
+        const mid            = Math.floor(allOctaves.length / 2);
+        const half           = Math.floor(Math.min(3, allOctaves.length) / 2);
+        const startIdx       = Math.max(0, mid - half);
+        const visibleOctaves = allOctaves.slice(startIdx, startIdx + Math.min(3, allOctaves.length));
         track = {
             id, instrument,
-            activeOctave: octaves[Math.floor(octaves.length / 2)],
+            activeOctave: visibleOctaves[Math.floor(visibleOctaves.length / 2)],
+            visibleOctaves,
             stepsMap,
         };
     }
@@ -159,24 +165,89 @@ function renderDrumEditor(track, editorEl) {
 }
 
 // -------------------------------------------------------
-// メロディエディタ（ピアノ鍵盤 + 全オクターブ同一行表示）
+// メロディエディタ（オクターブセレクター + アコーディオン）
 // -------------------------------------------------------
 function renderMelodicEditor(track, editorEl) {
-    const octaves = OCTAVE_RANGE[track.instrument];
+    const allOctaves = OCTAVE_RANGE[track.instrument];
 
-    // オクターブ凡例（クリック不可・色の説明）
-    const tabsEl = document.createElement('div');
-    tabsEl.className = 'oct-tabs';
-    octaves.forEach(o => {
-        const legend = document.createElement('div');
-        legend.className = 'oct-legend';
-        legend.textContent = OCT_COLOR[o].label;
-        legend.style.setProperty('--tab-color', OCT_COLOR[o].on);
-        tabsEl.appendChild(legend);
+    // ----- オクターブセレクター -----
+    const selectorEl = document.createElement('div');
+    selectorEl.className = 'oct-selector';
+
+    allOctaves.forEach(o => {
+        const btn = document.createElement('button');
+        btn.className = 'oct-selector-btn' + (track.visibleOctaves.includes(o) ? ' selected' : '');
+        btn.textContent = OCT_COLOR[o].label;
+        btn.style.setProperty('--oct-color', OCT_COLOR[o].on);
+        btn.addEventListener('click', () => {
+            if (track.visibleOctaves.includes(o)) {
+                if (track.visibleOctaves.length <= 1) return; // 最低1つは残す
+                track.visibleOctaves = track.visibleOctaves.filter(v => v !== o);
+                if (track.activeOctave === o) track.activeOctave = track.visibleOctaves[0];
+            } else {
+                // 元の順序を維持して追加
+                track.visibleOctaves = allOctaves.filter(v => track.visibleOctaves.includes(v) || v === o);
+            }
+            renderEditor();
+        });
+        selectorEl.appendChild(btn);
     });
-    editorEl.appendChild(tabsEl);
+    editorEl.appendChild(selectorEl);
 
-    // ピアノ鍵盤 + ステップグリッドのラッパー
+    // ----- アコーディオン -----
+    const accordionEl = document.createElement('div');
+    accordionEl.className = 'oct-accordion';
+
+    track.visibleOctaves.forEach(o => {
+        const isActive = o === track.activeOctave;
+        const octStyle = OCT_COLOR[o];
+
+        const section = document.createElement('div');
+        section.className = 'oct-section' + (isActive ? ' active' : '');
+
+        // ヘッダーバー
+        const headerEl = document.createElement('div');
+        headerEl.className = 'oct-section-header';
+        headerEl.style.setProperty('--oct-color', octStyle.on);
+
+        const labelEl = document.createElement('span');
+        labelEl.className = 'oct-section-label';
+        labelEl.textContent = octStyle.label;
+        headerEl.appendChild(labelEl);
+
+        if (!isActive) {
+            // ミニプレゼンスストリップ（どのステップに音があるか）
+            const miniStrip = document.createElement('div');
+            miniStrip.className = 'oct-mini-strip';
+            for (let i = 0; i < 16; i++) {
+                const hasNote = CHROMATIC.some(n => track.stepsMap[`${n}${o}`]?.[i]);
+                const cell = document.createElement('div');
+                cell.className = 'oct-mini-cell' + (hasNote ? ' on' : '');
+                if (hasNote) cell.style.background = octStyle.on;
+                miniStrip.appendChild(cell);
+            }
+            headerEl.appendChild(miniStrip);
+
+            // タップで展開、現在のアクティブを閉じる
+            headerEl.addEventListener('click', () => {
+                track.activeOctave = o;
+                renderEditor();
+            });
+        }
+
+        section.appendChild(headerEl);
+        if (isActive) section.appendChild(buildOctaveGrid(track, o));
+        accordionEl.appendChild(section);
+    });
+
+    editorEl.appendChild(accordionEl);
+}
+
+// -------------------------------------------------------
+// 単一オクターブ グリッド（ピアノ鍵盤 + ステップ16列）
+// -------------------------------------------------------
+function buildOctaveGrid(track, octave) {
+    const octStyle  = OCT_COLOR[octave];
     const melodicEl = document.createElement('div');
     melodicEl.className = 'melodic-editor';
 
@@ -185,73 +256,62 @@ function renderMelodicEditor(track, editorEl) {
     keysEl.className = 'piano-keys';
     keysEl.appendChild(Object.assign(document.createElement('div'), { className: 'piano-key-spacer' }));
 
-    // 右: ステップグリッド（全行が同期スクロール）
+    // 右: ステップグリッド
     const gridScrollEl = document.createElement('div');
     gridScrollEl.className = 'steps-grid-scroll';
     const gridEl = document.createElement('div');
     gridEl.className = 'steps-grid';
 
-    // ヘッダー行（オクターブごとにビート番号 1〜4）
+    // ヘッダー行（ビート番号 1〜4）
     const headerEl = document.createElement('div');
     headerEl.className = 'steps-header';
-    octaves.forEach((o, oi) => {
-        if (oi > 0) headerEl.appendChild(Object.assign(document.createElement('div'), { className: 'oct-divider' }));
-        const group = document.createElement('div');
-        group.className = 'step-group';
-        for (let i = 0; i < 16; i++) {
-            const cell = document.createElement('div');
-            cell.className = 'step-header-cell' + (i % 4 === 0 ? ' beat' : '');
-            cell.textContent = i % 4 === 0 ? String(i / 4 + 1) : '·';
-            if (i % 4 === 0) cell.style.color = OCT_COLOR[o].on;
-            group.appendChild(cell);
-        }
-        headerEl.appendChild(group);
-    });
+    const headerGroup = document.createElement('div');
+    headerGroup.className = 'step-group';
+    for (let i = 0; i < 16; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'step-header-cell' + (i % 4 === 0 ? ' beat' : '');
+        cell.textContent = i % 4 === 0 ? String(i / 4 + 1) : '·';
+        if (i % 4 === 0) cell.style.color = octStyle.on;
+        headerGroup.appendChild(cell);
+    }
+    headerEl.appendChild(headerGroup);
     gridEl.appendChild(headerEl);
 
-    // 12音行（B〜C）— 高音が上・低音が下になるよう逆順で表示
+    // 12音行（B〜C）— 高音が上
     [...CHROMATIC].reverse().forEach(noteName => {
         const isBlack = BLACK_KEYS.has(noteName);
 
-        // ピアノ鍵（左列）
         const keyEl = document.createElement('div');
         keyEl.className = 'piano-key ' + (isBlack ? 'black-key' : 'white-key');
         keyEl.textContent = noteName;
         keysEl.appendChild(keyEl);
 
-        // ステップ行（全オクターブを横並び）
         const rowEl = document.createElement('div');
         rowEl.className = 'steps-row' + (isBlack ? ' black-key' : '');
 
-        octaves.forEach((o, oi) => {
-            if (oi > 0) rowEl.appendChild(Object.assign(document.createElement('div'), { className: 'oct-divider' }));
-            const fullNote = `${noteName}${o}`;
-            const steps    = track.stepsMap[fullNote];
-            const octStyle = OCT_COLOR[o];
+        const steps     = track.stepsMap[`${noteName}${octave}`];
+        const noteGroup = document.createElement('div');
+        noteGroup.className = 'step-group';
+        noteGroup.style.setProperty('--on-bg',     octStyle.on);
+        noteGroup.style.setProperty('--on-border', octStyle.border);
 
-            const group = document.createElement('div');
-            group.className = 'step-group';
-            group.style.setProperty('--on-bg',     octStyle.on);
-            group.style.setProperty('--on-border', octStyle.border);
-
-            steps.forEach((on, stepIdx) => {
-                const btn = document.createElement('button');
-                btn.className = 'step' + (on ? ' on' : '');
-                btn.addEventListener('click', () => {
-                    steps[stepIdx] = !steps[stepIdx];
-                    btn.classList.toggle('on', steps[stepIdx]);
-                });
-                group.appendChild(btn);
+        steps.forEach((on, stepIdx) => {
+            const btn = document.createElement('button');
+            btn.className = 'step' + (on ? ' on' : '');
+            btn.addEventListener('click', () => {
+                steps[stepIdx] = !steps[stepIdx];
+                btn.classList.toggle('on', steps[stepIdx]);
             });
-            rowEl.appendChild(group);
+            noteGroup.appendChild(btn);
         });
+        rowEl.appendChild(noteGroup);
         gridEl.appendChild(rowEl);
     });
 
     gridScrollEl.appendChild(gridEl);
     melodicEl.appendChild(keysEl);
     melodicEl.appendChild(gridScrollEl);
-    editorEl.appendChild(melodicEl);
+    return melodicEl;
 }
 
 // -------------------------------------------------------
