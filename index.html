@@ -292,32 +292,24 @@
         .step:active { opacity: 0.55; }
         .step.playing { background: #f5c518; border-color: #d4a800; }
 
-        /* ======= オクターブタブ ======= */
+        /* ======= オクターブ凡例（色の説明・クリック不可）======= */
         .oct-tabs {
             display: flex;
             gap: 6px;
             margin-bottom: 12px;
             flex-wrap: wrap;
+            align-items: center;
         }
-        .oct-tab {
-            padding: 6px 14px;
-            font-size: 12px;
-            border-radius: 3px;
-            border: 1.5px solid #ccc;
-            background: #fff;
-            color: #999;
-            cursor: pointer;
-            touch-action: manipulation;
+        .oct-legend {
+            font-size: 11px;
             font-weight: 700;
-            letter-spacing: 0.04em;
-            transition: all 0.1s;
-        }
-        .oct-tab.active {
-            background: var(--tab-color, #111);
-            border-color: var(--tab-color, #111);
             color: #fff;
+            background: var(--tab-color, #888);
+            padding: 4px 10px;
+            border-radius: 3px;
+            letter-spacing: 0.04em;
+            user-select: none;
         }
-        .oct-tab:active { opacity: 0.7; }
 
         /* ======= メロディエディタ（ピアノ鍵盤 + 同期スクロールグリッド）======= */
         .melodic-editor {
@@ -353,18 +345,18 @@
             flex-shrink: 0;
             user-select: none;
         }
-        /* 白鍵: 全幅 */
+        /* 白鍵: 全幅・黒文字 */
         .piano-key.white-key {
             width: 52px;
             background: #fff;
-            color: #bbb;
+            color: #333;
             border-bottom: 1px solid #eee;
         }
-        /* 黒鍵: 短く（右側に白鍵エリアが見える）*/
+        /* 黒鍵: 短く・白文字 */
         .piano-key.black-key {
             width: 38px;
             background: #1a1a1a;
-            color: #555;
+            color: #eee;
             border-bottom: 1px solid #000;
         }
 
@@ -407,7 +399,7 @@
         /* ステップ行 */
         .steps-row {
             display: flex;
-            gap: 3px;
+            gap: 0;
             padding: 4px 8px;
             height: 36px;
             align-items: center;
@@ -415,13 +407,35 @@
         }
         .steps-row.black-key { background: #e8e8e8; }
 
+        /* オクターブ区切り線 */
+        .oct-divider {
+            width: 1px;
+            height: 24px;
+            background: #ccc;
+            flex-shrink: 0;
+            margin: 0 5px;
+        }
+
+        /* オクターブごとのステップグループ */
+        .step-group {
+            display: flex;
+            gap: 3px;
+        }
+        .step-group .step:nth-child(4n+1):not(:first-child) { margin-left: 4px; }
+
         /* グリッド内のステップボタン（メロディ用・少し小さく）*/
         .steps-grid .step {
             width: 28px;
             height: 26px;
             border-radius: 2px;
         }
-        .steps-grid .step:nth-child(4n+1):not(:first-child) { margin-left: 6px; }
+
+        /* ヘッダーも同様の構造 */
+        .steps-header {
+            gap: 0;
+        }
+        .steps-header .step-header-cell:nth-child(4n+1):not(:first-child) { margin-left: 0; }
+        .step-group .step-header-cell:nth-child(4n+1):not(:first-child) { margin-left: 4px; }
 
         /* ======= 楽器選択モーダル（下からスライドアップ）======= */
         .modal-overlay {
