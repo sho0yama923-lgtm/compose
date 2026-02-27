@@ -1,127 +1,40 @@
-# 作曲ツール — Claude 向け開発指針
+# 開発指針: スマホ向け作曲ツール
 
-## プロジェクトの最終目標
+## [Core Goals & Policy]
+- Target: 音楽初学者向け、直感的なスマホ作曲ツール (音楽理論不要)
+- Priority: シンプルさ最優先。機能追加より既存機能の明確化。1画面の情報量と操作を最小限に。
+- Mobile-First: タップ領域≧44px、`-webkit-overflow-scrolling: touch`、`touch-action: manipulation`(ズーム防止)
+- Out of Scope: 高度な機能(MIDI/ミキサー)、PC専用レイアウト、ユーザー登録/DB保存
 
-**音楽初学者でもスマホで直感的に使える作曲ツール**
+## [Tech Stack]
+- 音声: Tone.js v14.8.49 (CDN)
+- モジュール: ES Modules (`type="module"`)
+- 開発環境: `python3 -m http.server 8080` (CORS対策必須)
 
-- 音楽理論を知らなくても触れる
-- シンプルなUIで迷わない
+## [Architecture & Files]
+*Rule: index.htmlのインラインJS禁止。定数はconstants.jsへ。肥大化時は適宜ファイル分割。*
 
----
+- `index.html`: UI(トップ/サイドバー/メイン/楽器モーダル)。`<script type="module" src="./app.js">`のみ記述。
+- `app.js`: 状態管理/DOM描画/イベント処理。
+  - 主要関数: `addTrack`, `deleteTrack`, `selectTrack`, `renderSidebar`, `renderEditor`(drum/melodic分岐), `buildSteps`
+  - 再生時: 全トラックからスコアを構築し `player.play()` へ渡す。
+- `constants.js`: 定数群 (`DRUM_ROWS`, `CHROMATIC`, `BLACK_KEYS`, `OCTAVE_RANGE`, `OCT_COLOR`, `INST_LABEL`)
+- `player.js`: Tone.js再生エンジン。`play(score, { bpm, loop })`, `stop()`
+  - **⚠️重要**: `Tone.Sequence`に配列を直接渡すとサブ分割されるバグあり。回避のため、インデックス配列(0〜15)を渡し、コールバック内で `score[i]` を参照する実装とすること。
+- `instruments.js`: 楽器ごとの `Tone.Sampler` 定義。piano/drums/bass/aco_guitar。音源パス: `sounds/`
 
-## 設計の基本方針
+## [Data Model]
+- 16ステップ = 1小節
+- Drum: `{ id, instrument: 'drums', rows: [{ label, note, steps: Array(16) }] }`
+- Melodic: `{ id, instrument: 'piano', activeOctave: 4, stepsMap: { 'C4': Array(16), ... } }`
+- Score: `score[i] = [{ instrument: 'piano', notes: 'C4' }]` (null=無音)
 
-### シンプルさを最優先する
-- 機能を増やすより、今ある機能をわかりやすくすることを優先する
-- 1画面に情報を詰め込みすぎない
-- ボタンや操作は最小限に絞る
-
-### スマホ前提で作る
-- タッチ操作でストレスなく使えること
-- ボタンは指で押しやすいサイズ（最低 44px）
-- 横スクロールが必要な部分は `-webkit-overflow-scrolling: touch` を使う
-- `touch-action: manipulation` でダブルタップズームを防ぐ
-
-## ファイル構成
-
-### `index.html`
-- HTMLとCSSのみ。インラインスクリプトは書かない
-- `<script type="module" src="./app.js"></script>` の1行でJSを読み込む
-- UIレイアウト: トップバー / サイドバー（ハンバーガーメニュー）/ メインエリア / 楽器選択モーダル
-
-### `app.js`
-- アプリの状態管理・DOM描画・イベント処理をすべて担当
-- 主な関数:
-  - `addTrack(instrument)` — トラックを追加、ドラムと旋律で構造が異なる
-  - `deleteTrack(id)` — トラック削除
-  - `selectTrack(id)` — アクティブトラックの切り替えと再描画
-  - `renderSidebar()` — サイドバーのトラックリストを再描画
-  - `renderEditor()` — メインエリアのエディタを再描画（drums / melodic を振り分け）
-  - `renderDrumEditor(track, el)` — ドラム用3行のステップエディタ
-  - `renderMelodicEditor(track, el)` — オクターブタブ + 12音行のエディタ
-  - `buildSteps(steps, octStyle)` — ステップボタン列を生成する共通関数
-- 再生時はすべてのトラックからスコアを構築して `play()` に渡す
-
-### `constants.js`
-- アプリ全体で使う定数をまとめたファイル
-  - `DRUM_ROWS` — ドラムの行定義（Kick / Snare / HiHat）
-  - `CHROMATIC` — 音名の配列（C〜B、12音）
-  - `BLACK_KEYS` — 黒鍵の音名セット（C#, D#, F#, G#, A#）
-  - `OCTAVE_RANGE` — 楽器ごとの使用オクターブ範囲
-  - `OCT_COLOR` — オクターブごとの色定義（ステップボタンとタブに使用）
-  - `INST_LABEL` — 楽器IDから表示名へのマッピング
-
-### `player.js`
-- Tone.js を使った再生エンジン
-- `play(score, { bpm, loop })` — 16ステップのスコアを受け取り再生開始
-- `stop()` — 再生停止・シーケンスの破棄
-- 重要: `Tone.Sequence` に配列を直接渡すとサブ分割として解釈されるバグがあるため、インデックス配列（0〜15）を渡してコールバック内で `score[i]` を参照する設計にしている
-
-### `instruments.js`
-- 楽器ごとの `Tone.Sampler` を定義して `export default` でまとめてエクスポート
-- 対応楽器: `piano` / `drums` / `bass` / `aco_guitar`
-- サンプル音源は `sounds/` フォルダ以下に格納
-
-### ルール
-- `index.html` にインラインスクリプトは書かない
-- 定数は `constants.js` に集める
-- 機能が増えてきたら積極的にファイルを分割する
-
----
-
-## 技術スタック
-
-- **Tone.js v14.8.49** — 音声再生（CDN）
-- **ES Modules** — `type="module"` でファイル分割
-- **ローカルサーバー** — `python3 -m http.server 8080`（ES Modules + 音声のCORSに必要）
-
----
-
-## データモデル
-
-### ステップシーケンサー（16ステップ = 1小節）
-
-```js
-// ドラムトラック
-{ id, instrument: 'drums', rows: [{ label, note, steps: Array(16) }] }
-
-// メロディトラック（ピアノ・ベース・ギター）
-{ id, instrument: 'piano', activeOctave: 4, stepsMap: { 'C4': Array(16), ... } }
-```
-
-### スコア（再生時に構築）
-
-```js
-score[i] = [{ instrument: 'piano', notes: 'C4' }]  // null = 無音
-```
-
----
-
-## UIのトーン・デザイン
-
-**ピアノをモチーフにした白黒基調のスタイリッシュなデザイン**
-
-| 部位 | 色・スタイル | モチーフ |
-|---|---|---|
-| トップバー | 漆黒 `#0a0a0a` | ピアノの天板 |
-| サイドバー背景 | 白 `#fff` | 白鍵エリア |
-| トラックアイテム | 黒 `#111`、左づめ、右端に余白 | 黒鍵 |
-| メインエリア背景 | 薄グレー `#f0f0f0` | 白鍵の素材感 |
-| ステップボタン（OFF） | 白 `#f8f8f8` + 薄いボーダー | 白鍵 |
-| ステップボタン（ON） | 黒 `#111`（デフォルト） | 黒鍵を押した状態 |
-| メロディ白鍵行 | 白背景 | 白鍵 |
-| メロディ黒鍵行（C#等）| 薄グレー `#e4e4e4` | 黒鍵 |
-| 再生ボタン | 白 | 白鍵 |
-| 停止ボタン | 濃いグレー | 黒鍵 |
-
-- オクターブタブ・ON時のステップ色はオクターブカラー（低=青、中=緑、高=黄〜橙）で識別
-- 余白を十分に取り、窮屈にならないようにする
-- モーダルの楽器ボタンも黒鍵スタイルで統一
-
----
-
-## やらないこと（スコープ外）
-
-- 複雑な音楽理論機能（MIDIエクスポート、マルチトラックミキサーなど）
-- PC専用レイアウト
-- ユーザー登録・データ保存（将来的には検討）
+## [UI Design: ピアノモチーフ(白黒基調)]
+- #0a0a0a: トップバー(天板)
+- #111: トラックアイテム, ステップON(黒鍵押下), 楽器ボタン
+- #fff: サイドバー背景, メロディ白鍵行, 再生ボタン
+- #f0f0f0: メインエリア背景
+- #f8f8f8 (薄ボーダー付): ステップOFF(白鍵)
+- #e4e4e4: メロディ黒鍵行
+- オクターブ識別: ステップON時とタブに `OCT_COLOR` (低=青, 中=緑, 高=黄〜橙) を適用
+- レイアウト: 窮屈にならないよう十分な余白を確保
