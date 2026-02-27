@@ -209,8 +209,8 @@ function renderMelodicEditor(track, editorEl) {
     });
     gridEl.appendChild(headerEl);
 
-    // 12音行（C〜B）— 各行に全オクターブのステップを横並びで表示
-    CHROMATIC.forEach(noteName => {
+    // 12音行（B〜C）— 高音が上・低音が下になるよう逆順で表示
+    [...CHROMATIC].reverse().forEach(noteName => {
         const isBlack = BLACK_KEYS.has(noteName);
 
         // ピアノ鍵（左列）
