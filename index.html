@@ -208,7 +208,7 @@
             flex: 1;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
-            padding: 16px;
+            padding: 10px 12px;
             background: #f0f0f0;
         }
 
@@ -228,10 +228,10 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 18px;
+            margin-bottom: 8px;
         }
         .editor-title {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 700;
             color: #111;
             flex: 1;
@@ -297,16 +297,16 @@
         .oct-range-ctrl {
             display: flex;
             align-items: center;
-            gap: 12px;
-            margin-bottom: 10px;
+            gap: 6px;
+            flex-shrink: 0;
         }
         .oct-range-btn {
-            width: 36px;
-            height: 36px;
+            width: 26px;
+            height: 26px;
             border: 1px solid #ccc;
             background: #fff;
             border-radius: 4px;
-            font-size: 14px;
+            font-size: 11px;
             cursor: pointer;
             touch-action: manipulation;
             display: flex;
@@ -317,21 +317,22 @@
         .oct-range-btn:disabled { opacity: 0.25; cursor: default; }
         .oct-range-btn:not(:disabled):active { background: #f0f0f0; }
         .oct-range-label {
-            font-size: 12px;
+            font-size: 11px;
             color: #888;
             font-weight: 700;
             letter-spacing: 0.04em;
+            white-space: nowrap;
         }
 
         /* ======= オクターブ アコーディオン ======= */
         .oct-accordion {
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            margin-bottom: 8px;
+            gap: 6px;
+            margin-bottom: 6px;
         }
         .oct-section {
-            border-radius: 8px;
+            border-radius: 6px;
             overflow: hidden;
             border: 1.5px solid #ddd;
         }
@@ -340,10 +341,10 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 8px 14px;
+            padding: 6px 10px;
             background: #111;
             color: #fff;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
             border: none;
             cursor: pointer;
@@ -390,12 +391,12 @@
             border-right: 2px solid #ccc;
         }
         .piano-key-spacer {
-            height: 22px;
+            height: 20px;
             border-bottom: 1px solid #ddd;
             background: #fafafa;
         }
         .piano-key {
-            height: 36px;
+            height: 26px;
             display: flex;
             align-items: center;
             justify-content: flex-end;
@@ -408,21 +409,21 @@
         }
         /* 白鍵: 全幅・黒文字 */
         .piano-key.white-key {
-            width: 52px;
+            width: 48px;
             background: #fff;
             color: #333;
             border-bottom: 1px solid #eee;
         }
-        /* ドラムラベル: 白鍵より少し幅広 */
+        /* ドラムラベル */
         .piano-key.drum-key {
-            width: 52px;
+            width: 48px;
             font-size: 9px;
             justify-content: flex-end;
         }
 
         /* 黒鍵: 短く・白文字 */
         .piano-key.black-key {
-            width: 38px;
+            width: 36px;
             background: #1a1a1a;
             color: #eee;
             border-bottom: 1px solid #000;
@@ -443,15 +444,15 @@
         /* ビート番号ヘッダー */
         .steps-header {
             display: flex;
-            gap: 3px;
-            padding: 0 8px;
-            height: 22px;
+            gap: 2px;
+            padding: 0 6px;
+            height: 20px;
             align-items: center;
             border-bottom: 1px solid #e8e8e8;
             background: #fafafa;
         }
         .step-header-cell {
-            width: 28px;
+            width: 22px;
             font-size: 9px;
             text-align: center;
             color: #ccc;
@@ -462,31 +463,27 @@
             font-weight: 700;
             font-size: 10px;
         }
-        .step-header-cell:nth-child(4n+1):not(:first-child) { margin-left: 6px; }
+        .step-header-cell:nth-child(4n+1):not(:first-child) { margin-left: 4px; }
 
         /* ステップ行 */
         .steps-row {
             display: flex;
-            gap: 3px;
-            padding: 4px 8px;
-            height: 36px;
+            gap: 2px;
+            padding: 3px 6px;
+            height: 26px;
             align-items: center;
             border-bottom: 1px solid #f0f0f0;
         }
         .steps-row.black-key { background: #e8e8e8; }
         .steps-row .step:nth-child(4n+1):not(:first-child) { margin-left: 4px; }
 
-        /* グリッド内のステップボタン（メロディ用・少し小さく）*/
+        /* グリッド内のステップボタン（メロディ用・コンパクト）*/
         .steps-grid .step {
-            width: 28px;
-            height: 26px;
+            width: 22px;
+            height: 20px;
             border-radius: 2px;
         }
 
-        /* ビートヘッダーの間隔 */
-        .steps-header {
-            gap: 3px;
-        }
         .steps-header .step-header-cell:nth-child(4n+1):not(:first-child) { margin-left: 4px; }
 
         /* ======= 楽器選択モーダル（下からスライドアップ）======= */

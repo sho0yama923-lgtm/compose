@@ -229,7 +229,8 @@ function renderMelodicEditor(track, editorEl) {
     ctrlEl.appendChild(downBtn);
     ctrlEl.appendChild(rangeLabel);
     ctrlEl.appendChild(upBtn);
-    editorEl.appendChild(ctrlEl);
+    // 楽器名ヘッダーの右側に配置
+    editorEl.querySelector('.editor-header').appendChild(ctrlEl);
 
     const accordionEl = document.createElement('div');
     accordionEl.className = 'oct-accordion';
