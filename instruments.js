@@ -20,7 +20,8 @@ const INSTRUMENT_LIST = [
         mapping: {
             "C1": "kick.mp3",
             "D1": "snare.mp3",
-            "F#1": "hihat.mp3"
+            "F#1": "hihat.mp3",
+            "G": "tom1.mp3"
         }
     },
     // ■ ベース (フォルダを作ったらここを有効にするだけ！)
@@ -32,7 +33,6 @@ const INSTRUMENT_LIST = [
         range: [1, 4]
     },
 
-        },
     // ■ エレキギター
 
     {
@@ -48,7 +48,7 @@ const INSTRUMENT_LIST = [
         type: "chromatic",
         folder: "sounds/aco_guitar/",
         range: [2, 4]
-    }
+    },
 
         // ■ ヴァイオリン
 
@@ -74,7 +74,8 @@ const INSTRUMENT_LIST = [
 export const DRUM_MAP = {
     KICK: "C1",
     SNARE: "D1",
-    HIHAT: "F#1"
+    HIHAT: "F#1",
+    TOM: "G"
 };
 
 

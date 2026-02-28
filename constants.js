@@ -4,6 +4,7 @@ export const DRUM_ROWS = [
     { label: 'Kick',  note: 'C1'  },
     { label: 'Snare', note: 'D1'  },
     { label: 'HiHat', note: 'F#1' },
+    { label: 'Tom', note: 'G' },
 ];
 
 // クロマチック音名（C〜B）
@@ -35,6 +36,9 @@ export const INST_LABEL = {
     piano:     '🎹 Piano',
     bass:      '🎸 Bass',
     aco_guitar:'🎵 Acoustic Guitar',
+    ele_guitar:'⚡️ Electric Guitar',
+    violin:'🎻 Violin',
+    trumpet:'🎺 Trumpet' 
 };
 
 // 楽器の型: 'rhythm'（行×ステップ）か 'melody'（クロマチック×オクターブ）か 'chord'（コード進行）
@@ -45,6 +49,9 @@ export const INST_TYPE = {
     piano:     'melody',
     bass:      'melody',
     aco_guitar:'melody',
+    ele_guitar:'melody',
+    violin:'melody',
+    trumpet:'melody'
 };
 
 // コード機能: ルート音とコードタイプ
