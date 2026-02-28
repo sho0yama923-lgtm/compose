@@ -31,15 +31,17 @@ export const OCT_COLOR = {
 
 export const INST_LABEL = {
     drums:     '🥁 Drums',
+    chord:     '🎼 コード',
     piano:     '🎹 Piano',
     bass:      '🎸 Bass',
     aco_guitar:'🎵 Acoustic Guitar',
 };
 
-// 楽器の型: 'rhythm'（行×ステップ）か 'melody'（クロマチック×オクターブ）
+// 楽器の型: 'rhythm'（行×ステップ）か 'melody'（クロマチック×オクターブ）か 'chord'（コード進行）
 // 新楽器を追加する際はここに1行追加するだけでUIが自動決定される
 export const INST_TYPE = {
     drums:     'rhythm',
+    chord:     'chord',
     piano:     'melody',
     bass:      'melody',
     aco_guitar:'melody',

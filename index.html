@@ -555,32 +555,9 @@
         }
         .btn-cancel:active { background: #f5f5f5; }
 
-        /* ======= コード入力パネル ======= */
-        .chord-panel {
-            background: #fff;
-            border-bottom: 1px solid #e0e0e0;
-            flex-shrink: 0;
-        }
-        .chord-panel-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            width: 100%;
-            padding: 12px 14px;
-            background: none;
-            border: none;
-            font-size: 14px;
-            font-weight: 600;
-            color: #111;
-            cursor: pointer;
-            touch-action: manipulation;
-            text-align: left;
-        }
-        .chord-panel-header:active { background: #f5f5f5; }
-        .chord-panel-arrow { font-size: 11px; color: #888; }
-
+        /* ======= コードエディタ ======= */
         .chord-panel-body {
-            padding: 0 12px 12px;
+            padding: 8px 12px 16px;
             display: flex;
             flex-direction: column;
             gap: 10px;
@@ -805,6 +782,7 @@
         <h2>楽器を選択</h2>
         <div class="modal-options">
             <button data-inst="drums">🥁<br>Drums</button>
+            <button data-inst="chord">🎼<br>コード</button>
             <button data-inst="piano">🎹<br>Piano</button>
             <button data-inst="bass">🎸<br>Bass</button>
             <button data-inst="aco_guitar">🎵<br>Acoustic Guitar</button>

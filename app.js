@@ -97,6 +97,14 @@ function addTrack(instrument) {
             id, instrument,
             rows: DRUM_ROWS.map(r => ({ label: r.label, note: r.note, steps: Array(16).fill(false) })),
         };
+    } else if (INST_TYPE[instrument] === 'chord') {
+        track = {
+            id, instrument,
+            chordSteps: Array(16).fill(null),
+            selectedChordRoot: 'C',
+            selectedChordType: 'maj',
+            selectedChordOctave: 4,
+        };
     } else {
         // stepsMap は oct 1〜7 全域を保持（viewBase で表示範囲を選択）
         const stepsMap = {};
@@ -109,11 +117,6 @@ function addTrack(instrument) {
             viewBase,
             activeOctave: viewBase + 1, // 中央オクターブをデフォルトで開く
             stepsMap,
-            // コード入力パネル状態
-            chordMode: false,
-            selectedChordRoot: 'C',
-            selectedChordType: 'maj',
-            selectedChordOctave: 4,
         };
     }
 
@@ -149,8 +152,9 @@ function renderEditor() {
 
     if (INST_TYPE[track.instrument] === 'rhythm') {
         renderDrumEditor(track, editorEl);
+    } else if (INST_TYPE[track.instrument] === 'chord') {
+        renderChordEditor(track, editorEl);
     } else {
-        renderChordPanel(track, editorEl);
         renderMelodicEditor(track, editorEl);
     }
 }
@@ -359,28 +363,9 @@ function renderMelodicEditor(track, editorEl) {
 }
 
 // -------------------------------------------------------
-// コード入力パネル
+// コードエディタ（専用トラックとして表示）
 // -------------------------------------------------------
-function renderChordPanel(track, editorEl) {
-    const panelEl = document.createElement('div');
-    panelEl.className = 'chord-panel';
-
-    // ── ヘッダー（折りたたみトグル） ──
-    const headerBtn = document.createElement('button');
-    headerBtn.className = 'chord-panel-header';
-    headerBtn.innerHTML = `<span>🎵 コード入力</span><span class="chord-panel-arrow">${track.chordMode ? '▼' : '▶'}</span>`;
-    headerBtn.addEventListener('click', () => {
-        track.chordMode = !track.chordMode;
-        renderEditor();
-    });
-    panelEl.appendChild(headerBtn);
-
-    if (!track.chordMode) {
-        editorEl.appendChild(panelEl);
-        return;
-    }
-
-    // ── パネル本体 ──
+function renderChordEditor(track, editorEl) {
     const bodyEl = document.createElement('div');
     bodyEl.className = 'chord-panel-body';
 
@@ -519,28 +504,22 @@ function renderChordPanel(track, editorEl) {
     const stepCells = document.createElement('div');
     stepCells.className = 'chord-steps-cells';
 
-    // 各ステップのコード情報を track.stepsMap から検出
-    // （コードを示す追加データは持たず、ステップ上のノートから判定する）
-    // コード状態は track.chordSteps に保存
-    if (!track.chordSteps) track.chordSteps = Array(16).fill(null);
-
     for (let i = 0; i < 16; i++) {
         const chord = track.chordSteps[i];
         const btn = document.createElement('button');
         btn.className = 'chord-step-btn' + (chord ? ' on' : '');
         btn.textContent = chord ? `${chord.root}${chord.type}` : '';
         btn.addEventListener('click', () => {
-            if (chord) {
-                // クリア: このステップのコード構成音をstepsMapからオフにする
-                const notes = getChordNotes(chord.root, chord.type, chord.octave);
-                notes.forEach(n => { if (track.stepsMap[n]) track.stepsMap[n][i] = false; });
+            if (track.chordSteps[i]) {
+                // クリア
                 track.chordSteps[i] = null;
             } else {
-                // 適用: このステップの全ノートをクリアしてからコード音をオン
-                Object.values(track.stepsMap).forEach(s => { s[i] = false; });
-                const notes = getChordNotes(track.selectedChordRoot, track.selectedChordType, track.selectedChordOctave);
-                notes.forEach(n => { if (track.stepsMap[n]) track.stepsMap[n][i] = true; });
-                track.chordSteps[i] = { root: track.selectedChordRoot, type: track.selectedChordType, octave: track.selectedChordOctave };
+                // 現在選択中のコードを適用
+                track.chordSteps[i] = {
+                    root: track.selectedChordRoot,
+                    type: track.selectedChordType,
+                    octave: track.selectedChordOctave,
+                };
             }
             renderEditor();
         });
@@ -550,8 +529,7 @@ function renderChordPanel(track, editorEl) {
     stepsSection.appendChild(stepsRow);
     bodyEl.appendChild(stepsSection);
 
-    panelEl.appendChild(bodyEl);
-    editorEl.appendChild(panelEl);
+    editorEl.appendChild(bodyEl);
 }
 
 // -------------------------------------------------------
@@ -590,13 +568,20 @@ document.getElementById('playBtn').addEventListener('click', async () => {
     const score = Array(16).fill(null);
 
     tracks.forEach(track => {
-        if (track.instrument === 'drums') {
+        if (INST_TYPE[track.instrument] === 'rhythm') {
             track.rows.forEach(row => {
                 row.steps.forEach((on, i) => {
                     if (!on) return;
                     score[i] = score[i] || [];
                     score[i].push({ instrument: track.instrument, notes: row.note });
                 });
+            });
+        } else if (INST_TYPE[track.instrument] === 'chord') {
+            track.chordSteps.forEach((chord, i) => {
+                if (!chord) return;
+                const notes = getChordNotes(chord.root, chord.type, chord.octave);
+                score[i] = score[i] || [];
+                score[i].push({ instrument: 'piano', notes: notes.length === 1 ? notes[0] : notes });
             });
         } else {
             // 同ステップの複数ノートを配列にまとめてコードとして発音
@@ -638,4 +623,5 @@ modal.querySelectorAll('[data-inst]').forEach(btn => {
 // 初期トラック
 // -------------------------------------------------------
 addTrack('drums');
+addTrack('chord');
 addTrack('piano');
