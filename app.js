@@ -1,6 +1,6 @@
 // app.js — 状態管理・描画・イベント処理
 import { play, stop } from './player.js';
-import { DRUM_ROWS, CHROMATIC, BLACK_KEYS, OCTAVE_RANGE, OCT_COLOR, INST_LABEL } from './constants.js';
+import { DRUM_ROWS, CHROMATIC, BLACK_KEYS, OCTAVE_DEFAULT_BASE, OCT_COLOR, INST_LABEL, INST_TYPE } from './constants.js';
 
 // -------------------------------------------------------
 // 状態
@@ -82,20 +82,22 @@ function addTrack(instrument) {
     const id = nextId++;
     let track;
 
-    if (instrument === 'drums') {
+    if (INST_TYPE[instrument] === 'rhythm') {
         track = {
             id, instrument,
             rows: DRUM_ROWS.map(r => ({ label: r.label, note: r.note, steps: Array(16).fill(false) })),
         };
     } else {
-        const octaves  = OCTAVE_RANGE[instrument];
+        // stepsMap は oct 1〜7 全域を保持（viewBase で表示範囲を選択）
         const stepsMap = {};
-        octaves.forEach(oct => {
+        for (let oct = 1; oct <= 7; oct++) {
             CHROMATIC.forEach(n => { stepsMap[`${n}${oct}`] = Array(16).fill(false); });
-        });
+        }
+        const viewBase = OCTAVE_DEFAULT_BASE[instrument] ?? 3;
         track = {
             id, instrument,
-            activeOctave: octaves[Math.floor(octaves.length / 2)],
+            viewBase,
+            activeOctave: viewBase + 1, // 中央オクターブをデフォルトで開く
             stepsMap,
         };
     }
@@ -130,7 +132,7 @@ function renderEditor() {
     header.innerHTML = `<span class="editor-title">${INST_LABEL[track.instrument]}</span>`;
     editorEl.appendChild(header);
 
-    if (track.instrument === 'drums') {
+    if (INST_TYPE[track.instrument] === 'rhythm') {
         renderDrumEditor(track, editorEl);
     } else {
         renderMelodicEditor(track, editorEl);
@@ -194,7 +196,40 @@ function renderDrumEditor(track, editorEl) {
 // メロディエディタ（オクターブ アコーディオン）
 // -------------------------------------------------------
 function renderMelodicEditor(track, editorEl) {
-    const octaves = OCTAVE_RANGE[track.instrument];
+    const octaves = [track.viewBase, track.viewBase + 1, track.viewBase + 2];
+
+    // オクターブ範囲シフトコントロール
+    const ctrlEl = document.createElement('div');
+    ctrlEl.className = 'oct-range-ctrl';
+
+    const downBtn = document.createElement('button');
+    downBtn.className = 'oct-range-btn';
+    downBtn.textContent = '◀';
+    downBtn.disabled = track.viewBase <= 1;
+    downBtn.addEventListener('click', () => {
+        track.viewBase--;
+        if (!octaves.includes(track.activeOctave)) track.activeOctave = null;
+        renderEditor();
+    });
+
+    const rangeLabel = document.createElement('span');
+    rangeLabel.className = 'oct-range-label';
+    rangeLabel.textContent = `Oct ${track.viewBase} – ${track.viewBase + 2}`;
+
+    const upBtn = document.createElement('button');
+    upBtn.className = 'oct-range-btn';
+    upBtn.textContent = '▶';
+    upBtn.disabled = track.viewBase >= 5;
+    upBtn.addEventListener('click', () => {
+        track.viewBase++;
+        if (!octaves.includes(track.activeOctave)) track.activeOctave = null;
+        renderEditor();
+    });
+
+    ctrlEl.appendChild(downBtn);
+    ctrlEl.appendChild(rangeLabel);
+    ctrlEl.appendChild(upBtn);
+    editorEl.appendChild(ctrlEl);
 
     const accordionEl = document.createElement('div');
     accordionEl.className = 'oct-accordion';

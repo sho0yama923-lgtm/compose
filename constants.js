@@ -10,11 +10,12 @@ export const DRUM_ROWS = [
 export const CHROMATIC  = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 export const BLACK_KEYS = new Set(['C#','D#','F#','G#','A#']);
 
-// 楽器ごとの使用オクターブ範囲（最大3オクターブ）
-export const OCTAVE_RANGE = {
-    piano:     [3, 4, 5],
-    bass:      [1, 2, 3],
-    aco_guitar:[2, 3, 4],
+// 楽器ごとのデフォルト表示オクターブ開始値（3オクターブ分を表示: base, base+1, base+2）
+// ユーザーが◀▶で変更可能。全音符は oct 1〜7 で保存される
+export const OCTAVE_DEFAULT_BASE = {
+    piano:      3,   // デフォルト: 3〜5
+    bass:       1,   // デフォルト: 1〜3
+    aco_guitar: 2,   // デフォルト: 2〜4
 };
 
 // オクターブごとの色（低=青系、中=緑、高=黄〜橙）
@@ -33,4 +34,13 @@ export const INST_LABEL = {
     piano:     '🎹 Piano',
     bass:      '🎸 Bass',
     aco_guitar:'🎵 Acoustic Guitar',
+};
+
+// 楽器の型: 'rhythm'（行×ステップ）か 'melody'（クロマチック×オクターブ）
+// 新楽器を追加する際はここに1行追加するだけでUIが自動決定される
+export const INST_TYPE = {
+    drums:     'rhythm',
+    piano:     'melody',
+    bass:      'melody',
+    aco_guitar:'melody',
 };

@@ -24,15 +24,16 @@
 - `app.js`: 状態管理/DOM描画/イベント処理。
   - 主要関数: `addTrack`, `deleteTrack`, `selectTrack`, `renderSidebar`, `renderEditor`(drum/melodic分岐), `buildSteps`
   - 再生時: 全トラックからスコアを構築し `player.play()` へ渡す。
-- `constants.js`: 定数群 (`DRUM_ROWS`, `CHROMATIC`, `BLACK_KEYS`, `OCTAVE_RANGE`, `OCT_COLOR`, `INST_LABEL`)
+- `constants.js`: 定数群 (`DRUM_ROWS`, `CHROMATIC`, `BLACK_KEYS`, `OCTAVE_RANGE`, `OCT_COLOR`, `INST_LABEL`, `INST_TYPE`)
+  - `INST_TYPE`: 楽器IDに型 `'rhythm'` / `'melody'` を対応付け。新楽器追加時はここに1行加えるだけでUIが自動決定される。
 - `player.js`: Tone.js再生エンジン。`play(score, { bpm, loop })`, `stop()`
   - ⚠️重要: `Tone.Sequence`に配列を直接渡すとサブ分割されるバグあり。回避のため、インデックス配列(0〜15)を渡し、コールバック内で `score[i]` を参照する実装とすること。
 - `instruments.js`: 楽器ごとの `Tone.Sampler` 定義。piano/drums/bass/aco_guitar。音源パス: `sounds/`
 
 ## [Data Model]
 - 1小節 = 16ステップ
-- Drum: `{ id, instrument: 'drums', rows: [{ label, note, steps: Array(16) }] }`
-- Melodic: `{ id, instrument: 'piano', activeOctave: 4, stepsMap: { 'C4': Array(16), ... } }`
+- Rhythm型 (`INST_TYPE='rhythm'`): `{ id, instrument, rows: [{ label, note, steps: Array(16) }] }`
+- Melody型 (`INST_TYPE='melody'`): `{ id, instrument, activeOctave: 4, stepsMap: { 'C4': Array(16), ... } }`
 - Score: `score[i] = [{ instrument: 'piano', notes: 'C4' }]` (null=無音)
 
 ## [UI Design: ピアノモチーフ(白黒基調)]

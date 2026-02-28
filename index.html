@@ -293,6 +293,36 @@
         .step:active { opacity: 0.55; }
         .step.playing { background: #f5c518; border-color: #d4a800; }
 
+        /* ======= オクターブ範囲シフトコントロール ======= */
+        .oct-range-ctrl {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        .oct-range-btn {
+            width: 36px;
+            height: 36px;
+            border: 1px solid #ccc;
+            background: #fff;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            touch-action: manipulation;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .oct-range-btn:disabled { opacity: 0.25; cursor: default; }
+        .oct-range-btn:not(:disabled):active { background: #f0f0f0; }
+        .oct-range-label {
+            font-size: 12px;
+            color: #888;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+
         /* ======= オクターブ アコーディオン ======= */
         .oct-accordion {
             display: flex;
