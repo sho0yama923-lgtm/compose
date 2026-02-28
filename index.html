@@ -554,6 +554,187 @@
             touch-action: manipulation;
         }
         .btn-cancel:active { background: #f5f5f5; }
+
+        /* ======= コードエディタ ======= */
+        .chord-panel-body {
+            padding: 8px 12px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .chord-selector-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .chord-selector-label {
+            font-size: 11px;
+            color: #888;
+            min-width: 56px;
+            flex-shrink: 0;
+        }
+
+        /* ルート選択 */
+        .chord-root-list {
+            display: flex;
+            gap: 5px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            padding-bottom: 2px;
+        }
+        .chord-root-list::-webkit-scrollbar { display: none; }
+        .chord-root-btn {
+            min-width: 36px;
+            height: 36px;
+            font-size: 12px;
+            font-weight: 600;
+            border: 1.5px solid #ddd;
+            border-radius: 6px;
+            background: #f8f8f8;
+            color: #111;
+            cursor: pointer;
+            flex-shrink: 0;
+            touch-action: manipulation;
+        }
+        .chord-root-btn:active { opacity: 0.7; }
+        .chord-root-btn.selected {
+            background: #111;
+            color: #fff;
+            border-color: #111;
+        }
+
+        /* タイプ選択 */
+        .chord-type-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        .chord-type-btn {
+            height: 36px;
+            padding: 0 10px;
+            font-size: 12px;
+            font-weight: 600;
+            border: 1.5px solid #ddd;
+            border-radius: 6px;
+            background: #f8f8f8;
+            color: #111;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        .chord-type-btn:active { opacity: 0.7; }
+        .chord-type-btn.selected {
+            background: #111;
+            color: #fff;
+            border-color: #111;
+        }
+
+        /* オクターブコントロール */
+        .chord-oct-ctrl {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ドラムパターン参照 */
+        .chord-rhythm-ref {
+            background: #f8f8f8;
+            border-radius: 6px;
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .chord-rhythm-title {
+            font-size: 10px;
+            color: #aaa;
+            letter-spacing: 0.06em;
+            margin-bottom: 2px;
+        }
+        .chord-rhythm-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .chord-rhythm-row-label {
+            font-size: 10px;
+            color: #888;
+            min-width: 38px;
+            flex-shrink: 0;
+        }
+        .chord-rhythm-cells {
+            display: flex;
+            gap: 0;
+            overflow: hidden;
+        }
+        .chord-rhythm-cell {
+            font-size: 10px;
+            width: calc((100vw - 110px) / 16);
+            max-width: 22px;
+            text-align: center;
+            color: #ccc;
+            flex-shrink: 0;
+        }
+        .chord-rhythm-cell.on { color: #111; font-weight: bold; }
+
+        /* コードステップ行 */
+        .chord-steps-section {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .chord-steps-header,
+        .chord-steps-row {
+            display: flex;
+            align-items: center;
+            gap: 0;
+        }
+        .chord-steps-label-spacer,
+        .chord-steps-label {
+            min-width: 38px;
+            font-size: 11px;
+            color: #888;
+            flex-shrink: 0;
+        }
+        .chord-step-header-cell {
+            font-size: 10px;
+            text-align: center;
+            color: #bbb;
+            width: calc((100vw - 110px) / 16);
+            max-width: 44px;
+            flex-shrink: 0;
+        }
+        .chord-step-header-cell.beat { color: #555; font-weight: 600; }
+        .chord-steps-cells {
+            display: flex;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            flex: 1;
+        }
+        .chord-steps-cells::-webkit-scrollbar { display: none; }
+        .chord-step-btn {
+            min-width: calc((100vw - 110px) / 16);
+            max-width: 44px;
+            height: 44px;
+            font-size: 9px;
+            font-weight: 700;
+            line-height: 1.2;
+            border: 1.5px solid #e0e0e0;
+            border-radius: 4px;
+            background: #f8f8f8;
+            color: #aaa;
+            cursor: pointer;
+            flex-shrink: 0;
+            touch-action: manipulation;
+            padding: 0 1px;
+        }
+        .chord-step-btn:active { opacity: 0.7; }
+        .chord-step-btn.on {
+            background: #111;
+            color: #fff;
+            border-color: #111;
+        }
     </style>
 </head>
 <body>
@@ -601,6 +782,7 @@
         <h2>楽器を選択</h2>
         <div class="modal-options">
             <button data-inst="drums">🥁<br>Drums</button>
+            <button data-inst="chord">🎼<br>コード</button>
             <button data-inst="piano">🎹<br>Piano</button>
             <button data-inst="bass">🎸<br>Bass</button>
             <button data-inst="aco_guitar">🎵<br>Acoustic Guitar</button>

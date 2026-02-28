@@ -31,16 +31,34 @@ export const OCT_COLOR = {
 
 export const INST_LABEL = {
     drums:     '🥁 Drums',
+    chord:     '🎼 コード',
     piano:     '🎹 Piano',
     bass:      '🎸 Bass',
     aco_guitar:'🎵 Acoustic Guitar',
 };
 
-// 楽器の型: 'rhythm'（行×ステップ）か 'melody'（クロマチック×オクターブ）
+// 楽器の型: 'rhythm'（行×ステップ）か 'melody'（クロマチック×オクターブ）か 'chord'（コード進行）
 // 新楽器を追加する際はここに1行追加するだけでUIが自動決定される
 export const INST_TYPE = {
     drums:     'rhythm',
+    chord:     'chord',
     piano:     'melody',
     bass:      'melody',
     aco_guitar:'melody',
+};
+
+// コード機能: ルート音とコードタイプ
+export const CHORD_ROOTS = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+
+// コードタイプ: 半音インターバル配列
+export const CHORD_TYPES = {
+    'maj':  [0, 4, 7],
+    'min':  [0, 3, 7],
+    '7':    [0, 4, 7, 10],
+    'maj7': [0, 4, 7, 11],
+    'min7': [0, 3, 7, 10],
+    'sus4': [0, 5, 7],
+    'sus2': [0, 2, 7],
+    'dim':  [0, 3, 6],
+    'aug':  [0, 4, 8],
 };

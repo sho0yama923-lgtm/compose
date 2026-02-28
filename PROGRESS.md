@@ -16,39 +16,52 @@
 ### UI
 - トップバー: メニューボタン・トラック名表示・BPM入力・再生/停止ボタン
 - サイドバー: トラック一覧（黒鍵スタイル）・スライドイン/オーバーレイ・トラック削除
-- 楽器選択モーダル: 下からスライドアップ・4楽器選択（Drums / Piano / Bass / Acoustic Guitar）
+- 楽器選択モーダル: 下からスライドアップ・5種選択（Drums / コード / Piano / Bass / Acoustic Guitar）
 - エンプティステート: トラックなし時のガイド表示
 
 ### トラックエディタ
-- **ドラムエディタ**: Kick / Snare / HiHat の3行 × 16ステップ（メロディと同じレイアウトに統一）
+- **ドラムエディタ**: Kick / Snare / HiHat の3行 × 16ステップ
+- **コードエディタ**: 専用トラック（`INST_TYPE='chord'`）として独立
+  - ルート選択（C〜B）/ タイプ選択（maj / min / 7 / maj7 / min7 / sus4 / sus2 / dim / aug）/ オクターブ選択
+  - ドラムパターン参照（リズムと同期確認）
+  - 16ステップボタン: タップで選択中コードを記録、再タップでクリア
+  - 再生時: `getChordNotes()` で構成音算出 → `instrument: 'piano'` で発音
+  - データモデル: `{ id, instrument:'chord', chordSteps: Array(16), selectedChordRoot, selectedChordType, selectedChordOctave }`
 - **メロディエディタ**: オクターブ アコーディオン形式
-  - 各オクターブが縦に並ぶ折りたたみパネル（タップで開閉、単独で閉じることも可能）
+  - 各オクターブが縦に並ぶ折りたたみパネル（タップで開閉）
   - 高オクターブが上、低オクターブが下の順
   - 展開時: 左列にピアノ鍵盤UI（白鍵/黒鍵）+ 右に12音 × 16ステップグリッド
-  - 折りたたみ時: ヘッダー内に 12音 × 16ステップの細いミニプレビューグリッド（音の有無が一目でわかる）
-  - ステップON時: 黒（白黒デザインに統一）
+  - 折りたたみ時: ヘッダー内に 12音 × 16ステップの細いミニプレビューグリッド
   - オクターブ幅を3オクターブに制限（piano: 3〜5 / bass: 1〜3 / aco_guitar: 2〜4）
+
+### デフォルトトラック
+起動時に drums → chord → piano の3本が自動生成される
 
 ### 再生エンジン
 - 全トラックからスコアを構築し `play()` へ渡す実装
 - `Tone.Sequence` にインデックス配列を渡す（サブ分割バグ回避済み）
-- ドラム・メロディ両対応のスコア構築
-- 和音再生: `player.js` は `notes` 配列に対応済み（UI側は未実装）
+- rhythm / chord / melody すべてのトラック型に対応
 
 ### データモデル
 - Drum: `{ id, instrument, rows: [{ label, note, steps[16] }] }`
+- Chord: `{ id, instrument:'chord', chordSteps[16], selectedChordRoot, selectedChordType, selectedChordOctave }`
 - Melodic: `{ id, instrument, activeOctave, stepsMap: { 'C4': steps[16], ... } }`
-- 複数トラック追加・削除・選択
 
 ### 楽器音源
-- Piano: オクターブ1〜7 クロマチック（ファイル名自動生成）
-- Drums: Kick(C1) / Snare(D1) / HiHat(F#1) — manualマッピング
-- Bass: A#1〜G4 — manualマッピング
-- Acoustic Guitar: A2〜G#4 — manualマッピング
+- Piano: オクターブ1〜7 クロマチック
+- Drums: Kick(C1) / Snare(D1) / HiHat(F#1)
+- Bass: A#1〜G4
+- Acoustic Guitar: A2〜G#4
 
 ---
 
-## 今後のロードマップ（DESIGN.md より）
+## 次にやるべきこと（候補）
+
+- 特になし。ユーザーの指示を待つ。
+
+---
+
+## 今後のロードマップ
 
 ### Phase 1: 演奏体験の向上（優先度: 高）
 
@@ -58,35 +71,18 @@
 - app.js 側でステップボタンの参照をどう渡すか設計が必要
 
 #### 1-B. ドラムパターンの拡充
-- 現状 Kick / Snare / HiHat の3種のみ
-- 追加候補: Open HiHat / Clap / Tom など
 - `constants.js` の `DRUM_ROWS` と `instruments.js` の `drums.mapping` を拡張するだけで対応可能
-
----
 
 ### Phase 2: メロディ作曲の補助（優先度: 中）
 
-#### 2-A. 和音（コード）追加機能（DESIGN.md §2）
-- コード名（例: Cmaj / Am / G7）を選ぶと構成音を自動展開して同ステップに一括セット
-- `player.js` は既に `notes` 配列対応済みなので、**スコア構築側のみ変更で対応可能**
-- UI案: エディタ上部に「コード挿入」ボタン → コード選択ダイアログ → ステップ列をタップで挿入
-
-#### 2-B. スケール選択機能（DESIGN.md §3）
-- スケール（例: Cメジャー / Aマイナー）を選ぶと、スケール外の音をグレーアウト・無効化
-- 音楽理論を知らなくても外れた音を選ばずに済む
+#### 2-A. スケール選択機能
+- スケール外の音をグレーアウト・無効化
 - `constants.js` にスケール定義を追加し、`renderMelodicEditor` でフィルタ処理
-
----
 
 ### Phase 3: 楽曲構成（優先度: 低）
 
 #### 3-A. 複数小節対応
-- 現状は1小節（16ステップ）固定
-- 小節を複数作って並べる「アレンジビュー」的なUI
-
-#### 3-B. データ保存・読み込み
-- localStorage を使ったセッション保存
-- JSON エクスポート/インポート
+#### 3-B. データ保存・読み込み（localStorage / JSON）
 
 ---
 
@@ -97,4 +93,4 @@
 
 ## バグ修正履歴
 
-- `activeTrackId === 0`（drums が最初のトラック）のとき `!activeTrackId` が `true` になり空の状態が表示されるバグを修正 → `activeTrackId === null` に変更（2026-02-28）
+- `activeTrackId === 0` のとき `!activeTrackId` が `true` になる → `=== null` チェックに変更（2026-02-28）
