@@ -32,6 +32,15 @@ const INSTRUMENT_LIST = [
         range: [1, 4]
     },
 
+        },
+    // ■ エレキギター
+
+    {
+        id: "ele_guitar",
+        type: "chromatic",
+        folder: "sounds/ele_guitar/",
+        range: [2, 5]
+    },
     // ■ アコースティックギター (同様に追加可能)
 
     {
@@ -40,6 +49,24 @@ const INSTRUMENT_LIST = [
         folder: "sounds/aco_guitar/",
         range: [2, 4]
     }
+
+        // ■ ヴァイオリン
+
+    {
+        id: "violon",
+        type: "chromatic",
+        folder: "sounds/violin/",
+        range: [3, 6]
+    },
+
+        // ■ トランペット
+
+    {
+        id: "trumpet",
+        type: "chromatic",
+        folder: "sounds/trumpet/",
+        range: [3, 6]
+    },
     
 ];
 
