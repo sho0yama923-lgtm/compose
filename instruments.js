@@ -21,7 +21,7 @@ const INSTRUMENT_LIST = [
             "C1": "kick.mp3",
             "D1": "snare.mp3",
             "F#1": "hihat.mp3",
-            "G": "tom1.mp3"
+            "G1": "tom1.mp3"
         }
     },
     // ■ ベース (フォルダを作ったらここを有効にするだけ！)
@@ -53,7 +53,7 @@ const INSTRUMENT_LIST = [
         // ■ ヴァイオリン
 
     {
-        id: "violon",
+        id: "violin",
         type: "chromatic",
         folder: "sounds/violin/",
         range: [3, 6]
@@ -75,7 +75,7 @@ export const DRUM_MAP = {
     KICK: "C1",
     SNARE: "D1",
     HIHAT: "F#1",
-    TOM: "G"
+    TOM: "G1"
 };
 
 
