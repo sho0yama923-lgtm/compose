@@ -17,6 +17,9 @@ export const OCTAVE_DEFAULT_BASE = {
     piano:      3,   // デフォルト: 3〜5
     bass:       1,   // デフォルト: 1〜3
     aco_guitar: 2,   // デフォルト: 2〜4
+    ele_guitar: 2,
+    violin: 2,
+    trumpet: 2
 };
 
 // オクターブごとの色（低=青系、中=緑、高=黄〜橙）
