@@ -47,17 +47,14 @@
 - Chord: `{ id, instrument:'chord', chordSteps[16], selectedChordRoot, selectedChordType, selectedChordOctave }`
 - Melodic: `{ id, instrument, activeOctave, stepsMap: { 'C4': steps[16], ... } }`
 
-### 楽器音源
-- Piano: オクターブ1〜7 クロマチック
-- Drums: Kick(C1) / Snare(D1) / HiHat(F#1)
-- Bass: A#1〜G4
-- Acoustic Guitar: A2〜G#4
 
----
+## 次にやるべきこと
 
-## 次にやるべきこと（候補）
+### コードエディタUIの作成
+- コードの適応範囲を選択
+- リズム楽器との同期機能. ☑︎kickのような表示を出しどのリズムと同期するか決める
+- 他の楽器と同じく手動でタイミング選択もできる
 
-- 特になし。ユーザーの指示を待つ。
 
 ---
 
