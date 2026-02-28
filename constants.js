@@ -10,11 +10,11 @@ export const DRUM_ROWS = [
 export const CHROMATIC  = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 export const BLACK_KEYS = new Set(['C#','D#','F#','G#','A#']);
 
-// 楽器ごとの使用オクターブ範囲
+// 楽器ごとの使用オクターブ範囲（最大3オクターブ）
 export const OCTAVE_RANGE = {
-    piano:     [2, 3, 4, 5, 6],
-    bass:      [1, 2, 3, 4],
-    aco_guitar:[2, 3, 4, 5],
+    piano:     [3, 4, 5],
+    bass:      [1, 2, 3],
+    aco_guitar:[2, 3, 4],
 };
 
 // オクターブごとの色（低=青系、中=緑、高=黄〜橙）
