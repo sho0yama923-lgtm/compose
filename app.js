@@ -1,6 +1,6 @@
 // app.js — 状態管理・描画・イベント処理
 import { play, stop } from './player.js';
-import { DRUM_ROWS, CHROMATIC, BLACK_KEYS, OCTAVE_DEFAULT_BASE, OCT_COLOR, INST_LABEL, INST_TYPE, CHORD_ROOTS, CHORD_TYPES } from './constants.js';
+import { DRUM_ROWS, CHROMATIC, BLACK_KEYS, OCTAVE_DEFAULT_BASE, OCT_COLOR, INST_LABEL, INST_TYPE, CHORD_ROOTS, CHORD_TYPES, ROOT_COLORS } from './constants.js';
 
 // コードの構成音を返す（例: getChordNotes('C', 'maj', 4) → ['C4','E4','G4']）
 function getChordNotes(root, type, octave) {
@@ -100,10 +100,14 @@ function addTrack(instrument) {
     } else if (INST_TYPE[instrument] === 'chord') {
         track = {
             id, instrument,
-            chordSteps: Array(16).fill(null),
-            selectedChordRoot: 'C',
-            selectedChordType: 'maj',
+            chordMap:        Array(16).fill(null),  // コード範囲: { root, type, octave } or null
+            soundSteps:      Array(16).fill(false), // 発音トリガー: boolean
+            selectedChordRoot:   'C',
+            selectedChordType:   'maj',
             selectedChordOctave: 4,
+            dividers:        [0, 4, 8, 12], // ゾーン開始位置配列（0は常に固定）
+            selectedDivPos:  null,       // 選択中の区切り線位置（null=未選択）
+            selectedDrumRows: new Set(),  // 同期チェック中の row.label
         };
     } else {
         // stepsMap は oct 1〜7 全域を保持（viewBase で表示範囲を選択）
@@ -365,9 +369,57 @@ function renderMelodicEditor(track, editorEl) {
 // -------------------------------------------------------
 // コードエディタ（専用トラックとして表示）
 // -------------------------------------------------------
+
+// hex色をrgba(r,g,b,alpha)に変換するヘルパー
+function hexToRgba(hex, alpha) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// 選択中の区切り線を1ステップ移動するヘルパー
+function moveDivider(track, direction) { // direction: -1 or +1
+    if (track.selectedDivPos === null) return;
+    const idx = track.dividers.indexOf(track.selectedDivPos);
+    if (idx <= 0) return; // pos=0 は固定・移動不可
+    const newPos = track.selectedDivPos + direction;
+    const prevDiv = track.dividers[idx - 1];
+    const nextDiv = track.dividers[idx + 1] ?? 16;
+    if (newPos <= prevDiv || newPos >= nextDiv) return; // 範囲外なら無視
+
+    if (direction === 1) {
+        // 右移動: 旧位置のステップが左ゾーンに取り込まれる
+        track.chordMap[track.selectedDivPos] = track.chordMap[track.selectedDivPos - 1] ?? null;
+    } else {
+        // 左移動: 新位置のステップが右ゾーンに取り込まれる
+        track.chordMap[newPos] = track.chordMap[track.selectedDivPos] ?? null;
+    }
+    track.dividers[idx] = newPos;
+    track.selectedDivPos = newPos;
+    renderEditor();
+}
+
+// ビートヘッダー行を生成するヘルパー
+function buildBeatHeader() {
+    const hdrCells = document.createElement('div');
+    hdrCells.className = 'chord-steps-cells';
+    for (let i = 0; i < 16; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'chord-step-header-cell' + (i % 4 === 0 ? ' beat' : '');
+        cell.textContent = i % 4 === 0 ? String(i / 4 + 1) : '·';
+        hdrCells.appendChild(cell);
+    }
+    return hdrCells;
+}
+
 function renderChordEditor(track, editorEl) {
     const bodyEl = document.createElement('div');
     bodyEl.className = 'chord-panel-body';
+
+    // ===== パレット（ルート / タイプ / オクターブ）=====
+    const paletteEl = document.createElement('div');
+    paletteEl.className = 'chord-palette';
 
     // ルート選択
     const rootRow = document.createElement('div');
@@ -380,16 +432,30 @@ function renderChordEditor(track, editorEl) {
     rootList.className = 'chord-root-list';
     CHORD_ROOTS.forEach(r => {
         const btn = document.createElement('button');
-        btn.className = 'chord-root-btn' + (r === track.selectedChordRoot ? ' selected' : '');
+        const isSelected = r === track.selectedChordRoot;
+        btn.className = 'chord-root-btn' + (isSelected ? ' selected' : '');
         btn.textContent = r;
+        if (isSelected) {
+            const col = ROOT_COLORS[r] ?? '#111';
+            btn.style.background = col;
+            btn.style.borderColor = col;
+            btn.style.color = '#fff';
+        }
         btn.addEventListener('click', () => {
             track.selectedChordRoot = r;
-            rootList.querySelectorAll('.chord-root-btn').forEach(b => b.classList.toggle('selected', b.textContent === r));
+            rootList.querySelectorAll('.chord-root-btn').forEach(b => {
+                const sel = b.textContent === r;
+                b.classList.toggle('selected', sel);
+                const col = ROOT_COLORS[b.textContent] ?? '#111';
+                b.style.background = sel ? col : '';
+                b.style.borderColor = sel ? col : '';
+                b.style.color = sel ? '#fff' : '';
+            });
         });
         rootList.appendChild(btn);
     });
     rootRow.appendChild(rootList);
-    bodyEl.appendChild(rootRow);
+    paletteEl.appendChild(rootRow);
 
     // タイプ選択
     const typeRow = document.createElement('div');
@@ -411,7 +477,7 @@ function renderChordEditor(track, editorEl) {
         typeList.appendChild(btn);
     });
     typeRow.appendChild(typeList);
-    bodyEl.appendChild(typeRow);
+    paletteEl.appendChild(typeRow);
 
     // オクターブ選択
     const octRow = document.createElement('div');
@@ -439,21 +505,204 @@ function renderChordEditor(track, editorEl) {
     octCtrl.appendChild(octVal);
     octCtrl.appendChild(octUp);
     octRow.appendChild(octCtrl);
-    bodyEl.appendChild(octRow);
+    paletteEl.appendChild(octRow);
 
-    // ドラムパターン参照（リズムと同期）
+    bodyEl.appendChild(paletteEl);
+
+    // ===== コード範囲セクション =====
+    const rangeSection = document.createElement('div');
+    rangeSection.className = 'chord-section';
+
+    // セクションヘッダー: [◀][▶] コード範囲 [全クリア]
+    const rangeHeaderEl = document.createElement('div');
+    rangeHeaderEl.className = 'chord-section-header';
+
+    const canMove = track.selectedDivPos !== null && track.dividers.indexOf(track.selectedDivPos) > 0;
+
+    const arrowL = document.createElement('button');
+    arrowL.className = 'chord-div-arrow';
+    arrowL.textContent = '◀';
+    arrowL.disabled = !canMove;
+    arrowL.addEventListener('click', () => moveDivider(track, -1));
+
+    const arrowR = document.createElement('button');
+    arrowR.className = 'chord-div-arrow';
+    arrowR.textContent = '▶';
+    arrowR.disabled = !canMove;
+    arrowR.addEventListener('click', () => moveDivider(track, 1));
+
+    const rangeTitleEl = document.createElement('span');
+    rangeTitleEl.className = 'chord-section-title';
+    rangeTitleEl.style.flex = '1';
+    rangeTitleEl.textContent = 'コード範囲';
+
+    const rangeClearBtn = document.createElement('button');
+    rangeClearBtn.className = 'chord-quick-btn danger';
+    rangeClearBtn.textContent = '全クリア';
+    rangeClearBtn.addEventListener('click', () => {
+        track.chordMap = Array(16).fill(null);
+        track.dividers = [0, 4, 8, 12];
+        track.selectedDivPos = null;
+        renderEditor();
+    });
+
+    // 区切り削除ボタン（選択中の区切り線を削除）
+    const deleteDivBtn = document.createElement('button');
+    deleteDivBtn.className = 'chord-div-arrow chord-div-delete';
+    deleteDivBtn.textContent = '✕';
+    deleteDivBtn.disabled = !canMove;
+    deleteDivBtn.addEventListener('click', () => {
+        const idx = track.dividers.indexOf(track.selectedDivPos);
+        if (idx <= 0) return;
+        track.dividers.splice(idx, 1);
+        track.selectedDivPos = null;
+        renderEditor();
+    });
+
+    rangeHeaderEl.appendChild(arrowL);
+    rangeHeaderEl.appendChild(arrowR);
+    rangeHeaderEl.appendChild(deleteDivBtn);
+    rangeHeaderEl.appendChild(rangeTitleEl);
+    rangeHeaderEl.appendChild(rangeClearBtn);
+    rangeSection.appendChild(rangeHeaderEl);
+
+    // ゾーン取得ヘルパー
+    function getZones(divs) {
+        return divs.map((pos, d) => ({
+            start: pos,
+            end: (divs[d + 1] ?? 16) - 1,
+            divIdx: d,
+        }));
+    }
+
+    // コード範囲行（ラベル行 + ドット行のゾーン列）
+    const rangeRow = document.createElement('div');
+    rangeRow.className = 'chord-range-row';
+
+    const zones = getZones(track.dividers);
+
+    zones.forEach((zone, d) => {
+        // ゾーン間区切り線（最初のゾーンの前は不要）
+        if (d > 0) {
+            const divEl = document.createElement('div');
+            const isSelected = track.selectedDivPos === zone.start;
+            divEl.className = 'chord-zone-div' + (isSelected ? ' selected' : '');
+            divEl.addEventListener('click', () => {
+                track.selectedDivPos = (track.selectedDivPos === zone.start) ? null : zone.start;
+                renderEditor();
+            });
+            rangeRow.appendChild(divEl);
+        }
+
+        // ゾーンコンテナ（ラベル + ドット列）
+        const zoneEl = document.createElement('div');
+        zoneEl.className = 'chord-range-zone';
+
+        const zoneChord = track.chordMap[zone.start];
+        const zoneColor = zoneChord ? (ROOT_COLORS[zoneChord.root] ?? '#1a1a1a') : null;
+
+        // ゾーン背景を帯状に色付け
+        if (zoneColor) {
+            zoneEl.style.background = hexToRgba(zoneColor, 0.13);
+            zoneEl.style.borderRadius = '4px';
+        }
+
+        // 帯全体タップでコード適用（ドットのクリックもバブルアップでここに届く）
+        zoneEl.addEventListener('click', () => {
+            const z = getZones(track.dividers).find(z => zone.start === z.start);
+            if (!z) return;
+            for (let j = z.start; j <= z.end; j++) {
+                track.chordMap[j] = {
+                    root: track.selectedChordRoot,
+                    type: track.selectedChordType,
+                    octave: track.selectedChordOctave,
+                };
+            }
+            renderEditor();
+        });
+
+        // ラベル（コード名）
+        const labelEl = document.createElement('div');
+        labelEl.className = 'chord-zone-label';
+        if (zoneChord) {
+            labelEl.textContent = `${zoneChord.root}${zoneChord.type}`;
+            labelEl.style.color = zoneColor;
+        }
+        zoneEl.appendChild(labelEl);
+
+        // ドット行
+        const dotsEl = document.createElement('div');
+        dotsEl.className = 'chord-zone-dots';
+
+        for (let i = zone.start; i <= zone.end; i++) {
+            // 隙間セパレータ（ダブルクリックで区切り線を追加）
+            if (i > zone.start) {
+                const sep = document.createElement('div');
+                sep.className = 'chord-dot-sep';
+                const sepPos = i;
+                sep.addEventListener('click', (e) => e.stopPropagation());
+                sep.addEventListener('dblclick', (e) => {
+                    e.stopPropagation();
+                    if (!track.dividers.includes(sepPos)) {
+                        track.dividers.push(sepPos);
+                        track.dividers.sort((a, b) => a - b);
+                        renderEditor();
+                    }
+                });
+                dotsEl.appendChild(sep);
+            }
+
+            // ドットボタン（常に●、コード有無で色が変わる）
+            // クリックは zoneEl にバブルアップするため個別ハンドラ不要
+            const btn = document.createElement('button');
+            btn.className = 'chord-dot-btn';
+            btn.textContent = '●';
+            btn.style.color = zoneChord ? '#222' : '#d0d0d0';
+            dotsEl.appendChild(btn);
+        }
+        zoneEl.appendChild(dotsEl);
+        rangeRow.appendChild(zoneEl);
+    });
+
+    rangeSection.appendChild(rangeRow);
+
+    // ガイドテキスト
+    const rangeGuide = document.createElement('div');
+    rangeGuide.className = 'chord-range-guide';
+    rangeGuide.textContent = '帯タップでコード適用 ／ 隙間ダブルタップで分割 ／ 分割線タップ→✕で削除・◀▶で移動';
+    rangeSection.appendChild(rangeGuide);
+
+    bodyEl.appendChild(rangeSection);
+
+    // ===== 発音セクション =====
+    const soundSection = document.createElement('div');
+    soundSection.className = 'chord-section';
+
+    const soundTitleEl = document.createElement('div');
+    soundTitleEl.className = 'chord-section-title';
+    soundTitleEl.textContent = '発音';
+    soundSection.appendChild(soundTitleEl);
+
+    // ドラムパターン参照（チェックボックス + 統一同期ボタン）
     const drumTracks = tracks.filter(t => INST_TYPE[t.instrument] === 'rhythm');
     if (drumTracks.length > 0) {
         const drumRefEl = document.createElement('div');
         drumRefEl.className = 'chord-rhythm-ref';
-        const refLabel = document.createElement('div');
-        refLabel.className = 'chord-rhythm-title';
-        refLabel.textContent = 'リズム参照';
-        drumRefEl.appendChild(refLabel);
         drumTracks.forEach(dt => {
             dt.rows.forEach(row => {
                 const rowEl = document.createElement('div');
                 rowEl.className = 'chord-rhythm-row';
+                // チェックボックス
+                const chk = document.createElement('input');
+                chk.type = 'checkbox';
+                chk.className = 'chord-drum-check';
+                chk.checked = track.selectedDrumRows.has(row.label);
+                chk.addEventListener('change', () => {
+                    if (chk.checked) track.selectedDrumRows.add(row.label);
+                    else track.selectedDrumRows.delete(row.label);
+                    // renderEditor() は不要（チェック状態維持のため）
+                });
+                rowEl.appendChild(chk);
                 const lbl = document.createElement('span');
                 lbl.className = 'chord-rhythm-row-label';
                 lbl.textContent = row.label;
@@ -470,64 +719,65 @@ function renderChordEditor(track, editorEl) {
                 drumRefEl.appendChild(rowEl);
             });
         });
-        bodyEl.appendChild(drumRefEl);
-    }
-
-    // コードステップ行
-    const stepsSection = document.createElement('div');
-    stepsSection.className = 'chord-steps-section';
-
-    // ビートヘッダー
-    const stepsHdr = document.createElement('div');
-    stepsHdr.className = 'chord-steps-header';
-    const hdrSpacer = document.createElement('span');
-    hdrSpacer.className = 'chord-steps-label-spacer';
-    stepsHdr.appendChild(hdrSpacer);
-    const hdrCells = document.createElement('div');
-    hdrCells.className = 'chord-steps-cells';
-    for (let i = 0; i < 16; i++) {
-        const cell = document.createElement('div');
-        cell.className = 'chord-step-header-cell' + (i % 4 === 0 ? ' beat' : '');
-        cell.textContent = i % 4 === 0 ? String(i / 4 + 1) : '·';
-        hdrCells.appendChild(cell);
-    }
-    stepsHdr.appendChild(hdrCells);
-    stepsSection.appendChild(stepsHdr);
-
-    // コードステップボタン行
-    const stepsRow = document.createElement('div');
-    stepsRow.className = 'chord-steps-row';
-    const rowLbl = document.createElement('span');
-    rowLbl.className = 'chord-steps-label';
-    rowLbl.textContent = 'コード';
-    stepsRow.appendChild(rowLbl);
-    const stepCells = document.createElement('div');
-    stepCells.className = 'chord-steps-cells';
-
-    for (let i = 0; i < 16; i++) {
-        const chord = track.chordSteps[i];
-        const btn = document.createElement('button');
-        btn.className = 'chord-step-btn' + (chord ? ' on' : '');
-        btn.textContent = chord ? `${chord.root}${chord.type}` : '';
-        btn.addEventListener('click', () => {
-            if (track.chordSteps[i]) {
-                // クリア
-                track.chordSteps[i] = null;
-            } else {
-                // 現在選択中のコードを適用
-                track.chordSteps[i] = {
-                    root: track.selectedChordRoot,
-                    type: track.selectedChordType,
-                    octave: track.selectedChordOctave,
-                };
-            }
+        // 統一同期ボタン（リズム参照エリアの末尾）
+        const syncAllBtn = document.createElement('button');
+        syncAllBtn.className = 'chord-sync-all-btn';
+        syncAllBtn.textContent = '同期';
+        syncAllBtn.addEventListener('click', () => {
+            drumTracks.forEach(dt => {
+                dt.rows.forEach(row => {
+                    if (!track.selectedDrumRows.has(row.label)) return;
+                    row.steps.forEach((on, i) => { if (on) track.soundSteps[i] = true; });
+                });
+            });
             renderEditor();
         });
-        stepCells.appendChild(btn);
+        drumRefEl.appendChild(syncAllBtn);
+        soundSection.appendChild(drumRefEl);
     }
-    stepsRow.appendChild(stepCells);
-    stepsSection.appendChild(stepsRow);
-    bodyEl.appendChild(stepsSection);
+
+    // 各ステップの継承コードを計算（chordMap左端から引き継ぎ）
+    const inheritedChords = Array(16).fill(null);
+    let inherited = null;
+    for (let i = 0; i < 16; i++) {
+        if (track.chordMap[i]) inherited = track.chordMap[i];
+        inheritedChords[i] = inherited;
+    }
+
+    // 発音ステップ行
+    const soundRow = document.createElement('div');
+    soundRow.className = 'chord-steps-row';
+    const soundRowLbl = document.createElement('span');
+    soundRowLbl.className = 'chord-steps-label';
+    soundRowLbl.textContent = '発音';
+    soundRow.appendChild(soundRowLbl);
+    const soundCells = document.createElement('div');
+    soundCells.className = 'chord-steps-cells';
+    for (let i = 0; i < 16; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'chord-sound-btn' + (track.soundSteps[i] ? ' on' : '');
+        if (track.soundSteps[i] && inheritedChords[i]) {
+            const col = ROOT_COLORS[inheritedChords[i].root] ?? '#111';
+            btn.style.background = col;
+            btn.style.borderColor = col;
+        }
+        btn.addEventListener('click', () => {
+            track.soundSteps[i] = !track.soundSteps[i];
+            btn.classList.toggle('on', track.soundSteps[i]);
+            if (track.soundSteps[i] && inheritedChords[i]) {
+                const col = ROOT_COLORS[inheritedChords[i].root] ?? '#111';
+                btn.style.background = col;
+                btn.style.borderColor = col;
+            } else {
+                btn.style.background = '';
+                btn.style.borderColor = '';
+            }
+        });
+        soundCells.appendChild(btn);
+    }
+    soundRow.appendChild(soundCells);
+    soundSection.appendChild(soundRow);
+    bodyEl.appendChild(soundSection);
 
     editorEl.appendChild(bodyEl);
 }
@@ -577,12 +827,16 @@ document.getElementById('playBtn').addEventListener('click', async () => {
                 });
             });
         } else if (INST_TYPE[track.instrument] === 'chord') {
-            track.chordSteps.forEach((chord, i) => {
-                if (!chord) return;
-                const notes = getChordNotes(chord.root, chord.type, chord.octave);
-                score[i] = score[i] || [];
-                score[i].push({ instrument: 'piano', notes: notes.length === 1 ? notes[0] : notes });
-            });
+            // chordMap の最新エントリを引き継ぎながらスキャン
+            let currentChord = null;
+            for (let i = 0; i < 16; i++) {
+                if (track.chordMap[i]) currentChord = track.chordMap[i];
+                if (track.soundSteps[i] && currentChord) {
+                    const notes = getChordNotes(currentChord.root, currentChord.type, currentChord.octave);
+                    score[i] = score[i] || [];
+                    score[i].push({ instrument: 'piano', notes: notes.length === 1 ? notes[0] : notes });
+                }
+            }
         } else {
             // 同ステップの複数ノートを配列にまとめてコードとして発音
             const stepNotes = Array.from({ length: 16 }, () => []);

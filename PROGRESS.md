@@ -1,6 +1,6 @@
 # PROGRESS.md — 作曲ツール 進捗メモ
 
-最終更新: 2026-02-28
+最終更新: 2026-03-01
 
 ---
 
@@ -20,13 +20,22 @@
 - エンプティステート: トラックなし時のガイド表示
 
 ### トラックエディタ
-- **ドラムエディタ**: 6ステップ
+- **ドラムエディタ**: 6ステップ行 × 16ステップグリッド
 - **コードエディタ**: 専用トラック（`INST_TYPE='chord'`）として独立
-  - ルート選択（C〜B）/ タイプ選択（maj / min / 7 / maj7 / min7 / sus4 / sus2 / dim / aug）/ オクターブ選択
-  - ドラムパターン参照（リズムと同期確認）
-  - 16ステップボタン: タップで選択中コードを記録、再タップでクリア
-  - 再生時: `getChordNotes()` で構成音算出 → `instrument: 'piano'` で発音
-  - データモデル: `{ id, instrument:'chord', chordSteps: Array(16), selectedChordRoot, selectedChordType, selectedChordOctave }`
+  - パレット: ルート選択（C〜B）/ タイプ選択（maj〜aug 9種）/ オクターブ選択
+  - **コード範囲セクション（ゾーンエディタ方式）**:
+    - `dividers: [0]` でゾーンを定義（0は常に固定、複数の区切り線を持てる）
+    - ゾーンをタップ（シングルクリック 250ms debounce） → そのゾーン全体に現在のパレットコードを適用
+    - ステップをダブルクリック → その位置に新しい区切り線を追加
+    - 区切り線をクリック → 選択状態に（`selectedDivPos`）
+    - セクション左端の [◀][▶] → 選択中の区切り線を1ステップ移動（chordMap も連動更新）
+    - [全クリア]: chordMap / dividers / selectedDivPos をリセット
+    - 隣接ゾーンの色分け: コードが変わるたびに黒(#1a1a1a) / グレー(#666) を交互切り替え
+  - **発音セクション**: どのステップで実際に音を出すか（コード範囲と独立）
+    - ドラムパターン参照 + 各行にチェックボックス + [同期] ボタン1つ（チェック行を一括同期）
+    - 16ステップ（シンプルON/OFF）
+  - 再生時: `soundSteps[i]=true` かつ `chordMap` の最新コードで発音（継承方式）
+  - データモデル: `{ id, instrument:'chord', chordMap[16], soundSteps[16], selectedChordRoot, selectedChordType, selectedChordOctave, dividers: [0], selectedDivPos: null, selectedDrumRows(Set) }`
 - **メロディエディタ**: オクターブ アコーディオン形式
   - 各オクターブが縦に並ぶ折りたたみパネル（タップで開閉）
   - 高オクターブが上、低オクターブが下の順
@@ -44,16 +53,16 @@
 
 ### データモデル
 - Drum: `{ id, instrument, rows: [{ label, note, steps[16] }] }`
-- Chord: `{ id, instrument:'chord', chordSteps[16], selectedChordRoot, selectedChordType, selectedChordOctave }`
-- Melodic: `{ id, instrument, activeOctave, stepsMap: { 'C4': steps[16], ... } }`
+- Chord: `{ id, instrument:'chord', chordMap[16], soundSteps[16], dividers:[0], selectedDivPos:null, selectedChordRoot, selectedChordType, selectedChordOctave, selectedDrumRows(Set) }`
+- Melodic: `{ id, instrument, viewBase, activeOctave, stepsMap: { 'C4': steps[16], ... } }`
 
 
 ## 次にやるべきこと
 
-### コードエディタUIの作成
-- コードの適応範囲を選択
-- リズム楽器との同期機能. ☑︎kickのような表示を出しどのリズムと同期するか決める
-- 他の楽器と同じく手動でタイミング選択もできる
+### 再生中ステップハイライト（優先度: 高）
+- CSSに `.step.playing { background: #f5c518; }` は定義済み
+- `player.js` の Tone.Sequence コールバックで現在ステップに `.playing` クラスを付与/除去する実装が未完
+- app.js 側でステップボタンの参照を渡す設計が必要
 
 
 ---
