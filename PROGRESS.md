@@ -9,42 +9,42 @@
 ### コアアーキテクチャ
 - `index.html`: 全UI（トップバー / サイドバー / メインエリア / 楽器モーダル）
 - `app.js`: 状態管理・DOM描画・イベント処理
-- `constants.js`: 全定数（DRUM_ROWS / CHROMATIC / BLACK_KEYS / OCTAVE_RANGE / OCT_COLOR / INST_LABEL / ROOT_COLORS）
+- `constants.js`: 定数（DRUM_ROWS / CHROMATIC / BLACK_KEYS / OCT_COLOR / ROOT_COLORS / CHORD_ROOTS / CHORD_TYPES）
 - `player.js`: Tone.js 再生エンジン（スコアベース・BPM・ループ対応）
-- `instruments.js`: Tone.Sampler 定義（piano / drums / bass / aco_guitar）
+- `instruments.js`: 楽器設定の一元管理 + Tone.Sampler 自動生成
+  - `INSTRUMENT_LIST`: 全楽器のメタデータ（id / label / instType / octaveBase / sampleType）
+  - `sampleType: "auto"`: フォルダ内の .mp3 を自動検出（top-level await + fetch）
+  - `sampleType: "chromatic"`: 全クロマチック音源（piano のみ）
+  - `sampleType: "manual"`: ドラム用の手動マッピング
+  - computed export: `INST_LABEL` / `INST_TYPE` / `OCTAVE_DEFAULT_BASE`
+  - **新楽器追加 = `sounds/xxx/` にファイルを置き INSTRUMENT_LIST に1行追加するだけ**
+
+### 対応楽器（8種）
+- Drums / コード / Piano / Bass / Acoustic Guitar / Electric Guitar / Violin / Trumpet
 
 ### UI
 - トップバー: メニューボタン・トラック名表示・BPM入力・再生/停止ボタン
 - サイドバー: トラック一覧（黒鍵スタイル）・スライドイン/オーバーレイ・トラック削除
-- 楽器選択モーダル: 下からスライドアップ・5種選択（Drums / コード / Piano / Bass / Acoustic Guitar）
+- 楽器選択モーダル: 下からスライドアップ・8種選択
 - エンプティステート: トラックなし時のガイド表示
 
 ### トラックエディタ
-- **ドラムエディタ**: 6ステップ行 × 16ステップグリッド
+- **ドラムエディタ**: 4ステップ行 × 16ステップグリッド
 - **コードエディタ**: 専用トラック（`INST_TYPE='chord'`）として独立
   - パレット: ルート選択（C〜B、ROOT_COLORS で色付き）/ タイプ選択（maj〜aug 9種）/ オクターブ選択
   - **コード範囲セクション（ゾーンエディタ方式）**:
     - `dividers: [0, 8]` でデフォルト2分割。0は常に固定。
-    - ゾーン帯（`.chord-range-zone`）が flex で比例幅になり、16ドットが常に1画面に収まる
-    - **シングルタップ**（帯全体、250ms debounce）→ そのゾーン全体にパレットコードを適用
-    - **ダブルタップ**（帯全体）→ タップX座標から最近傍ステップ境界に分割線を追加
-    - 区切り線をタップ → 選択状態に（`selectedDivPos`）
-    - セクション左端の [◀][▶] → 選択中の区切り線を1ステップ移動（chordMap も連動更新）
-    - [✕] → 選択中の区切り線を削除
-    - [全クリア] → chordMap / dividers（`[0]` にリセット）/ selectedDivPos をリセット
-    - ゾーン帯: ROOT_COLORS で薄く色付け（`hexToRgba(color, 0.13)`）
-    - ドット: 常に `●` 表示。コード適用時は濃色、未適用時は薄色
-    - ゾーンラベル: ゾーン上部にコード名を ROOT_COLORS で表示
-  - **発音セクション**: どのステップで実際に音を出すか（コード範囲と独立）
-    - 16ステップ ON/OFF。ON ボタンに継承コードの ROOT_COLORS を適用
+    - ゾーン帯が flex で比例幅になり、16ドットが常に1画面に収まる
+    - シングルタップ（250ms debounce）→ ゾーン全体にコード適用
+    - ダブルタップ → タップ座標から最近傍ステップ境界に分割線追加
+    - 区切り線タップ → 選択状態、◀▶で移動、✕で削除
+    - 全クリア → dividers を `[0]` にリセット
+  - **発音セクション**: 16ステップ ON/OFF（コード範囲と独立）
   - 再生時: `soundSteps[i]=true` かつ `chordMap` の最新コード（継承方式）で発音
-  - データモデル: `{ id, instrument:'chord', chordMap[16], soundSteps[16], selectedChordRoot, selectedChordType, selectedChordOctave, dividers:[0,8], selectedDivPos:null, selectedDrumRows(Set) }`
 - **メロディエディタ**: オクターブ アコーディオン形式
   - 各オクターブが縦に並ぶ折りたたみパネル（タップで開閉）
-  - 高オクターブが上、低オクターブが下の順
-  - 展開時: 左列にピアノ鍵盤UI（白鍵/黒鍵）+ 右に12音 × 16ステップグリッド
-  - 折りたたみ時: ヘッダー内に 12音 × 16ステップの細いミニプレビューグリッド
-  - オクターブ幅を3オクターブに制限（piano: 3〜5 / bass: 1〜3 / aco_guitar: 2〜4）
+  - 展開時: ピアノ鍵盤UI + 12音 × 16ステップグリッド
+  - 折りたたみ時: 12音 × 16ステップのミニプレビュー
 
 ### デフォルトトラック
 起動時に drums → chord → piano の3本が自動生成される
@@ -56,7 +56,7 @@
 
 ### データモデル
 - Drum: `{ id, instrument, rows: [{ label, note, steps[16] }] }`
-- Chord: `{ id, instrument:'chord', chordMap[16], soundSteps[16], dividers:[0,8], selectedDivPos:null, selectedChordRoot, selectedChordType, selectedChordOctave, selectedDrumRows(Set) }`
+- Chord: `{ id, instrument:'chord', chordMap[16], soundSteps[16], dividers:[0,8], selectedDivPos:null, ... }`
 - Melodic: `{ id, instrument, viewBase, activeOctave, stepsMap: { 'C4': steps[16], ... } }`
 
 
@@ -98,8 +98,10 @@
 ## 直面している課題・メモ
 
 - 再生中ハイライトを実現するには、ステップボタンの DOM 参照をどこで管理するかの設計が必要
-- 音源ファイル（`sounds/`）はすでに用意済みの前提でコードが組まれている（未確認）
+- `sampleType: "auto"` は Python `http.server` のディレクトリ一覧に依存（開発専用）
 
 ## バグ修正履歴
 
 - `activeTrackId === 0` のとき `!activeTrackId` が `true` になる → `=== null` チェックに変更（2026-02-28）
+- trumpet/violin/ele_guitar の音が出ない → `generateChromaticFiles` の 404 が原因で `Sampler.loaded=false`。`sampleType:"auto"` で実在ファイルのみ検出する方式に修正（2026-03-01）
+- aco_guitar の `loaded=false` → 同上の修正を適用（2026-03-01）
