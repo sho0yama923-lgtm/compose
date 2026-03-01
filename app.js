@@ -1,6 +1,7 @@
 // app.js — 状態管理・描画・イベント処理
 import { play, stop } from './player.js';
-import { DRUM_ROWS, CHROMATIC, BLACK_KEYS, OCTAVE_DEFAULT_BASE, OCT_COLOR, INST_LABEL, INST_TYPE, CHORD_ROOTS, CHORD_TYPES, ROOT_COLORS } from './constants.js';
+import { DRUM_ROWS, CHROMATIC, BLACK_KEYS, OCT_COLOR, CHORD_ROOTS, CHORD_TYPES, ROOT_COLORS } from './constants.js';
+import instruments, { INST_LABEL, INST_TYPE, OCTAVE_DEFAULT_BASE } from './instruments.js';
 
 // コードの構成音を返す（例: getChordNotes('C', 'maj', 4) → ['C4','E4','G4']）
 function getChordNotes(root, type, octave) {

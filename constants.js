@@ -11,17 +11,6 @@ export const DRUM_ROWS = [
 export const CHROMATIC  = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 export const BLACK_KEYS = new Set(['C#','D#','F#','G#','A#']);
 
-// 楽器ごとのデフォルト表示オクターブ開始値（3オクターブ分を表示: base, base+1, base+2）
-// ユーザーが◀▶で変更可能。全音符は oct 1〜7 で保存される
-export const OCTAVE_DEFAULT_BASE = {
-    piano:      3,   // デフォルト: 3〜5
-    bass:       1,   // デフォルト: 1〜3
-    aco_guitar: 2,   // デフォルト: 2〜4
-    ele_guitar: 2,
-    violin: 3,
-    trumpet: 3
-};
-
 // オクターブごとの色（低=青系、中=緑、高=黄〜橙）
 export const OCT_COLOR = {
     1: { on: '#5c6bc0', border: '#9fa8da', label: 'Oct 1' },
@@ -31,30 +20,6 @@ export const OCT_COLOR = {
     5: { on: '#c8a600', border: '#ffe082', label: 'Oct 5' },
     6: { on: '#ef6c00', border: '#ffb74d', label: 'Oct 6' },
     7: { on: '#c62828', border: '#ef9a9a', label: 'Oct 7' },
-};
-
-export const INST_LABEL = {
-    drums:     '🥁 Drums',
-    chord:     '🎼 コード',
-    piano:     '🎹 Piano',
-    bass:      '🎸 Bass',
-    aco_guitar:'🎵 Acoustic Guitar',
-    ele_guitar:'⚡️ Electric Guitar',
-    violin:'🎻 Violin',
-    trumpet:'🎺 Trumpet' 
-};
-
-// 楽器の型: 'rhythm'（行×ステップ）か 'melody'（クロマチック×オクターブ）か 'chord'（コード進行）
-// 新楽器を追加する際はここに1行追加するだけでUIが自動決定される
-export const INST_TYPE = {
-    drums:     'rhythm',
-    chord:     'chord',
-    piano:     'melody',
-    bass:      'melody',
-    aco_guitar:'melody',
-    ele_guitar:'melody',
-    violin:'melody',
-    trumpet:'melody'
 };
 
 // コード機能: ルート音とコードタイプ
