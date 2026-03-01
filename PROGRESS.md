@@ -9,7 +9,7 @@
 ### コアアーキテクチャ
 - `index.html`: 全UI（トップバー / サイドバー / メインエリア / 楽器モーダル）
 - `app.js`: 状態管理・DOM描画・イベント処理
-- `constants.js`: 全定数（DRUM_ROWS / CHROMATIC / BLACK_KEYS / OCTAVE_RANGE / OCT_COLOR / INST_LABEL）
+- `constants.js`: 全定数（DRUM_ROWS / CHROMATIC / BLACK_KEYS / OCTAVE_RANGE / OCT_COLOR / INST_LABEL / ROOT_COLORS）
 - `player.js`: Tone.js 再生エンジン（スコアベース・BPM・ループ対応）
 - `instruments.js`: Tone.Sampler 定義（piano / drums / bass / aco_guitar）
 
@@ -22,20 +22,23 @@
 ### トラックエディタ
 - **ドラムエディタ**: 6ステップ行 × 16ステップグリッド
 - **コードエディタ**: 専用トラック（`INST_TYPE='chord'`）として独立
-  - パレット: ルート選択（C〜B）/ タイプ選択（maj〜aug 9種）/ オクターブ選択
+  - パレット: ルート選択（C〜B、ROOT_COLORS で色付き）/ タイプ選択（maj〜aug 9種）/ オクターブ選択
   - **コード範囲セクション（ゾーンエディタ方式）**:
-    - `dividers: [0]` でゾーンを定義（0は常に固定、複数の区切り線を持てる）
-    - ゾーンをタップ（シングルクリック 250ms debounce） → そのゾーン全体に現在のパレットコードを適用
-    - ステップをダブルクリック → その位置に新しい区切り線を追加
-    - 区切り線をクリック → 選択状態に（`selectedDivPos`）
+    - `dividers: [0, 8]` でデフォルト2分割。0は常に固定。
+    - ゾーン帯（`.chord-range-zone`）が flex で比例幅になり、16ドットが常に1画面に収まる
+    - **シングルタップ**（帯全体、250ms debounce）→ そのゾーン全体にパレットコードを適用
+    - **ダブルタップ**（帯全体）→ タップX座標から最近傍ステップ境界に分割線を追加
+    - 区切り線をタップ → 選択状態に（`selectedDivPos`）
     - セクション左端の [◀][▶] → 選択中の区切り線を1ステップ移動（chordMap も連動更新）
-    - [全クリア]: chordMap / dividers / selectedDivPos をリセット
-    - 隣接ゾーンの色分け: コードが変わるたびに黒(#1a1a1a) / グレー(#666) を交互切り替え
+    - [✕] → 選択中の区切り線を削除
+    - [全クリア] → chordMap / dividers（`[0]` にリセット）/ selectedDivPos をリセット
+    - ゾーン帯: ROOT_COLORS で薄く色付け（`hexToRgba(color, 0.13)`）
+    - ドット: 常に `●` 表示。コード適用時は濃色、未適用時は薄色
+    - ゾーンラベル: ゾーン上部にコード名を ROOT_COLORS で表示
   - **発音セクション**: どのステップで実際に音を出すか（コード範囲と独立）
-    - ドラムパターン参照 + 各行にチェックボックス + [同期] ボタン1つ（チェック行を一括同期）
-    - 16ステップ（シンプルON/OFF）
-  - 再生時: `soundSteps[i]=true` かつ `chordMap` の最新コードで発音（継承方式）
-  - データモデル: `{ id, instrument:'chord', chordMap[16], soundSteps[16], selectedChordRoot, selectedChordType, selectedChordOctave, dividers: [0], selectedDivPos: null, selectedDrumRows(Set) }`
+    - 16ステップ ON/OFF。ON ボタンに継承コードの ROOT_COLORS を適用
+  - 再生時: `soundSteps[i]=true` かつ `chordMap` の最新コード（継承方式）で発音
+  - データモデル: `{ id, instrument:'chord', chordMap[16], soundSteps[16], selectedChordRoot, selectedChordType, selectedChordOctave, dividers:[0,8], selectedDivPos:null, selectedDrumRows(Set) }`
 - **メロディエディタ**: オクターブ アコーディオン形式
   - 各オクターブが縦に並ぶ折りたたみパネル（タップで開閉）
   - 高オクターブが上、低オクターブが下の順
@@ -53,7 +56,7 @@
 
 ### データモデル
 - Drum: `{ id, instrument, rows: [{ label, note, steps[16] }] }`
-- Chord: `{ id, instrument:'chord', chordMap[16], soundSteps[16], dividers:[0], selectedDivPos:null, selectedChordRoot, selectedChordType, selectedChordOctave, selectedDrumRows(Set) }`
+- Chord: `{ id, instrument:'chord', chordMap[16], soundSteps[16], dividers:[0,8], selectedDivPos:null, selectedChordRoot, selectedChordType, selectedChordOctave, selectedDrumRows(Set) }`
 - Melodic: `{ id, instrument, viewBase, activeOctave, stepsMap: { 'C4': steps[16], ... } }`
 
 

@@ -105,7 +105,7 @@ function addTrack(instrument) {
             selectedChordRoot:   'C',
             selectedChordType:   'maj',
             selectedChordOctave: 4,
-            dividers:        [0, 4, 8, 12], // ゾーン開始位置配列（0は常に固定）
+            dividers:        [0, 8],         // ゾーン開始位置配列（0は常に固定）
             selectedDivPos:  null,       // 選択中の区切り線位置（null=未選択）
             selectedDrumRows: new Set(),  // 同期チェック中の row.label
         };
@@ -541,7 +541,7 @@ function renderChordEditor(track, editorEl) {
     rangeClearBtn.textContent = '全クリア';
     rangeClearBtn.addEventListener('click', () => {
         track.chordMap = Array(16).fill(null);
-        track.dividers = [0, 4, 8, 12];
+        track.dividers = [0];
         track.selectedDivPos = null;
         renderEditor();
     });
@@ -597,6 +597,9 @@ function renderChordEditor(track, editorEl) {
         // ゾーンコンテナ（ラベル + ドット列）
         const zoneEl = document.createElement('div');
         zoneEl.className = 'chord-range-zone';
+        // step 数に比例した幅になるよう flex 値をインラインで設定
+        zoneEl.style.flex = String(zone.end - zone.start + 1);
+        zoneEl.style.minWidth = '0';
 
         const zoneChord = track.chordMap[zone.start];
         const zoneColor = zoneChord ? (ROOT_COLORS[zoneChord.root] ?? '#1a1a1a') : null;
@@ -607,18 +610,43 @@ function renderChordEditor(track, editorEl) {
             zoneEl.style.borderRadius = '4px';
         }
 
-        // 帯全体タップでコード適用（ドットのクリックもバブルアップでここに届く）
-        zoneEl.addEventListener('click', () => {
-            const z = getZones(track.dividers).find(z => zone.start === z.start);
-            if (!z) return;
-            for (let j = z.start; j <= z.end; j++) {
-                track.chordMap[j] = {
-                    root: track.selectedChordRoot,
-                    type: track.selectedChordType,
-                    octave: track.selectedChordOctave,
-                };
+        // シングルタップ→コード適用 / ダブルタップ→近傍ギャップに分割線追加
+        const canSplit = (zone.end - zone.start) >= 1;
+        let zoneClickTimer = null;
+        zoneEl.addEventListener('click', (e) => {
+            if (zoneClickTimer) {
+                // ── ダブルタップ ──
+                clearTimeout(zoneClickTimer);
+                zoneClickTimer = null;
+                if (!canSplit) return;
+                const rect = zoneEl.getBoundingClientRect();
+                const relX = e.clientX - rect.left;
+                const zoneSteps = zone.end - zone.start + 1;
+                const stepWidth = rect.width / zoneSteps;
+                let nearestGap = Math.round(relX / stepWidth);
+                nearestGap = Math.max(1, Math.min(zoneSteps - 1, nearestGap));
+                const newDivPos = zone.start + nearestGap;
+                if (!track.dividers.includes(newDivPos)) {
+                    track.dividers.push(newDivPos);
+                    track.dividers.sort((a, b) => a - b);
+                    renderEditor();
+                }
+            } else {
+                // ── シングルタップ（250ms 後にコード適用） ──
+                zoneClickTimer = setTimeout(() => {
+                    zoneClickTimer = null;
+                    const z = getZones(track.dividers).find(z => zone.start === z.start);
+                    if (!z) return;
+                    for (let j = z.start; j <= z.end; j++) {
+                        track.chordMap[j] = {
+                            root: track.selectedChordRoot,
+                            type: track.selectedChordType,
+                            octave: track.selectedChordOctave,
+                        };
+                    }
+                    renderEditor();
+                }, 250);
             }
-            renderEditor();
         });
 
         // ラベル（コード名）
@@ -635,20 +663,10 @@ function renderChordEditor(track, editorEl) {
         dotsEl.className = 'chord-zone-dots';
 
         for (let i = zone.start; i <= zone.end; i++) {
-            // 隙間セパレータ（ダブルクリックで区切り線を追加）
+            // 隙間セパレータ（視覚ガイドのみ、操作はゾーン帯のダブルタップで処理）
             if (i > zone.start) {
                 const sep = document.createElement('div');
                 sep.className = 'chord-dot-sep';
-                const sepPos = i;
-                sep.addEventListener('click', (e) => e.stopPropagation());
-                sep.addEventListener('dblclick', (e) => {
-                    e.stopPropagation();
-                    if (!track.dividers.includes(sepPos)) {
-                        track.dividers.push(sepPos);
-                        track.dividers.sort((a, b) => a - b);
-                        renderEditor();
-                    }
-                });
                 dotsEl.appendChild(sep);
             }
 

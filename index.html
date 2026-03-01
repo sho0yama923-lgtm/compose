@@ -831,17 +831,13 @@
         .chord-range-row {
             display: flex;
             align-items: stretch;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: none;
             padding: 2px 0;
         }
-        .chord-range-row::-webkit-scrollbar { display: none; }
         /* ゾーンコンテナ（ラベル + ドット列） */
         .chord-range-zone {
             display: flex;
             flex-direction: column;
-            flex-shrink: 0;
+            min-width: 0;
         }
         /* ゾーンのコード名ラベル */
         .chord-zone-label {
@@ -857,11 +853,12 @@
             color: #ccc;
         }
         /* ドット行 */
-        .chord-zone-dots { display: flex; }
+        .chord-zone-dots { display: flex; flex: 1; min-width: 0; }
         /* ドットボタン */
         .chord-dot-btn {
-            min-width: calc((100vw - 110px) / 16);
-            max-width: 44px;
+            flex: 1;
+            min-width: 0;
+            max-width: none;
             height: 36px;
             font-size: 20px;
             line-height: 1;
@@ -873,13 +870,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            flex-shrink: 0;
             padding: 0;
         }
         .chord-dot-btn:active { opacity: 0.6; }
-        /* ドット間の隙間（ダブルクリックで区切り線追加） */
+        /* ドット間の隙間（視覚ガイド） */
         .chord-dot-sep {
-            width: 10px;
+            width: 2px;
             height: 36px;
             flex-shrink: 0;
             cursor: col-resize;
