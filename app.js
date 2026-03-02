@@ -192,10 +192,29 @@ function renderEditor() {
     const emptyState = document.getElementById('emptyState');
     const editorEl   = document.getElementById('trackEditor');
 
+    // ▼▼▼【ここから追加】下部バーの要素を取得し、色を塗る関数を用意する ▼▼▼
+    const bottomBar = document.getElementById('bottomMeasureBar');
+    const bLabel    = document.getElementById('bottomMeasureLabel');
+    const bRemove   = document.getElementById('btnMeasureRemove');
+    const bPrev     = document.getElementById('btnMeasurePrev');
+    const bNext     = document.getElementById('btnMeasureNext');
+    const bSlider   = document.getElementById('measureSliderBottom');
+
+    const updateBottomSliderBg = () => {
+        if (!bSlider) return;
+        const min = parseInt(bSlider.min, 10) || 0;
+        const max = parseInt(bSlider.max, 10) || 1;
+        const val = parseInt(bSlider.value, 10) || 0;
+        const percentage = (max === min) ? 0 : ((val - min) / (max - min)) * 100;
+        bSlider.style.backgroundSize = `${percentage}% 100%`;
+    };
+    // ▲▲▲【追加ここまで】▲▲▲
+
     if (activeTrackId === null || tracks.length === 0) {
         emptyState.style.display = '';
         editorEl.style.display   = 'none';
         editorEl.innerHTML       = '';
+        if (bottomBar) bottomBar.style.display = 'none';
         return;
     }
 
@@ -206,9 +225,27 @@ function renderEditor() {
     editorEl.style.display   = '';
     editorEl.innerHTML       = '';
 
+    // ▼▼▼【ここから追加】下部バーの裏にエディタが隠れないように余白を作る ▼▼▼
+    editorEl.style.paddingBottom = '90px'; 
+
+    // 現在の小節数などのデータを下部バーに反映させる
+    if (bottomBar) {
+        bottomBar.style.display = 'flex';
+        bLabel.textContent = `${currentMeasure + 1} / ${numMeasures}`;
+        bRemove.disabled = numMeasures <= 1;
+        bPrev.disabled = currentMeasure <= 0;
+        bNext.disabled = currentMeasure >= numMeasures - 1;
+        bSlider.max = Math.max(1, numMeasures - 1);
+        bSlider.value = currentMeasure;
+        updateBottomSliderBg();
+    }
+    // ▲▲▲【追加ここまで】▲▲▲
+
     const header = document.createElement('div');
     header.className = 'editor-header';
+    header.style.justifyContent = 'flex-end';
 
+    /*
     // 小節コントロール
     const measureCtrl = document.createElement('div');
     measureCtrl.className = 'measure-ctrl';
@@ -251,6 +288,7 @@ function renderEditor() {
     measureCtrl.appendChild(mNext);
     measureCtrl.appendChild(mAdd);
     header.appendChild(measureCtrl);
+    */
 
     editorEl.appendChild(header);
 
@@ -1042,6 +1080,42 @@ mainEl.addEventListener('touchend', e => {
         else if (dx > 0 && currentMeasure > 0) { currentMeasure--; renderEditor(); }
     }
 });
+
+// ▼▼▼【ここから追加】下部バーのボタンを押した時の処理を登録する ▼▼▼
+const bRemoveBtn = document.getElementById('btnMeasureRemove');
+const bPrevBtn   = document.getElementById('btnMeasurePrev');
+const bNextBtn   = document.getElementById('btnMeasureNext');
+const bAddBtn    = document.getElementById('btnMeasureAdd');
+const bSliderInp = document.getElementById('measureSliderBottom');
+
+if (bRemoveBtn) bRemoveBtn.addEventListener('click', removeMeasure);
+if (bAddBtn)    bAddBtn.addEventListener('click', addMeasure);
+
+if (bPrevBtn) bPrevBtn.addEventListener('click', () => {
+    if (currentMeasure > 0) { 
+        currentMeasure--; 
+        renderEditor(); 
+    }
+});
+
+if (bNextBtn) bNextBtn.addEventListener('click', () => {
+    if (currentMeasure < numMeasures - 1) { 
+        currentMeasure++; 
+        renderEditor(); 
+    }
+});
+
+// スライダーを操作した時に小節を切り替える
+if (bSliderInp) {
+    bSliderInp.addEventListener('input', (e) => {
+        const targetMeasure = parseInt(e.target.value, 10);
+        if (currentMeasure !== targetMeasure) {
+            currentMeasure = targetMeasure;
+            renderEditor(); // これを呼ぶだけでスライダーの色もグリッドも更新されます
+        }
+    });
+}
+// ▲▲▲【追加ここまで】▲▲▲
 
 // -------------------------------------------------------
 // 初期トラック

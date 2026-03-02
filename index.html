@@ -1012,6 +1012,107 @@
             min-width: 32px;
             text-align: center;
         }
+
+        /* ======= 下部固定：小節シークバー ======= */
+        .bottom-measure-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(250, 250, 250, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-top: 1px solid #ddd;
+            /* iPhoneのホームバー(下部の線)に被らないように余白を自動計算 */
+            padding: 8px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        }
+
+        .bottom-measure-label {
+            font-size: 11px;
+            color: #555;
+            font-weight: 700;
+            margin-bottom: 6px;
+            letter-spacing: 0.1em;
+        }
+
+        .bottom-measure-row {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            max-width: 600px;
+            gap: 8px;
+        }
+
+        .mb-btn {
+            width: 36px;
+            height: 36px;
+            border: 1px solid #ccc;
+            background: #fff;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            touch-action: manipulation;
+        }
+        .mb-btn:disabled { opacity: 0.25; cursor: default; }
+        .mb-btn:not(:disabled):active { background: #e0e0e0; }
+        .mb-remove { color: #c00; font-size: 16px; }
+        .mb-add { color: #2e7d32; font-size: 16px; }
+
+        .mb-slider-wrap {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            padding: 0 4px;
+        }
+
+        .measure-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            background-color: #e0e0e0;
+            background-image: linear-gradient(#111, #111);
+            background-size: 0% 100%;
+            background-repeat: no-repeat;
+            border-radius: 3px;
+            outline: none;
+            margin: 0;
+            display: block;
+        }
+
+        .measure-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #111;
+            cursor: pointer;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+            margin-top: -8px; /* 中央揃え */
+        }
+        .measure-slider::-moz-range-thumb {
+            width: 22px;
+            height: 22px;
+            border: none;
+            border-radius: 50%;
+            background: #111;
+            cursor: pointer;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+
+
     </style>
 </head>
 <body>
@@ -1051,6 +1152,20 @@
     </div>
     <div id="trackEditor" style="display:none;"></div>
 </main>
+
+<!-- ====== 小節シークバー ====== -->
+<div id="bottomMeasureBar" class="bottom-measure-bar" style="display: none;">
+    <div class="bottom-measure-label" id="bottomMeasureLabel">1 / 4</div>
+    <div class="bottom-measure-row">
+        <button class="mb-btn mb-remove" id="btnMeasureRemove">－</button>
+        <button class="mb-btn mb-prev" id="btnMeasurePrev">◀</button>
+        <div class="mb-slider-wrap">
+            <input type="range" class="measure-slider" id="measureSliderBottom" min="0" max="3" value="0">
+        </div>
+        <button class="mb-btn mb-next" id="btnMeasureNext">▶</button>
+        <button class="mb-btn mb-add" id="btnMeasureAdd">＋</button>
+    </div>
+</div>
 
 <!-- ======= 楽器選択モーダル ======= -->
 <div class="modal-overlay" id="modal">
