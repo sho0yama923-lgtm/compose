@@ -231,13 +231,6 @@
             margin-bottom: 8px;
             flex-wrap: wrap;
         }
-        .editor-title {
-            font-size: 16px;
-            font-weight: 700;
-            color: #111;
-            flex: 1;
-            letter-spacing: 0.03em;
-        }
 
         /* ======= ドラム行 ======= */
         .row {
@@ -357,6 +350,9 @@
         .oct-section-arrow { font-size: 10px; opacity: 0.5; flex-shrink: 0; }
         .oct-section-body { display: none; }
         .oct-section.open .oct-section-body { display: block; }
+        /* 展開中: ミニプレビュー非表示 & ヘッダー細く */
+        .oct-section.open .oct-section-mini { display: none; }
+        .oct-section.open .oct-section-header { padding: 4px 10px; }
 
         /* ミニプレビュー: 12音×16ステップ グリッド */
         .oct-section-mini {
@@ -962,6 +958,12 @@
             align-items: center;
             gap: 3px;
             flex-shrink: 0;
+        }
+        .measure-title {
+            font-size: 10px;
+            color: #999;
+            font-weight: 700;
+            margin-right: 2px;
         }
         .measure-btn {
             width: 28px;

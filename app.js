@@ -208,11 +208,20 @@ function renderEditor() {
 
     const header = document.createElement('div');
     header.className = 'editor-header';
-    header.innerHTML = `<span class="editor-title">${INST_LABEL[track.instrument]}</span>`;
 
     // 小節コントロール
     const measureCtrl = document.createElement('div');
     measureCtrl.className = 'measure-ctrl';
+
+    const mTitle = document.createElement('span');
+    mTitle.className = 'measure-title';
+    mTitle.textContent = '小節';
+
+    const mRemove = document.createElement('button');
+    mRemove.className = 'measure-btn measure-remove';
+    mRemove.innerHTML = '－<span class="btn-guide">削除</span>';
+    mRemove.disabled = numMeasures <= 1;
+    mRemove.addEventListener('click', removeMeasure);
 
     const mPrev = document.createElement('button');
     mPrev.className = 'measure-btn';
@@ -235,17 +244,12 @@ function renderEditor() {
     mAdd.innerHTML = '＋<span class="btn-guide">追加</span>';
     mAdd.addEventListener('click', addMeasure);
 
-    const mRemove = document.createElement('button');
-    mRemove.className = 'measure-btn measure-remove';
-    mRemove.innerHTML = '－<span class="btn-guide">削除</span>';
-    mRemove.disabled = numMeasures <= 1;
-    mRemove.addEventListener('click', removeMeasure);
-
+    measureCtrl.appendChild(mTitle);
+    measureCtrl.appendChild(mRemove);
     measureCtrl.appendChild(mPrev);
     measureCtrl.appendChild(mLabel);
     measureCtrl.appendChild(mNext);
     measureCtrl.appendChild(mAdd);
-    measureCtrl.appendChild(mRemove);
     header.appendChild(measureCtrl);
 
     editorEl.appendChild(header);
