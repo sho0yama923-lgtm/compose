@@ -214,7 +214,7 @@ function renderEditor() {
     measureCtrl.className = 'measure-ctrl';
 
     const mTitle = document.createElement('span');
-    mTitle.className = 'measure-title';
+    mTitle.className = 'ctrl-title';
     mTitle.textContent = '小節';
 
     const mRemove = document.createElement('button');
@@ -353,6 +353,10 @@ function renderMelodicEditor(track, editorEl) {
         renderEditor();
     });
 
+    const octTitle = document.createElement('span');
+    octTitle.className = 'ctrl-title';
+    octTitle.textContent = '音程';
+    ctrlEl.appendChild(octTitle);
     ctrlEl.appendChild(downBtn);
     ctrlEl.appendChild(rangeLabel);
     ctrlEl.appendChild(upBtn);
