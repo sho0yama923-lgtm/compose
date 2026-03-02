@@ -1013,46 +1013,27 @@
             text-align: center;
         }
 
-        /* ======= 下部固定：小節シークバー ======= */
-        /* ======= 下部固定：小節シークバー（画面レイアウトに組み込む） ======= */
-        .bottom-measure-bar {
-            /* position: fixed; や bottom: 0; は削除します */
-            width: 100%;
-            box-sizing: border-box;
-            background: #fafafa;
-            border-top: 1px solid #ddd;
-            /* 余白を少し詰めて画面を広く使う */
-            padding: 8px 16px calc(8px + env(safe-area-inset-bottom, 0px));
+        /* ======= 小節シークバー（エディタ内） ======= */
+        .measure-seek {
             display: flex;
-            flex-direction: column;
             align-items: center;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.03);
-            flex-shrink: 0; /* 画面が狭くてもこのバー自体は潰れないようにする */
+            gap: 6px;
+            padding: 6px 0;
         }
-
-        .bottom-measure-label {
+        .measure-seek-label {
             font-size: 11px;
             color: #555;
             font-weight: 700;
-            margin-bottom: 6px;
-            letter-spacing: 0.1em;
+            letter-spacing: 0.05em;
+            white-space: nowrap;
         }
-
-        .bottom-measure-row {
-            display: flex;
-            align-items: center;
-            width: 100%;
-            max-width: 600px;
-            gap: 8px;
-        }
-
         .mb-btn {
-            width: 36px;
-            height: 36px;
+            width: 30px;
+            height: 30px;
             border: 1px solid #ccc;
             background: #fff;
-            border-radius: 6px;
-            font-size: 14px;
+            border-radius: 5px;
+            font-size: 13px;
             font-weight: bold;
             color: #333;
             display: flex;
@@ -1064,8 +1045,8 @@
         }
         .mb-btn:disabled { opacity: 0.25; cursor: default; }
         .mb-btn:not(:disabled):active { background: #e0e0e0; }
-        .mb-remove { color: #c00; font-size: 16px; }
-        .mb-add { color: #2e7d32; font-size: 16px; }
+        .mb-remove { color: #c00; }
+        .mb-add { color: #2e7d32; }
 
         .mb-slider-wrap {
             flex: 1;
@@ -1110,6 +1091,106 @@
             box-shadow: 0 1px 4px rgba(0,0,0,0.3);
         }
 
+        /* 1. 全体の縦スクロールを完全に禁止し、Flexboxで高さを管理 */
+        .main {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 8px 12px;
+        }
+
+        #trackEditor {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        /* 2. エディタ本体も縦スクロール禁止し、Flexbox化 */
+        /* 鍵盤(左)とグリッド(右)の横並びを維持する */
+        .melodic-editor {
+            flex: 1;
+            display: flex;
+            flex-direction: row; 
+            overflow: hidden;
+            min-height: 0;
+        }
+        
+        /* コードエディタは縦並びのままでOK */
+        .chord-panel-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 0;
+        }
+        /* 3. アコーディオン（オクターブ選択）の中身を画面の高さに合わせて伸縮させる */
+        .oct-accordion {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 0;
+        }
+        .oct-section {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+        .oct-section.open {
+            flex: 1; /* 開いているセクションが余白をすべて埋める */
+        }
+        /* open時の表示を block から flex に上書き */
+        .oct-section.open .oct-section-body {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        /* 4. 鍵盤とマスの「固定の高さ(26px)」を解除し、画面の高さに合わせて均等に割り振る */
+        .piano-keys {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .steps-grid-scroll {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: hidden; /* 縦スクロール禁止 */
+            overflow-x: auto;   /* 小節が横に長い場合の横スクロールは維持 */
+        }
+        .steps-grid {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+        /* 個別の行に flex: 1 を当てて均等分割 */
+        .piano-key, .steps-row {
+            height: auto;
+            flex: 1;
+            min-height: 0;
+            padding-top: 1px;
+            padding-bottom: 1px;
+        }
+        
+        /* 5. マスのボタン（step）も行の高さにピッタリ合わせる */
+        .steps-grid .step {
+            height: 100%;
+            min-height: 0;
+        }
+
+        /* 6. シークバーは潰れないようにサイズを固定 */
+        .measure-seek {
+            flex-shrink: 0;
+            padding: 8px 0 0 0;
+        }
+
 
     </style>
 </head>
@@ -1151,19 +1232,6 @@
     <div id="trackEditor" style="display:none;"></div>
 </main>
 
-<!-- ====== 小節シークバー ====== -->
-<div id="bottomMeasureBar" class="bottom-measure-bar" style="display: none;">
-    <div class="bottom-measure-label" id="bottomMeasureLabel">1 / 4</div>
-    <div class="bottom-measure-row">
-        <button class="mb-btn mb-remove" id="btnMeasureRemove">－</button>
-        <button class="mb-btn mb-prev" id="btnMeasurePrev">◀</button>
-        <div class="mb-slider-wrap">
-            <input type="range" class="measure-slider" id="measureSliderBottom" min="0" max="3" value="0">
-        </div>
-        <button class="mb-btn mb-next" id="btnMeasureNext">▶</button>
-        <button class="mb-btn mb-add" id="btnMeasureAdd">＋</button>
-    </div>
-</div>
 
 <!-- ======= 楽器選択モーダル ======= -->
 <div class="modal-overlay" id="modal">

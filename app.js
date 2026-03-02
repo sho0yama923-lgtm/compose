@@ -192,29 +192,10 @@ function renderEditor() {
     const emptyState = document.getElementById('emptyState');
     const editorEl   = document.getElementById('trackEditor');
 
-    // ▼▼▼【ここから追加】下部バーの要素を取得し、色を塗る関数を用意する ▼▼▼
-    const bottomBar = document.getElementById('bottomMeasureBar');
-    const bLabel    = document.getElementById('bottomMeasureLabel');
-    const bRemove   = document.getElementById('btnMeasureRemove');
-    const bPrev     = document.getElementById('btnMeasurePrev');
-    const bNext     = document.getElementById('btnMeasureNext');
-    const bSlider   = document.getElementById('measureSliderBottom');
-
-    const updateBottomSliderBg = () => {
-        if (!bSlider) return;
-        const min = parseInt(bSlider.min, 10) || 0;
-        const max = parseInt(bSlider.max, 10) || 1;
-        const val = parseInt(bSlider.value, 10) || 0;
-        const percentage = (max === min) ? 0 : ((val - min) / (max - min)) * 100;
-        bSlider.style.backgroundSize = `${percentage}% 100%`;
-    };
-    // ▲▲▲【追加ここまで】▲▲▲
-
     if (activeTrackId === null || tracks.length === 0) {
         emptyState.style.display = '';
         editorEl.style.display   = 'none';
         editorEl.innerHTML       = '';
-        if (bottomBar) bottomBar.style.display = 'none';
         return;
     }
 
@@ -225,21 +206,66 @@ function renderEditor() {
     editorEl.style.display   = '';
     editorEl.innerHTML       = '';
 
-    // ▼▼▼【ここから追加】下部バーの裏にエディタが隠れないように余白を作る ▼▼▼
-    //editorEl.style.paddingBottom = '90px'; 
+    // --- 小節シークバー（エディタ内に生成） ---
+    const seekRow = document.createElement('div');
+    seekRow.className = 'measure-seek';
 
-    // 現在の小節数などのデータを下部バーに反映させる
-    if (bottomBar) {
-        bottomBar.style.display = 'flex';
-        bLabel.textContent = `${currentMeasure + 1} / ${numMeasures}`;
-        bRemove.disabled = numMeasures <= 1;
-        bPrev.disabled = currentMeasure <= 0;
-        bNext.disabled = currentMeasure >= numMeasures - 1;
-        bSlider.max = Math.max(1, numMeasures - 1);
-        bSlider.value = currentMeasure;
-        updateBottomSliderBg();
-    }
-    // ▲▲▲【追加ここまで】▲▲▲
+    const seekRemove = document.createElement('button');
+    seekRemove.className = 'mb-btn mb-remove';
+    seekRemove.textContent = '－';
+    seekRemove.disabled = numMeasures <= 1;
+    seekRemove.addEventListener('click', removeMeasure);
+
+    const seekPrev = document.createElement('button');
+    seekPrev.className = 'mb-btn';
+    seekPrev.textContent = '◀';
+    seekPrev.disabled = currentMeasure <= 0;
+    seekPrev.addEventListener('click', () => { currentMeasure--; renderEditor(); });
+
+    const seekSlider = document.createElement('input');
+    seekSlider.type = 'range';
+    seekSlider.className = 'measure-slider';
+    seekSlider.min = 0;
+    seekSlider.max = Math.max(1, numMeasures - 1);
+    seekSlider.value = currentMeasure;
+    const updateSliderBg = () => {
+        const mn = parseInt(seekSlider.min, 10) || 0;
+        const mx = parseInt(seekSlider.max, 10) || 1;
+        const vl = parseInt(seekSlider.value, 10) || 0;
+        const pct = (mx === mn) ? 0 : ((vl - mn) / (mx - mn)) * 100;
+        seekSlider.style.backgroundSize = `${pct}% 100%`;
+    };
+    updateSliderBg();
+    seekSlider.addEventListener('input', (e) => {
+        const v = parseInt(e.target.value, 10);
+        if (currentMeasure !== v) { currentMeasure = v; renderEditor(); }
+    });
+
+    const seekWrap = document.createElement('div');
+    seekWrap.className = 'mb-slider-wrap';
+    seekWrap.appendChild(seekSlider);
+
+    const seekNext = document.createElement('button');
+    seekNext.className = 'mb-btn';
+    seekNext.textContent = '▶';
+    seekNext.disabled = currentMeasure >= numMeasures - 1;
+    seekNext.addEventListener('click', () => { currentMeasure++; renderEditor(); });
+
+    const seekAdd = document.createElement('button');
+    seekAdd.className = 'mb-btn mb-add';
+    seekAdd.textContent = '＋';
+    seekAdd.addEventListener('click', addMeasure);
+
+    const seekLabel = document.createElement('span');
+    seekLabel.className = 'measure-seek-label';
+    seekLabel.textContent = `${currentMeasure + 1} / ${numMeasures}`;
+
+    seekRow.appendChild(seekRemove);
+    seekRow.appendChild(seekPrev);
+    seekRow.appendChild(seekWrap);
+    seekRow.appendChild(seekNext);
+    seekRow.appendChild(seekAdd);
+    seekRow.appendChild(seekLabel);
 
     const header = document.createElement('div');
     header.className = 'editor-header';
@@ -299,6 +325,7 @@ function renderEditor() {
     } else {
         renderMelodicEditor(track, editorEl);
     }
+    editorEl.appendChild(seekRow);
 }
 
 // -------------------------------------------------------
@@ -1081,41 +1108,6 @@ mainEl.addEventListener('touchend', e => {
     }
 });
 
-// ▼▼▼【ここから追加】下部バーのボタンを押した時の処理を登録する ▼▼▼
-const bRemoveBtn = document.getElementById('btnMeasureRemove');
-const bPrevBtn   = document.getElementById('btnMeasurePrev');
-const bNextBtn   = document.getElementById('btnMeasureNext');
-const bAddBtn    = document.getElementById('btnMeasureAdd');
-const bSliderInp = document.getElementById('measureSliderBottom');
-
-if (bRemoveBtn) bRemoveBtn.addEventListener('click', removeMeasure);
-if (bAddBtn)    bAddBtn.addEventListener('click', addMeasure);
-
-if (bPrevBtn) bPrevBtn.addEventListener('click', () => {
-    if (currentMeasure > 0) { 
-        currentMeasure--; 
-        renderEditor(); 
-    }
-});
-
-if (bNextBtn) bNextBtn.addEventListener('click', () => {
-    if (currentMeasure < numMeasures - 1) { 
-        currentMeasure++; 
-        renderEditor(); 
-    }
-});
-
-// スライダーを操作した時に小節を切り替える
-if (bSliderInp) {
-    bSliderInp.addEventListener('input', (e) => {
-        const targetMeasure = parseInt(e.target.value, 10);
-        if (currentMeasure !== targetMeasure) {
-            currentMeasure = targetMeasure;
-            renderEditor(); // これを呼ぶだけでスライダーの色もグリッドも更新されます
-        }
-    });
-}
-// ▲▲▲【追加ここまで】▲▲▲
 
 // -------------------------------------------------------
 // 初期トラック
