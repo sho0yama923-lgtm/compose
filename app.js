@@ -110,7 +110,7 @@ function addTrack(instrument) {
             chordMap:        Array(ts).fill(null),
             soundSteps:      Array(ts).fill(false),
             selectedChordRoot:   'C',
-            selectedChordType:   'maj',
+            selectedChordType:   'M',
             selectedChordOctave: 4,
             dividers:        [0, STEPS_PER_MEASURE / 2],
             selectedDivPos:  null,
