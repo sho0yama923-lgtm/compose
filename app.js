@@ -1,7 +1,7 @@
 // app.js — 状態管理・描画・イベント処理
 import { play, stop } from './player.js';
-import { DRUM_ROWS, CHROMATIC, BLACK_KEYS, OCT_COLOR, CHORD_ROOTS, CHORD_TYPES, ROOT_COLORS } from './constants.js';
-import instruments, { INST_LABEL, INST_TYPE, OCTAVE_DEFAULT_BASE } from './instruments.js';
+import { CHROMATIC, BLACK_KEYS, OCT_COLOR, CHORD_ROOTS, CHORD_TYPES, ROOT_COLORS } from './constants.js';
+import instruments, { INST_LABEL, INST_TYPE, OCTAVE_DEFAULT_BASE, DRUM_ROWS, INSTRUMENT_LIST } from './instruments.js';
 
 // コードの構成音を返す（例: getChordNotes('C', 'maj', 4) → ['C4','E4','G4']）
 function getChordNotes(root, type, octave) {
@@ -19,6 +19,11 @@ function getChordNotes(root, type, octave) {
 let tracks       = [];
 let nextId       = 0;
 let activeTrackId = null;
+
+const STEPS_PER_MEASURE = 16;
+let numMeasures    = 4;
+let currentMeasure = 0;
+function totalSteps() { return STEPS_PER_MEASURE * numMeasures; }
 
 // -------------------------------------------------------
 // サイドバー開閉
@@ -93,40 +98,91 @@ function addTrack(instrument) {
     const id = nextId++;
     let track;
 
+    const ts = totalSteps();
     if (INST_TYPE[instrument] === 'rhythm') {
         track = {
             id, instrument,
-            rows: DRUM_ROWS.map(r => ({ label: r.label, note: r.note, steps: Array(16).fill(false) })),
+            rows: DRUM_ROWS.map(r => ({ label: r.label, note: r.note, steps: Array(ts).fill(false) })),
         };
     } else if (INST_TYPE[instrument] === 'chord') {
         track = {
             id, instrument,
-            chordMap:        Array(16).fill(null),  // コード範囲: { root, type, octave } or null
-            soundSteps:      Array(16).fill(false), // 発音トリガー: boolean
+            chordMap:        Array(ts).fill(null),
+            soundSteps:      Array(ts).fill(false),
             selectedChordRoot:   'C',
             selectedChordType:   'maj',
             selectedChordOctave: 4,
-            dividers:        [0, 8],         // ゾーン開始位置配列（0は常に固定）
-            selectedDivPos:  null,       // 選択中の区切り線位置（null=未選択）
-            selectedDrumRows: new Set(),  // 同期チェック中の row.label
+            dividers:        [0, STEPS_PER_MEASURE / 2],
+            selectedDivPos:  null,
+            selectedDrumRows: new Set(),
         };
     } else {
-        // stepsMap は oct 1〜7 全域を保持（viewBase で表示範囲を選択）
         const stepsMap = {};
         for (let oct = 1; oct <= 7; oct++) {
-            CHROMATIC.forEach(n => { stepsMap[`${n}${oct}`] = Array(16).fill(false); });
+            CHROMATIC.forEach(n => { stepsMap[`${n}${oct}`] = Array(ts).fill(false); });
         }
         const viewBase = OCTAVE_DEFAULT_BASE[instrument] ?? 3;
         track = {
             id, instrument,
             viewBase,
-            activeOctave: viewBase + 1, // 中央オクターブをデフォルトで開く
+            activeOctave: viewBase + 1,
             stepsMap,
         };
     }
 
     tracks.push(track);
     selectTrack(id);
+}
+
+// -------------------------------------------------------
+// 小節の追加・削除
+// -------------------------------------------------------
+function addMeasure() {
+    numMeasures++;
+    const newStart = (numMeasures - 1) * STEPS_PER_MEASURE;
+    tracks.forEach(track => {
+        if (INST_TYPE[track.instrument] === 'rhythm') {
+            track.rows.forEach(r => r.steps.push(...Array(STEPS_PER_MEASURE).fill(false)));
+        } else if (INST_TYPE[track.instrument] === 'chord') {
+            track.chordMap.push(...Array(STEPS_PER_MEASURE).fill(null));
+            track.soundSteps.push(...Array(STEPS_PER_MEASURE).fill(false));
+            // 新小節の先頭にディバイダーを追加
+            if (!track.dividers.includes(newStart)) {
+                track.dividers.push(newStart);
+                track.dividers.sort((a, b) => a - b);
+            }
+        } else {
+            Object.values(track.stepsMap).forEach(steps =>
+                steps.push(...Array(STEPS_PER_MEASURE).fill(false))
+            );
+        }
+    });
+    renderEditor();
+}
+
+function removeMeasure() {
+    if (numMeasures <= 1) return;
+    const removeStart = (numMeasures - 1) * STEPS_PER_MEASURE;
+    numMeasures--;
+    if (currentMeasure >= numMeasures) currentMeasure = numMeasures - 1;
+    tracks.forEach(track => {
+        if (INST_TYPE[track.instrument] === 'rhythm') {
+            track.rows.forEach(r => r.steps.splice(removeStart, STEPS_PER_MEASURE));
+        } else if (INST_TYPE[track.instrument] === 'chord') {
+            track.chordMap.splice(removeStart, STEPS_PER_MEASURE);
+            track.soundSteps.splice(removeStart, STEPS_PER_MEASURE);
+            // 削除小節内のディバイダーを除去
+            track.dividers = track.dividers.filter(d => d < removeStart);
+            if (track.selectedDivPos !== null && track.selectedDivPos >= removeStart) {
+                track.selectedDivPos = null;
+            }
+        } else {
+            Object.values(track.stepsMap).forEach(steps =>
+                steps.splice(removeStart, STEPS_PER_MEASURE)
+            );
+        }
+    });
+    renderEditor();
 }
 
 // -------------------------------------------------------
@@ -153,6 +209,45 @@ function renderEditor() {
     const header = document.createElement('div');
     header.className = 'editor-header';
     header.innerHTML = `<span class="editor-title">${INST_LABEL[track.instrument]}</span>`;
+
+    // 小節コントロール
+    const measureCtrl = document.createElement('div');
+    measureCtrl.className = 'measure-ctrl';
+
+    const mPrev = document.createElement('button');
+    mPrev.className = 'measure-btn';
+    mPrev.innerHTML = '◀<span class="btn-guide">前</span>';
+    mPrev.disabled = currentMeasure <= 0;
+    mPrev.addEventListener('click', () => { currentMeasure--; renderEditor(); });
+
+    const mLabel = document.createElement('span');
+    mLabel.className = 'measure-label';
+    mLabel.textContent = `${currentMeasure + 1} / ${numMeasures}`;
+
+    const mNext = document.createElement('button');
+    mNext.className = 'measure-btn';
+    mNext.innerHTML = '▶<span class="btn-guide">次</span>';
+    mNext.disabled = currentMeasure >= numMeasures - 1;
+    mNext.addEventListener('click', () => { currentMeasure++; renderEditor(); });
+
+    const mAdd = document.createElement('button');
+    mAdd.className = 'measure-btn measure-add';
+    mAdd.innerHTML = '＋<span class="btn-guide">追加</span>';
+    mAdd.addEventListener('click', addMeasure);
+
+    const mRemove = document.createElement('button');
+    mRemove.className = 'measure-btn measure-remove';
+    mRemove.innerHTML = '－<span class="btn-guide">削除</span>';
+    mRemove.disabled = numMeasures <= 1;
+    mRemove.addEventListener('click', removeMeasure);
+
+    measureCtrl.appendChild(mPrev);
+    measureCtrl.appendChild(mLabel);
+    measureCtrl.appendChild(mNext);
+    measureCtrl.appendChild(mAdd);
+    measureCtrl.appendChild(mRemove);
+    header.appendChild(measureCtrl);
+
     editorEl.appendChild(header);
 
     if (INST_TYPE[track.instrument] === 'rhythm') {
@@ -168,6 +263,7 @@ function renderEditor() {
 // ドラムエディタ
 // -------------------------------------------------------
 function renderDrumEditor(track, editorEl) {
+    const offset = currentMeasure * STEPS_PER_MEASURE;
     const wrapEl = document.createElement('div');
     wrapEl.className = 'melodic-editor';
 
@@ -183,7 +279,7 @@ function renderDrumEditor(track, editorEl) {
     // ビートヘッダー
     const hdrEl = document.createElement('div');
     hdrEl.className = 'steps-header';
-    for (let i = 0; i < 16; i++) {
+    for (let i = 0; i < STEPS_PER_MEASURE; i++) {
         const cell = document.createElement('div');
         cell.className = 'step-header-cell' + (i % 4 === 0 ? ' beat' : '');
         cell.textContent = i % 4 === 0 ? String(i / 4 + 1) : '·';
@@ -199,15 +295,16 @@ function renderDrumEditor(track, editorEl) {
 
         const rowEl = document.createElement('div');
         rowEl.className = 'steps-row';
-        row.steps.forEach((on, stepIdx) => {
+        for (let i = 0; i < STEPS_PER_MEASURE; i++) {
+            const si = offset + i;
             const btn = document.createElement('button');
-            btn.className = 'step' + (on ? ' on' : '');
+            btn.className = 'step' + (row.steps[si] ? ' on' : '');
             btn.addEventListener('click', () => {
-                row.steps[stepIdx] = !row.steps[stepIdx];
-                btn.classList.toggle('on', row.steps[stepIdx]);
+                row.steps[si] = !row.steps[si];
+                btn.classList.toggle('on', row.steps[si]);
             });
             rowEl.appendChild(btn);
-        });
+        }
         gridEl.appendChild(rowEl);
     });
 
@@ -221,6 +318,7 @@ function renderDrumEditor(track, editorEl) {
 // メロディエディタ（オクターブ アコーディオン）
 // -------------------------------------------------------
 function renderMelodicEditor(track, editorEl) {
+    const offset = currentMeasure * STEPS_PER_MEASURE;
     const octaves = [track.viewBase, track.viewBase + 1, track.viewBase + 2];
 
     // オクターブ範囲シフトコントロール
@@ -229,7 +327,7 @@ function renderMelodicEditor(track, editorEl) {
 
     const downBtn = document.createElement('button');
     downBtn.className = 'oct-range-btn';
-    downBtn.textContent = '◀';
+    downBtn.innerHTML = '◀<span class="btn-guide">低</span>';
     downBtn.disabled = track.viewBase <= 1;
     downBtn.addEventListener('click', () => {
         track.viewBase--;
@@ -243,7 +341,7 @@ function renderMelodicEditor(track, editorEl) {
 
     const upBtn = document.createElement('button');
     upBtn.className = 'oct-range-btn';
-    upBtn.textContent = '▶';
+    upBtn.innerHTML = '▶<span class="btn-guide">高</span>';
     upBtn.disabled = track.viewBase >= 5;
     upBtn.addEventListener('click', () => {
         track.viewBase++;
@@ -272,14 +370,14 @@ function renderMelodicEditor(track, editorEl) {
         const headerEl = document.createElement('button');
         headerEl.className = 'oct-section-header';
         headerEl.style.setProperty('--oct-color', octStyle.on);
-        // ミニプレビュー: 12音×16ステップ のグリッド
+        // ミニプレビュー: 12音×16ステップ のグリッド（現在小節分）
         const miniEl = document.createElement('div');
         miniEl.className = 'oct-section-mini';
         [...CHROMATIC].reverse().forEach(noteName => {
             const steps = track.stepsMap[`${noteName}${o}`];
-            for (let i = 0; i < 16; i++) {
+            for (let i = 0; i < STEPS_PER_MEASURE; i++) {
                 const cell = document.createElement('span');
-                cell.className = 'oct-mini-cell' + (steps[i] ? ' on' : '');
+                cell.className = 'oct-mini-cell' + (steps[offset + i] ? ' on' : '');
                 miniEl.appendChild(cell);
             }
         });
@@ -321,7 +419,7 @@ function renderMelodicEditor(track, editorEl) {
         // ビートヘッダー
         const hdrEl = document.createElement('div');
         hdrEl.className = 'steps-header';
-        for (let i = 0; i < 16; i++) {
+        for (let i = 0; i < STEPS_PER_MEASURE; i++) {
             const cell = document.createElement('div');
             cell.className = 'step-header-cell' + (i % 4 === 0 ? ' beat' : '');
             cell.textContent = i % 4 === 0 ? String(i / 4 + 1) : '·';
@@ -344,15 +442,16 @@ function renderMelodicEditor(track, editorEl) {
             const rowEl = document.createElement('div');
             rowEl.className = 'steps-row' + (isBlack ? ' black-key' : '');
 
-            steps.forEach((on, stepIdx) => {
+            for (let i = 0; i < STEPS_PER_MEASURE; i++) {
+                const si = offset + i;
                 const btn = document.createElement('button');
-                btn.className = 'step' + (on ? ' on' : '');
+                btn.className = 'step' + (steps[si] ? ' on' : '');
                 btn.addEventListener('click', () => {
-                    steps[stepIdx] = !steps[stepIdx];
-                    btn.classList.toggle('on', steps[stepIdx]);
+                    steps[si] = !steps[si];
+                    btn.classList.toggle('on', steps[si]);
                 });
                 rowEl.appendChild(btn);
-            });
+            }
             gridEl.appendChild(rowEl);
         });
 
@@ -386,7 +485,8 @@ function moveDivider(track, direction) { // direction: -1 or +1
     if (idx <= 0) return; // pos=0 は固定・移動不可
     const newPos = track.selectedDivPos + direction;
     const prevDiv = track.dividers[idx - 1];
-    const nextDiv = track.dividers[idx + 1] ?? 16;
+    const mEnd = (currentMeasure + 1) * STEPS_PER_MEASURE;
+    const nextDiv = track.dividers[idx + 1] ?? mEnd;
     if (newPos <= prevDiv || newPos >= nextDiv) return; // 範囲外なら無視
 
     if (direction === 1) {
@@ -405,7 +505,7 @@ function moveDivider(track, direction) { // direction: -1 or +1
 function buildBeatHeader() {
     const hdrCells = document.createElement('div');
     hdrCells.className = 'chord-steps-cells';
-    for (let i = 0; i < 16; i++) {
+    for (let i = 0; i < STEPS_PER_MEASURE; i++) {
         const cell = document.createElement('div');
         cell.className = 'chord-step-header-cell' + (i % 4 === 0 ? ' beat' : '');
         cell.textContent = i % 4 === 0 ? String(i / 4 + 1) : '·';
@@ -415,6 +515,9 @@ function buildBeatHeader() {
 }
 
 function renderChordEditor(track, editorEl) {
+    const offset = currentMeasure * STEPS_PER_MEASURE;
+    const mEnd   = offset + STEPS_PER_MEASURE;
+
     const bodyEl = document.createElement('div');
     bodyEl.className = 'chord-panel-body';
 
@@ -491,7 +594,7 @@ function renderChordEditor(track, editorEl) {
     octCtrl.className = 'chord-oct-ctrl';
     const octDown = document.createElement('button');
     octDown.className = 'oct-range-btn';
-    octDown.textContent = '◀';
+    octDown.innerHTML = '◀<span class="btn-guide">低</span>';
     octDown.disabled = track.selectedChordOctave <= 1;
     octDown.addEventListener('click', () => { track.selectedChordOctave--; renderEditor(); });
     const octVal = document.createElement('span');
@@ -499,7 +602,7 @@ function renderChordEditor(track, editorEl) {
     octVal.textContent = track.selectedChordOctave;
     const octUp = document.createElement('button');
     octUp.className = 'oct-range-btn';
-    octUp.textContent = '▶';
+    octUp.innerHTML = '▶<span class="btn-guide">高</span>';
     octUp.disabled = track.selectedChordOctave >= 6;
     octUp.addEventListener('click', () => { track.selectedChordOctave++; renderEditor(); });
     octCtrl.appendChild(octDown);
@@ -541,8 +644,12 @@ function renderChordEditor(track, editorEl) {
     rangeClearBtn.className = 'chord-quick-btn danger';
     rangeClearBtn.textContent = '全クリア';
     rangeClearBtn.addEventListener('click', () => {
-        track.chordMap = Array(16).fill(null);
-        track.dividers = [0];
+        // 現在小節分のみクリア
+        for (let i = offset; i < mEnd; i++) track.chordMap[i] = null;
+        // 現在小節内のディバイダーを除去し、小節先頭のみ残す
+        track.dividers = track.dividers.filter(d => d < offset || d >= mEnd);
+        track.dividers.push(offset);
+        track.dividers.sort((a, b) => a - b);
         track.selectedDivPos = null;
         renderEditor();
     });
@@ -567,11 +674,16 @@ function renderChordEditor(track, editorEl) {
     rangeHeaderEl.appendChild(rangeClearBtn);
     rangeSection.appendChild(rangeHeaderEl);
 
-    // ゾーン取得ヘルパー
+    // 現在小節内のディバイダーを取得（小節先頭を保証）
+    let measureDividers = track.dividers.filter(d => d >= offset && d < mEnd);
+    if (!measureDividers.includes(offset)) measureDividers.unshift(offset);
+    measureDividers.sort((a, b) => a - b);
+
+    // ゾーン取得ヘルパー（小節内のみ）
     function getZones(divs) {
         return divs.map((pos, d) => ({
             start: pos,
-            end: (divs[d + 1] ?? 16) - 1,
+            end: (divs[d + 1] ?? mEnd) - 1,
             divIdx: d,
         }));
     }
@@ -580,7 +692,7 @@ function renderChordEditor(track, editorEl) {
     const rangeRow = document.createElement('div');
     rangeRow.className = 'chord-range-row';
 
-    const zones = getZones(track.dividers);
+    const zones = getZones(measureDividers);
 
     zones.forEach((zone, d) => {
         // ゾーン間区切り線（最初のゾーンの前は不要）
@@ -636,7 +748,10 @@ function renderChordEditor(track, editorEl) {
                 // ── シングルタップ（250ms 後にコード適用） ──
                 zoneClickTimer = setTimeout(() => {
                     zoneClickTimer = null;
-                    const z = getZones(track.dividers).find(z => zone.start === z.start);
+                    const localDivs = track.dividers.filter(d => d >= offset && d < mEnd);
+                    if (!localDivs.includes(offset)) localDivs.unshift(offset);
+                    localDivs.sort((a, b) => a - b);
+                    const z = getZones(localDivs).find(z => zone.start === z.start);
                     if (!z) return;
                     for (let j = z.start; j <= z.end; j++) {
                         track.chordMap[j] = {
@@ -728,12 +843,13 @@ function renderChordEditor(track, editorEl) {
                 rowEl.appendChild(lbl);
                 const cellsEl = document.createElement('div');
                 cellsEl.className = 'chord-rhythm-cells';
-                row.steps.forEach(on => {
+                for (let i = 0; i < STEPS_PER_MEASURE; i++) {
+                    const on = row.steps[offset + i];
                     const cell = document.createElement('span');
                     cell.className = 'chord-rhythm-cell' + (on ? ' on' : '');
                     cell.textContent = on ? '●' : '·';
                     cellsEl.appendChild(cell);
-                });
+                }
                 rowEl.appendChild(cellsEl);
                 drumRefEl.appendChild(rowEl);
             });
@@ -755,15 +871,16 @@ function renderChordEditor(track, editorEl) {
         soundSection.appendChild(drumRefEl);
     }
 
-    // 各ステップの継承コードを計算（chordMap左端から引き継ぎ）
-    const inheritedChords = Array(16).fill(null);
+    // 各ステップの継承コードを計算（chordMap左端から引き継ぎ、全ステップ対象）
+    const ts = totalSteps();
+    const inheritedChords = Array(ts).fill(null);
     let inherited = null;
-    for (let i = 0; i < 16; i++) {
+    for (let i = 0; i < ts; i++) {
         if (track.chordMap[i]) inherited = track.chordMap[i];
         inheritedChords[i] = inherited;
     }
 
-    // 発音ステップ行
+    // 発音ステップ行（現在小節分のみ描画）
     const soundRow = document.createElement('div');
     soundRow.className = 'chord-steps-row';
     const soundRowLbl = document.createElement('span');
@@ -772,19 +889,20 @@ function renderChordEditor(track, editorEl) {
     soundRow.appendChild(soundRowLbl);
     const soundCells = document.createElement('div');
     soundCells.className = 'chord-steps-cells';
-    for (let i = 0; i < 16; i++) {
+    for (let i = 0; i < STEPS_PER_MEASURE; i++) {
+        const si = offset + i;
         const btn = document.createElement('button');
-        btn.className = 'chord-sound-btn' + (track.soundSteps[i] ? ' on' : '');
-        if (track.soundSteps[i] && inheritedChords[i]) {
-            const col = ROOT_COLORS[inheritedChords[i].root] ?? '#111';
+        btn.className = 'chord-sound-btn' + (track.soundSteps[si] ? ' on' : '');
+        if (track.soundSteps[si] && inheritedChords[si]) {
+            const col = ROOT_COLORS[inheritedChords[si].root] ?? '#111';
             btn.style.background = col;
             btn.style.borderColor = col;
         }
         btn.addEventListener('click', () => {
-            track.soundSteps[i] = !track.soundSteps[i];
-            btn.classList.toggle('on', track.soundSteps[i]);
-            if (track.soundSteps[i] && inheritedChords[i]) {
-                const col = ROOT_COLORS[inheritedChords[i].root] ?? '#111';
+            track.soundSteps[si] = !track.soundSteps[si];
+            btn.classList.toggle('on', track.soundSteps[si]);
+            if (track.soundSteps[si] && inheritedChords[si]) {
+                const col = ROOT_COLORS[inheritedChords[si].root] ?? '#111';
                 btn.style.background = col;
                 btn.style.borderColor = col;
             } else {
@@ -834,7 +952,8 @@ function buildSteps(steps, octStyle = null) {
 // -------------------------------------------------------
 document.getElementById('playBtn').addEventListener('click', async () => {
     const bpm   = Number(document.getElementById('bpmInput').value) || 120;
-    const score = Array(16).fill(null);
+    const ts    = totalSteps();
+    const score = Array(ts).fill(null);
 
     tracks.forEach(track => {
         if (INST_TYPE[track.instrument] === 'rhythm') {
@@ -846,9 +965,8 @@ document.getElementById('playBtn').addEventListener('click', async () => {
                 });
             });
         } else if (INST_TYPE[track.instrument] === 'chord') {
-            // chordMap の最新エントリを引き継ぎながらスキャン
             let currentChord = null;
-            for (let i = 0; i < 16; i++) {
+            for (let i = 0; i < ts; i++) {
                 if (track.chordMap[i]) currentChord = track.chordMap[i];
                 if (track.soundSteps[i] && currentChord) {
                     const notes = getChordNotes(currentChord.root, currentChord.type, currentChord.octave);
@@ -857,8 +975,7 @@ document.getElementById('playBtn').addEventListener('click', async () => {
                 }
             }
         } else {
-            // 同ステップの複数ノートを配列にまとめてコードとして発音
-            const stepNotes = Array.from({ length: 16 }, () => []);
+            const stepNotes = Array.from({ length: ts }, () => []);
             Object.entries(track.stepsMap).forEach(([note, steps]) => {
                 steps.forEach((on, i) => { if (on) stepNotes[i].push(note); });
             });
@@ -879,17 +996,43 @@ document.getElementById('stopBtn').addEventListener('click', () => stop());
 // トラック追加モーダル
 // -------------------------------------------------------
 const modal = document.getElementById('modal');
+const modalOptions = document.getElementById('modalOptions');
+
+// INSTRUMENT_LIST からモーダルボタンを動的生成
+INSTRUMENT_LIST.forEach(config => {
+    const btn = document.createElement('button');
+    btn.dataset.inst = config.id;
+    const [emoji, ...rest] = config.label.split(' ');
+    btn.innerHTML = `${emoji}<br>${rest.join(' ')}`;
+    btn.addEventListener('click', () => {
+        addTrack(config.id);
+        modal.classList.remove('open');
+    });
+    modalOptions.appendChild(btn);
+});
 
 document.getElementById('addTrackBtn').addEventListener('click', () => {
     closeSidebar();
     modal.classList.add('open');
 });
 document.getElementById('modalCancel').addEventListener('click', () => modal.classList.remove('open'));
-modal.querySelectorAll('[data-inst]').forEach(btn => {
-    btn.addEventListener('click', () => {
-        addTrack(btn.dataset.inst);
-        modal.classList.remove('open');
-    });
+
+// -------------------------------------------------------
+// スワイプで小節移動
+// -------------------------------------------------------
+const mainEl = document.getElementById('main');
+let _swipeStartX = 0, _swipeStartY = 0;
+mainEl.addEventListener('touchstart', e => {
+    _swipeStartX = e.touches[0].clientX;
+    _swipeStartY = e.touches[0].clientY;
+}, { passive: true });
+mainEl.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - _swipeStartX;
+    const dy = e.changedTouches[0].clientY - _swipeStartY;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+        if (dx < 0 && currentMeasure < numMeasures - 1) { currentMeasure++; renderEditor(); }
+        else if (dx > 0 && currentMeasure > 0) { currentMeasure--; renderEditor(); }
+    }
 });
 
 // -------------------------------------------------------

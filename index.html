@@ -227,8 +227,9 @@
         .editor-header {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 6px;
             margin-bottom: 8px;
+            flex-wrap: wrap;
         }
         .editor-title {
             font-size: 16px;
@@ -264,17 +265,16 @@
 
         /* ======= ステップボタン（ドラム用・共通）======= */
         .steps-scroll {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
+            overflow-x: hidden;
             padding-bottom: 4px;
         }
         .steps {
             display: flex;
             gap: 4px;
-            min-width: max-content;
         }
         .step {
-            width: 36px;
+            flex: 1;
+            min-width: 0;
             height: 36px;
             border-radius: 3px;
             border: 1px solid #d0d0d0;
@@ -282,10 +282,8 @@
             cursor: pointer;
             outline: none;
             transition: background 0.06s;
-            flex-shrink: 0;
             touch-action: manipulation;
         }
-        .step:nth-child(4n+1):not(:first-child) { margin-left: 6px; }
         .step.on {
             background: var(--on-bg, #111);
             border-color: var(--on-border, #000);
@@ -301,8 +299,9 @@
             flex-shrink: 0;
         }
         .oct-range-btn {
-            width: 26px;
-            height: 26px;
+            width: 30px;
+            height: auto;
+            min-height: 26px;
             border: 1px solid #ccc;
             background: #fff;
             border-radius: 4px;
@@ -310,9 +309,11 @@
             cursor: pointer;
             touch-action: manipulation;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
+            padding: 2px 0;
         }
         .oct-range-btn:disabled { opacity: 0.25; cursor: default; }
         .oct-range-btn:not(:disabled):active { background: #f0f0f0; }
@@ -432,13 +433,11 @@
         /* 右: ステップグリッド（全行が1つのスクロール領域）*/
         .steps-grid-scroll {
             flex: 1;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
+            overflow-x: hidden;
         }
         .steps-grid {
             display: flex;
             flex-direction: column;
-            min-width: max-content;
         }
 
         /* ビート番号ヘッダー */
@@ -452,18 +451,17 @@
             background: #fafafa;
         }
         .step-header-cell {
-            width: 22px;
+            flex: 1;
+            min-width: 0;
             font-size: 9px;
             text-align: center;
             color: #ccc;
-            flex-shrink: 0;
         }
         .step-header-cell.beat {
             color: #888;
             font-weight: 700;
             font-size: 10px;
         }
-        .step-header-cell:nth-child(4n+1):not(:first-child) { margin-left: 4px; }
 
         /* ステップ行 */
         .steps-row {
@@ -475,16 +473,36 @@
             border-bottom: 1px solid #f0f0f0;
         }
         .steps-row.black-key { background: #e8e8e8; }
-        .steps-row .step:nth-child(4n+1):not(:first-child) { margin-left: 4px; }
 
         /* グリッド内のステップボタン（メロディ用・コンパクト）*/
         .steps-grid .step {
-            width: 22px;
             height: 20px;
             border-radius: 2px;
         }
 
-        .steps-header .step-header-cell:nth-child(4n+1):not(:first-child) { margin-left: 4px; }
+        /* ======= ビートグループ背景色（2拍目・4拍目を薄く区別）======= */
+        .steps-row .step:nth-child(n+5):nth-child(-n+8),
+        .steps-row .step:nth-child(n+13):nth-child(-n+16) {
+            background: #ebebeb;
+        }
+        .steps-row.black-key .step:nth-child(n+5):nth-child(-n+8),
+        .steps-row.black-key .step:nth-child(n+13):nth-child(-n+16) {
+            background: #ddd;
+        }
+        /* ON状態はビートグループ色より優先 */
+        .steps-row .step.on { background: var(--on-bg, #111); }
+
+        .steps-header .step-header-cell:nth-child(n+5):nth-child(-n+8),
+        .steps-header .step-header-cell:nth-child(n+13):nth-child(-n+16) {
+            background: #f0f0f0;
+        }
+
+        /* ドラム用ビートグループ */
+        .steps .step:nth-child(n+5):nth-child(-n+8),
+        .steps .step:nth-child(n+13):nth-child(-n+16) {
+            background: #ebebeb;
+        }
+        .steps .step.on { background: var(--on-bg, #111); }
 
         /* ======= 楽器選択モーダル（下からスライドアップ）======= */
         .modal-overlay {
@@ -937,6 +955,52 @@
             border-color: #e0a0a0;
             color: #c00;
         }
+
+        /* ======= 小節コントロール ======= */
+        .measure-ctrl {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            flex-shrink: 0;
+        }
+        .measure-btn {
+            width: 28px;
+            height: auto;
+            min-height: 28px;
+            border: 1px solid #ccc;
+            background: #fff;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            touch-action: manipulation;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            padding: 3px 0;
+        }
+        .btn-guide {
+            display: block;
+            font-size: 7px;
+            line-height: 1;
+            color: #999;
+            font-weight: 400;
+            margin-top: 1px;
+        }
+        .measure-btn:disabled { opacity: 0.25; cursor: default; }
+        .measure-btn:not(:disabled):active { background: #f0f0f0; }
+        .measure-add { color: #2e7d32; font-weight: bold; margin-left: 4px; }
+        .measure-remove { color: #c00; font-weight: bold; }
+        .measure-label {
+            font-size: 11px;
+            color: #888;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            white-space: nowrap;
+            min-width: 32px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -982,17 +1046,7 @@
     <div class="modal">
         <div class="modal-handle"></div>
         <h2>楽器を選択</h2>
-        <div class="modal-options">
-            <button data-inst="drums">🥁<br>Drums</button>
-            <button data-inst="chord">🎼<br>コード</button>
-            <button data-inst="piano">🎹<br>Piano</button>
-            <button data-inst="bass">🎸<br>Bass</button>
-            <button data-inst="aco_guitar">🎵<br>Acoustic Guitar</button>
-            <button data-inst="ele_guitar">⚡️<br>Electric Guitar</button>
-            <button data-inst="violin">🎻<br>Violin</button>
-            <button data-inst="trumpet">🎺<br>Trumpet</button>
-
-        </div>
+        <div class="modal-options" id="modalOptions"></div>
         <button class="btn-cancel" id="modalCancel">キャンセル</button>
     </div>
 </div>

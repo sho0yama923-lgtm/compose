@@ -1,12 +1,5 @@
 // constants.js — アプリ全体で使う定数
 
-export const DRUM_ROWS = [
-    { label: 'Kick',  note: 'C1'  },
-    { label: 'Snare', note: 'D1'  },
-    { label: 'HiHat', note: 'F#1' },
-    { label: 'Tom', note: 'G1' },
-];
-
 // クロマチック音名（C〜B）
 export const CHROMATIC  = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 export const BLACK_KEYS = new Set(['C#','D#','F#','G#','A#']);

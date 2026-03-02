@@ -1,6 +1,6 @@
 # PROGRESS.md — 作曲ツール 進捗メモ
 
-最終更新: 2026-03-01
+最終更新: 2026-03-02
 
 ---
 
@@ -9,15 +9,15 @@
 ### コアアーキテクチャ
 - `index.html`: 全UI（トップバー / サイドバー / メインエリア / 楽器モーダル）
 - `app.js`: 状態管理・DOM描画・イベント処理
-- `constants.js`: 定数（DRUM_ROWS / CHROMATIC / BLACK_KEYS / OCT_COLOR / ROOT_COLORS / CHORD_ROOTS / CHORD_TYPES）
+- `constants.js`: 音楽理論定数（CHROMATIC / BLACK_KEYS / OCT_COLOR / ROOT_COLORS / CHORD_ROOTS / CHORD_TYPES）
 - `player.js`: Tone.js 再生エンジン（スコアベース・BPM・ループ対応）
 - `instruments.js`: 楽器設定の一元管理 + Tone.Sampler 自動生成
-  - `INSTRUMENT_LIST`: 全楽器のメタデータ（id / label / instType / octaveBase / sampleType）
-  - `sampleType: "auto"`: フォルダ内の .mp3 を自動検出（top-level await + fetch）
-  - `sampleType: "chromatic"`: 全クロマチック音源（piano のみ）
-  - `sampleType: "manual"`: ドラム用の手動マッピング
-  - computed export: `INST_LABEL` / `INST_TYPE` / `OCTAVE_DEFAULT_BASE`
-  - **新楽器追加 = `sounds/xxx/` にファイルを置き INSTRUMENT_LIST に1行追加するだけ**
+  - `INSTRUMENT_LIST`（export）: 全楽器のメタデータ（id / label / instType / octaveBase / sampleType / drumRows）
+  - `sampleType: "range"`: 指定オクターブ範囲でHEADリクエストによるファイル存在チェック（top-level await）
+  - `sampleType: "manual"`: ドラム用の手動マッピング + drumRows
+  - computed export: `INST_LABEL` / `INST_TYPE` / `OCTAVE_DEFAULT_BASE` / `DRUM_ROWS`
+  - **新楽器追加 = `sounds/xxx/` にファイルを置き INSTRUMENT_LIST に1行追加するだけ**（モーダルボタンも自動生成）
+  - **ドラム音追加 = drums エントリの mapping と drumRows を並べて編集するだけ**
 
 ### 対応楽器（8種）
 - Drums / コード / Piano / Bass / Acoustic Guitar / Electric Guitar / Violin / Trumpet
@@ -25,7 +25,7 @@
 ### UI
 - トップバー: メニューボタン・トラック名表示・BPM入力・再生/停止ボタン
 - サイドバー: トラック一覧（黒鍵スタイル）・スライドイン/オーバーレイ・トラック削除
-- 楽器選択モーダル: 下からスライドアップ・8種選択
+- 楽器選択モーダル: 下からスライドアップ・INSTRUMENT_LIST から動的生成
 - エンプティステート: トラックなし時のガイド表示
 
 ### トラックエディタ
@@ -55,9 +55,28 @@
 - rhythm / chord / melody すべてのトラック型に対応
 
 ### データモデル
-- Drum: `{ id, instrument, rows: [{ label, note, steps[16] }] }`
-- Chord: `{ id, instrument:'chord', chordMap[16], soundSteps[16], dividers:[0,8], selectedDivPos:null, ... }`
-- Melodic: `{ id, instrument, viewBase, activeOctave, stepsMap: { 'C4': steps[16], ... } }`
+- `STEPS_PER_MEASURE = 16`、`numMeasures`（可変）、`currentMeasure`（表示中小節）
+- Drum: `{ id, instrument, rows: [{ label, note, steps[STEPS_PER_MEASURE * numMeasures] }] }`
+- Chord: `{ id, instrument:'chord', chordMap[totalSteps], soundSteps[totalSteps], dividers, ... }`
+- Melodic: `{ id, instrument, viewBase, activeOctave, stepsMap: { 'C4': steps[totalSteps], ... } }`
+
+### 複数小節対応
+- フラット配列方式: 配列長 = `STEPS_PER_MEASURE * numMeasures`
+- UI は1画面に1小節分のみ表示（`offset = currentMeasure * STEPS_PER_MEASURE` でスライス）
+- スワイプ（左右50px以上）で小節移動
+- 小節コントロール: ◀前 ▶次（移動）＋追加（追加）－削除（末尾削除）
+- `addMeasure()`: 全トラックの配列末尾に16ステップ分追加
+- `removeMeasure()`: 全トラックの配列から末尾16ステップ分を除去
+- **デフォルト4小節**: `numMeasures = 4` で初期化。起動時に64ステップ分のデータが生成される
+
+### レスポンシブ対応（2026-03-02）
+- ステップセルを `flex: 1; min-width: 0` に変更（固定幅 36px/22px を廃止）
+- 16ステップが375pxスマホ画面に横スクロールなしで収まる
+- `.steps-grid`, `.steps` から `min-width: max-content` を削除
+- `.steps-grid-scroll` を `overflow-x: hidden` に変更
+- ビートグループ（拍の区切り）: margin ベースから背景色ベースに変更（2拍目・4拍目をわずかに暗く）
+- ボタンにガイドラベル追加: `.btn-guide` で小さなテキスト（前/次/追加/削除/低/高）を表示
+- `.editor-header` に `flex-wrap: wrap` を追加（狭い画面での折り返し対応）
 
 
 ## 次にやるべきこと
@@ -80,7 +99,7 @@
 - app.js 側でステップボタンの参照をどう渡すか設計が必要
 
 #### 1-B. ドラムパターンの拡充
-- `constants.js` の `DRUM_ROWS` と `instruments.js` の `drums.mapping` を拡張するだけで対応可能
+- `instruments.js` の drums エントリ（mapping + drumRows）を拡張するだけで対応可能
 
 ### Phase 2: メロディ作曲の補助（優先度: 中）
 
@@ -90,7 +109,7 @@
 
 ### Phase 3: 楽曲構成（優先度: 低）
 
-#### 3-A. 複数小節対応
+#### 3-A. 複数小節対応 ✅ 実装済み（2026-03-02）
 #### 3-B. データ保存・読み込み（localStorage / JSON）
 
 ---
@@ -98,10 +117,10 @@
 ## 直面している課題・メモ
 
 - 再生中ハイライトを実現するには、ステップボタンの DOM 参照をどこで管理するかの設計が必要
-- `sampleType: "auto"` は Python `http.server` のディレクトリ一覧に依存（開発専用）
+- `sampleType: "range"` はHEADリクエストでファイル存在確認するため、任意のHTTPサーバーで動作
 
 ## バグ修正履歴
 
 - `activeTrackId === 0` のとき `!activeTrackId` が `true` になる → `=== null` チェックに変更（2026-02-28）
-- trumpet/violin/ele_guitar の音が出ない → `generateChromaticFiles` の 404 が原因で `Sampler.loaded=false`。`sampleType:"auto"` で実在ファイルのみ検出する方式に修正（2026-03-01）
-- aco_guitar の `loaded=false` → 同上の修正を適用（2026-03-01）
+- trumpet/violin/ele_guitar の音が出ない → `generateChromaticFiles` の 404 が原因で `Sampler.loaded=false`。`sampleType:"range"` でHEADリクエストにより実在ファイルのみ検出する方式に修正（2026-03-01→03-02）
+- aco_guitar の `loaded=false` → 同上の修正を適用（2026-03-01→03-02）

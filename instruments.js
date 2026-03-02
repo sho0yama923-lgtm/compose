@@ -49,12 +49,18 @@ async function getAvailableNotesInRange(folder, startOctave, endOctave) {
 //
 // ==========================================================
 
-const INSTRUMENT_LIST = [
+export const INSTRUMENT_LIST = [
     {
         id: "drums",
         label: "🥁 Drums",    instType: "rhythm",  octaveBase: null,
         sampleType: "manual",  folder: "sounds/drums/",
-        mapping: { "C1": "kick.mp3", "D1": "snare.mp3", "F#1": "hihat.mp3", "G1": "tom1.mp3" }
+        mapping: { "C1": "kick.mp3", "D1": "snare.mp3", "F#1": "hihat.mp3", "G1": "tom1.mp3" },
+        drumRows: [
+            { label: 'Kick',  note: 'C1'  },
+            { label: 'Snare', note: 'D1'  },
+            { label: 'HiHat', note: 'F#1' },
+            { label: 'Tom',   note: 'G1'  },
+        ]
     },
     {
         id: "chord",
@@ -145,9 +151,5 @@ export const OCTAVE_DEFAULT_BASE = Object.fromEntries(
     INSTRUMENT_LIST.filter(c => c.octaveBase !== null).map(c => [c.id, c.octaveBase])
 );
 
-export const DRUM_MAP = {
-    KICK: "C1",
-    SNARE: "D1",
-    HIHAT: "F#1",
-    TOM: "G1"
-};
+const drumsConfig = INSTRUMENT_LIST.find(c => c.id === 'drums');
+export const DRUM_ROWS = drumsConfig ? drumsConfig.drumRows : [];
