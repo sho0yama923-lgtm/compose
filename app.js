@@ -226,7 +226,7 @@ function renderEditor() {
     editorEl.innerHTML       = '';
 
     // ▼▼▼【ここから追加】下部バーの裏にエディタが隠れないように余白を作る ▼▼▼
-    editorEl.style.paddingBottom = '90px'; 
+    //editorEl.style.paddingBottom = '90px'; 
 
     // 現在の小節数などのデータを下部バーに反映させる
     if (bottomBar) {
