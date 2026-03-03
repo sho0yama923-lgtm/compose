@@ -117,7 +117,7 @@ export function renderChordEditor(track, editorEl) {
 
     // オクターブ選択
     const octRow = document.createElement('div');
-    octRow.className = 'chord-selector-row';
+    octRow.className = 'chord-selector-row horizontal';
     const octLabel = document.createElement('span');
     octLabel.className = 'chord-selector-label';
     octLabel.textContent = 'オクターブ';

@@ -616,14 +616,19 @@ body {
 }
 .chord-selector-row {
     display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.chord-selector-row.horizontal {
+    flex-direction: row;
     align-items: center;
     gap: 8px;
 }
 .chord-selector-label {
-    font-size: 11px;
+    font-size: 10px;
     color: #888;
-    min-width: 56px;
-    flex-shrink: 0;
+    font-weight: 700;
+    letter-spacing: 0.05em;
 }
 
 /* ルート選択 */
