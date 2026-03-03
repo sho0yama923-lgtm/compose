@@ -629,25 +629,22 @@ body {
 /* ルート選択 */
 .chord-root-list {
     display: flex;
-    gap: 5px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    gap: 3px;
     padding-bottom: 2px;
 }
-.chord-root-list::-webkit-scrollbar { display: none; }
 .chord-root-btn {
-    min-width: 36px;
+    flex: 1;
+    min-width: 0;
     height: 36px;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     border: 1.5px solid #ddd;
     border-radius: 6px;
     background: #f8f8f8;
     color: #111;
     cursor: pointer;
-    flex-shrink: 0;
     touch-action: manipulation;
+    padding: 0;
 }
 .chord-root-btn:active { opacity: 0.7; }
 .chord-root-btn.selected {
