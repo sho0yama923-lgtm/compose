@@ -46,3 +46,13 @@ export const CHORD_TYPES = {
     'sus2': [0, 2, 7],
     'aug':  [0, 4, 8],
 };
+
+// コードの構成音を返す（例: getChordNotes('C', 'M', 4) → ['C4','E4','G4']）
+export function getChordNotes(root, type, octave) {
+    const rootIdx = CHROMATIC.indexOf(root);
+    return CHORD_TYPES[type].map(interval => {
+        const noteIdx = (rootIdx + interval) % 12;
+        const oct = octave + Math.floor((rootIdx + interval) / 12);
+        return CHROMATIC[noteIdx] + oct;
+    });
+}
