@@ -9,6 +9,7 @@ import { CHROMATIC } from './constants.js';
 // -------------------------------------------------------
 export function selectTrack(id) {
     appState.activeTrackId = id;
+    appState.previewMode = false;
     callbacks.renderEditor();
     callbacks.renderSidebar();
     callbacks.closeSidebar();

@@ -8,6 +8,7 @@ export const appState = {
     activeTrackId: null,
     numMeasures: 4,
     currentMeasure: 0,
+    previewMode: false,
 };
 
 export function totalSteps() {

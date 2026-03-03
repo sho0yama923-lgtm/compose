@@ -5,16 +5,35 @@ import { INST_TYPE } from './instruments.js';
 import { renderDrumEditor } from './editor-drum.js';
 import { renderMelodicEditor } from './editor-melodic.js';
 import { renderChordEditor } from './editor-chord.js';
+import { renderPreview } from './editor-preview.js';
 import { addMeasure, removeMeasure } from './track-manager.js';
 
 export function renderEditor() {
     const emptyState = document.getElementById('emptyState');
     const editorEl   = document.getElementById('trackEditor');
 
-    if (appState.activeTrackId === null || appState.tracks.length === 0) {
+    // トラックが無い場合
+    if (appState.tracks.length === 0) {
         emptyState.style.display = '';
         editorEl.style.display   = 'none';
         editorEl.innerHTML       = '';
+        return;
+    }
+
+    // プレビューモードまたはトラック未選択
+    if (appState.previewMode || appState.activeTrackId === null) {
+        emptyState.style.display = 'none';
+        editorEl.style.display   = '';
+        editorEl.innerHTML       = '';
+
+        // タイトルを「作曲ツール」に
+        document.getElementById('topbarTitle').textContent = '作曲ツール';
+
+        renderPreview(editorEl);
+
+        // シークバーを下部に追加
+        const seekRow = buildSeekBar();
+        editorEl.appendChild(seekRow);
         return;
     }
 
@@ -25,7 +44,24 @@ export function renderEditor() {
     editorEl.style.display   = '';
     editorEl.innerHTML       = '';
 
-    // --- 小節シークバー（エディタ内に生成） ---
+    const header = document.createElement('div');
+    header.className = 'editor-header';
+    header.style.justifyContent = 'flex-end';
+    editorEl.appendChild(header);
+
+    if (INST_TYPE[track.instrument] === 'rhythm') {
+        renderDrumEditor(track, editorEl);
+    } else if (INST_TYPE[track.instrument] === 'chord') {
+        renderChordEditor(track, editorEl);
+    } else {
+        renderMelodicEditor(track, editorEl);
+    }
+
+    editorEl.appendChild(buildSeekBar());
+}
+
+// --- 小節シークバー生成 ---
+function buildSeekBar() {
     const seekRow = document.createElement('div');
     seekRow.className = 'measure-seek';
 
@@ -47,14 +83,9 @@ export function renderEditor() {
     seekSlider.min = 0;
     seekSlider.max = Math.max(1, appState.numMeasures - 1);
     seekSlider.value = appState.currentMeasure;
-    const updateSliderBg = () => {
-        const mn = parseInt(seekSlider.min, 10) || 0;
-        const mx = parseInt(seekSlider.max, 10) || 1;
-        const vl = parseInt(seekSlider.value, 10) || 0;
-        const pct = (mx === mn) ? 0 : ((vl - mn) / (mx - mn)) * 100;
-        seekSlider.style.backgroundSize = `${pct}% 100%`;
-    };
-    updateSliderBg();
+    const pct = appState.numMeasures <= 1 ? 0
+        : (appState.currentMeasure / (appState.numMeasures - 1)) * 100;
+    seekSlider.style.backgroundSize = `${pct}% 100%`;
     seekSlider.addEventListener('input', (e) => {
         const v = parseInt(e.target.value, 10);
         if (appState.currentMeasure !== v) { appState.currentMeasure = v; renderEditor(); }
@@ -86,19 +117,5 @@ export function renderEditor() {
     seekRow.appendChild(seekAdd);
     seekRow.appendChild(seekLabel);
 
-    const header = document.createElement('div');
-    header.className = 'editor-header';
-    header.style.justifyContent = 'flex-end';
-
-    editorEl.appendChild(header);
-
-    if (INST_TYPE[track.instrument] === 'rhythm') {
-        renderDrumEditor(track, editorEl);
-    } else if (INST_TYPE[track.instrument] === 'chord') {
-        renderChordEditor(track, editorEl);
-    } else {
-        renderMelodicEditor(track, editorEl);
-    }
-
-    editorEl.appendChild(seekRow);
+    return seekRow;
 }

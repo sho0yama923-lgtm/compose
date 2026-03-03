@@ -1184,3 +1184,53 @@ body {
     flex-shrink: 0;
     padding: 8px 0 0 0;
 }
+
+/* ======= 全トラックプレビュー ======= */
+.preview-wrap {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+}
+.preview-card {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.preview-card-header {
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    background: #111;
+    cursor: pointer;
+    touch-action: manipulation;
+    letter-spacing: 0.04em;
+}
+.preview-card-header:active { opacity: 0.75; }
+.preview-grid {
+    display: grid;
+    grid-template-columns: repeat(16, 1fr);
+    gap: 1px;
+    padding: 6px;
+    background: #fafafa;
+}
+.preview-cell {
+    aspect-ratio: 1;
+    max-height: 6px;
+    border-radius: 1px;
+    background: #e8e8e8;
+}
+.preview-cell.on {
+    background: #333;
+}
+/* トップバータイトルをタップ可能に */
+.topbar-title {
+    cursor: pointer;
+    touch-action: manipulation;
+}
