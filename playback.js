@@ -1,6 +1,6 @@
 // playback.js — 再生/停止 + スコア構築
 
-import { appState, totalSteps } from './state.js';
+import { appState, STEPS_PER_MEASURE, totalSteps, callbacks } from './state.js';
 import { play, stop } from './player.js';
 import { INST_TYPE } from './instruments.js';
 import { getChordNotes } from './constants.js';
@@ -43,8 +43,30 @@ export function initPlayback() {
             }
         });
 
-        await play(score, { bpm });
+        await play(score, {
+            bpm,
+            onStep(globalStep) {
+                const measure = Math.floor(globalStep / STEPS_PER_MEASURE);
+                const stepInMeasure = globalStep % STEPS_PER_MEASURE;
+
+                // 小節が変わったら自動ページ送り
+                if (measure !== appState.currentMeasure) {
+                    appState.currentMeasure = measure;
+                    callbacks.renderEditor();
+                }
+
+                // 再生位置ハイライト更新
+                document.querySelectorAll('.preview-cell.playing')
+                    .forEach(el => el.classList.remove('playing'));
+                document.querySelectorAll(`.preview-cell[data-step="${stepInMeasure}"]`)
+                    .forEach(el => el.classList.add('playing'));
+            }
+        });
     });
 
-    document.getElementById('stopBtn').addEventListener('click', () => stop());
+    document.getElementById('stopBtn').addEventListener('click', () => {
+        stop();
+        document.querySelectorAll('.preview-cell.playing')
+            .forEach(el => el.classList.remove('playing'));
+    });
 }

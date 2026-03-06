@@ -32,7 +32,7 @@ let _sequence = null;
  *   @param {number}  options.bpm  - テンポ（デフォルト: 120）
  *   @param {boolean} options.loop - ループ再生（デフォルト: true）
  */
-export async function play(score, { bpm = 120, loop = true } = {}) {
+export async function play(score, { bpm = 120, loop = true, onStep } = {}) {
     await Tone.start();
 
     // 前の再生を停止
@@ -45,6 +45,9 @@ export async function play(score, { bpm = 120, loop = true } = {}) {
     const indices = score.map((_, i) => i);
 
     _sequence = new Tone.Sequence((time, i) => {
+        // 再生位置コールバック（DOM更新はDraw.scheduleで同期）
+        if (onStep) Tone.Draw.schedule(() => onStep(i), time);
+
         const step = score[i];
         if (!step) return;
 

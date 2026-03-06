@@ -194,6 +194,23 @@ body {
     touch-action: manipulation;
 }
 .btn-add-track:active { background: #333; }
+.sidebar-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+}
+.btn-sidebar-action {
+    flex: 1;
+    padding: 10px 4px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #fff;
+    font-size: 12px;
+    cursor: pointer;
+    touch-action: manipulation;
+    text-align: center;
+}
+.btn-sidebar-action:active { background: #eee; }
 
 /* ======= メインエリア ======= */
 .main {
@@ -1228,6 +1245,24 @@ body {
 }
 .preview-cell.on {
     background: #333;
+}
+.preview-cell.playing {
+    outline: 2px solid #f5c518;
+    outline-offset: -1px;
+    z-index: 1;
+    position: relative;
+}
+/* コードゾーンラベル */
+.preview-chord-label {
+    font-size: 9px;
+    font-weight: 700;
+    text-align: center;
+    padding: 2px 0;
+    color: #fff;
+    border-radius: 2px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
 }
 /* トップバータイトルをタップ可能に */
 .topbar-title {
