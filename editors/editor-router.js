@@ -1,16 +1,17 @@
 // editor-router.js — エディタ描画ルーター（シークバー + エディタ振り分け）
 
-import { appState, STEPS_PER_MEASURE, callbacks } from './state.js';
-import { INST_TYPE } from './instruments.js';
+import { appState, STEPS_PER_MEASURE, callbacks } from '../core/state.js';
+import { INST_TYPE } from '../instruments.js';
 import { renderDrumEditor } from './editor-drum.js';
 import { renderMelodicEditor } from './editor-melodic.js';
 import { renderChordEditor } from './editor-chord.js';
 import { renderPreview } from './editor-preview.js';
-import { addMeasure, removeMeasure } from './track-manager.js';
+import { addMeasure, removeMeasure } from '../track-manager.js';
 
 export function renderEditor() {
     const emptyState = document.getElementById('emptyState');
     const editorEl   = document.getElementById('trackEditor');
+    editorEl.classList.remove('melodic-track-editor', 'drum-track-editor', 'chord-track-editor', 'preview-editor');
 
     // トラックが無い場合
     if (appState.tracks.length === 0) {
@@ -25,6 +26,7 @@ export function renderEditor() {
         emptyState.style.display = 'none';
         editorEl.style.display   = '';
         editorEl.innerHTML       = '';
+        editorEl.classList.add('preview-editor');
 
         // タイトルを「作曲ツール」に
         document.getElementById('topbarTitle').textContent = '作曲ツール';
@@ -50,10 +52,13 @@ export function renderEditor() {
     editorEl.appendChild(header);
 
     if (INST_TYPE[track.instrument] === 'rhythm') {
+        editorEl.classList.add('drum-track-editor');
         renderDrumEditor(track, editorEl);
     } else if (INST_TYPE[track.instrument] === 'chord') {
+        editorEl.classList.add('chord-track-editor');
         renderChordEditor(track, editorEl);
     } else {
+        editorEl.classList.add('melodic-track-editor');
         renderMelodicEditor(track, editorEl);
     }
 

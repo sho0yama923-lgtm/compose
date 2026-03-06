@@ -1,10 +1,10 @@
 // playback.js — 再生/停止 + スコア構築
 
-import { appState, STEPS_PER_MEASURE, totalSteps, callbacks } from './state.js';
+import { appState, STEPS_PER_MEASURE, totalSteps, callbacks } from './core/state.js';
 import { play, stop } from './player.js';
 import { INST_TYPE } from './instruments.js';
-import { getChordNotes } from './constants.js';
-import { isStepHead } from './duration-utils.js';
+import { getChordNotes } from './core/constants.js';
+import { isStepHead } from './core/duration-utils.js';
 
 export function initPlayback() {
     document.getElementById('playBtn').addEventListener('click', async () => {

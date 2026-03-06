@@ -1,6 +1,6 @@
 // sidebar.js — サイドバー開閉 + トラックリスト描画
 
-import { appState } from './state.js';
+import { appState } from './core/state.js';
 import { INST_LABEL } from './instruments.js';
 import { selectTrack, deleteTrack } from './track-manager.js';
 

@@ -1,7 +1,7 @@
 // app.js — エントリポイント: コールバック登録 + 各モジュール初期化
 
-import { appState, callbacks } from './state.js';
-import { renderEditor } from './editor-router.js';
+import { appState, callbacks } from './core/state.js';
+import { renderEditor } from './editors/editor-router.js';
 import { renderSidebar, closeSidebar, initSidebar } from './sidebar.js';
 import { addTrack } from './track-manager.js';
 import { initPlayback } from './playback.js';

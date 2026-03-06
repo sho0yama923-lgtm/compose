@@ -1,14 +1,15 @@
 // editor-melodic.js — メロディエディタ（オクターブ アコーディオン）
 
-import { appState, STEPS_PER_MEASURE, callbacks } from './state.js';
-import { CHROMATIC, BLACK_KEYS, OCT_COLOR, DURATION_CELLS } from './constants.js';
-import { toggleStep, isStepHead, isStepTie } from './duration-utils.js';
+import { appState, STEPS_PER_MEASURE, callbacks } from '../core/state.js';
+import { CHROMATIC, BLACK_KEYS, OCT_COLOR, DURATION_CELLS } from '../core/constants.js';
+import { toggleStep, isStepHead, isStepTie } from '../core/duration-utils.js';
 import { renderDurationToolbar, getCurrentDuration } from './duration-toolbar.js';
 import {
     getEditorCells,
     getEditorGridColumns,
+    getEditorGridLineGroup,
     getMeasureStart,
-} from './rhythm-grid.js';
+} from '../core/rhythm-grid.js';
 
 export function renderMelodicEditor(track, editorEl) {
     const measureIndex = appState.currentMeasure;
@@ -16,6 +17,7 @@ export function renderMelodicEditor(track, editorEl) {
     const maxIndex = offset + STEPS_PER_MEASURE;
     const cells = getEditorCells();
     const columns = getEditorGridColumns();
+    const majorGroup = getEditorGridLineGroup();
     const octaves = [track.viewBase, track.viewBase + 1, track.viewBase + 2];
 
     // --- デュレーションツールバー ---
@@ -130,6 +132,8 @@ export function renderMelodicEditor(track, editorEl) {
         const hdrEl = document.createElement('div');
         hdrEl.className = 'timeline-header';
         hdrEl.style.gridTemplateColumns = columns;
+        hdrEl.style.setProperty('--timeline-columns', String(cells.length));
+        hdrEl.style.setProperty('--timeline-major', String(majorGroup));
         cells.forEach(cellInfo => {
             const cell = document.createElement('div');
             cell.className = 'timeline-header-cell' + (cellInfo.slot === 0 ? ' beat' : '');
@@ -153,6 +157,7 @@ export function renderMelodicEditor(track, editorEl) {
             const rowEl = document.createElement('div');
             rowEl.className = 'timeline-row' + (isBlack ? ' black-key' : '');
             rowEl.style.setProperty('--timeline-columns', String(cells.length));
+            rowEl.style.setProperty('--timeline-major', String(majorGroup));
             rowEl.addEventListener('click', (event) => {
                 const target = event.target;
                 if (target.classList.contains('timeline-note')) return;
@@ -174,8 +179,8 @@ export function renderMelodicEditor(track, editorEl) {
                 btn.className = 'timeline-note melodic-note';
                 const widthPct = ((DURATION_CELLS[val] || 1) / STEPS_PER_MEASURE) * 100;
                 const leftPct = (localStep / STEPS_PER_MEASURE) * 100;
-                btn.style.left = `calc(${leftPct}% + 1px)`;
-                btn.style.width = `calc(${widthPct}% - 2px)`;
+                btn.style.left = `${leftPct}%`;
+                btn.style.width = `${widthPct}%`;
 
                 btn.addEventListener('click', (event) => {
                     event.stopPropagation();

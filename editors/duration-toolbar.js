@@ -1,8 +1,8 @@
 // duration-toolbar.js — デュレーション選択ツールバー
 
-import { appState } from './state.js';
-import { DURATION_LIST } from './constants.js';
-import { getEffectiveDuration } from './duration-utils.js';
+import { appState } from '../core/state.js';
+import { DURATION_LIST } from '../core/constants.js';
+import { getEffectiveDuration } from '../core/duration-utils.js';
 
 /**
  * デュレーションツールバーを生成してコンテナに追加

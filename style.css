@@ -459,19 +459,33 @@ body {
     display: grid;
     grid-auto-flow: column;
     gap: 0;
-    padding: 0 6px;
+    padding: 0;
     height: 22px;
     flex-shrink: 0;
     align-items: center;
     border-bottom: 1px solid #e8e8e8;
-    background: #fafafa;
+    background:
+        repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            #b1b1b1 calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            #b1b1b1 calc(100% / (var(--timeline-columns) / var(--timeline-major, 4)))
+        ),
+        repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent calc((100% / var(--timeline-columns)) - 1px),
+            #e5e5e5 calc((100% / var(--timeline-columns)) - 1px),
+            #e5e5e5 calc(100% / var(--timeline-columns))
+        ),
+        #fafafa;
 }
 .timeline-header-cell {
     min-width: 0;
     font-size: 9px;
     text-align: center;
     color: #b8b8b8;
-    border-left: 1px solid #ececec;
 }
 .timeline-header-cell.beat {
     color: #888;
@@ -481,12 +495,19 @@ body {
 
 .timeline-row {
     display: block;
-    padding: 0 6px;
+    padding: 0;
     height: 30px;
     border-bottom: 1px solid #f0f0f0;
     position: relative;
     overflow: hidden;
     background:
+        repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            #b5b5b5 calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            #b5b5b5 calc(100% / (var(--timeline-columns) / var(--timeline-major, 4)))
+        ),
         repeating-linear-gradient(
             to right,
             transparent 0,
@@ -502,6 +523,13 @@ body {
         repeating-linear-gradient(
             to right,
             transparent 0,
+            transparent calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            #a9a9a9 calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            #a9a9a9 calc(100% / (var(--timeline-columns) / var(--timeline-major, 4)))
+        ),
+        repeating-linear-gradient(
+            to right,
+            transparent 0,
             transparent calc((100% / var(--timeline-columns)) - 1px),
             #d7d7d7 calc((100% / var(--timeline-columns)) - 1px),
             #d7d7d7 calc(100% / var(--timeline-columns))
@@ -512,8 +540,8 @@ body {
 .timeline-note {
     display: block;
     position: absolute;
-    top: 3px;
-    height: calc(100% - 6px);
+    top: 2px;
+    height: calc(100% - 4px);
     border: 1px solid #111;
     border-radius: 4px;
     background: #111;
@@ -814,6 +842,13 @@ body {
     padding: 0;
     border-bottom: 1px solid #ececec;
     background:
+        repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            #b5b5b5 calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            #b5b5b5 calc(100% / (var(--timeline-columns) / var(--timeline-major, 4)))
+        ),
         repeating-linear-gradient(
             to right,
             transparent 0,
@@ -1156,6 +1191,22 @@ body {
     flex-direction: column;
     overflow: hidden;
     min-height: 0;
+}
+#trackEditor.melodic-track-editor {
+    margin-inline: -12px;
+}
+#trackEditor.melodic-track-editor .editor-header {
+    padding-inline: 12px;
+}
+#trackEditor.melodic-track-editor .oct-section {
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
+}
+#trackEditor.melodic-track-editor .melodic-editor {
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
 }
 
 /* 2. エディタ本体も縦スクロール禁止し、Flexbox化 */

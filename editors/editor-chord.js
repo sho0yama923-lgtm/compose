@@ -1,11 +1,11 @@
 // editor-chord.js — コードエディタ（専用トラックとして表示）
 
-import { appState, STEPS_PER_MEASURE, totalSteps, callbacks } from './state.js';
-import { CHORD_ROOTS, CHORD_TYPES, ROOT_COLORS, DURATION_CELLS } from './constants.js';
-import { INST_TYPE } from './instruments.js';
-import { toggleStep, isStepHead, isStepTie } from './duration-utils.js';
+import { appState, STEPS_PER_MEASURE, totalSteps, callbacks } from '../core/state.js';
+import { CHORD_ROOTS, CHORD_TYPES, ROOT_COLORS, DURATION_CELLS } from '../core/constants.js';
+import { INST_TYPE } from '../instruments.js';
+import { toggleStep, isStepHead, isStepTie } from '../core/duration-utils.js';
 import { renderDurationToolbar, getCurrentDuration } from './duration-toolbar.js';
-import { getEditorCells, getEditorGridColumns, getMeasureStart } from './rhythm-grid.js';
+import { getEditorCells, getEditorGridColumns, getEditorGridLineGroup, getMeasureStart } from '../core/rhythm-grid.js';
 
 // hex色をrgba(r,g,b,alpha)に変換するヘルパー
 function hexToRgba(hex, alpha) {
@@ -46,6 +46,8 @@ function moveDivider(track, direction) {
 function buildBeatHeader() {
     const hdrCells = document.createElement('div');
     hdrCells.className = 'chord-steps-cells';
+    hdrCells.style.setProperty('--timeline-columns', String(STEPS_PER_MEASURE));
+    hdrCells.style.setProperty('--timeline-major', '4');
     for (let i = 0; i < STEPS_PER_MEASURE; i++) {
         const cell = document.createElement('div');
         cell.className = 'chord-step-header-cell' + (i % 4 === 0 ? ' beat' : '');
@@ -61,6 +63,7 @@ export function renderChordEditor(track, editorEl) {
     const mEnd   = offset + STEPS_PER_MEASURE;
     const cells = getEditorCells();
     const columns = getEditorGridColumns();
+    const majorGroup = getEditorGridLineGroup();
     const visibleStarts = cells.map(cell => offset + cell.localStep);
 
     // --- デュレーションツールバー ---
@@ -430,6 +433,7 @@ export function renderChordEditor(track, editorEl) {
     const soundCells = document.createElement('div');
     soundCells.className = 'chord-steps-cells';
     soundCells.style.setProperty('--timeline-columns', String(cells.length));
+    soundCells.style.setProperty('--timeline-major', String(majorGroup));
     soundCells.addEventListener('click', (event) => {
         const target = event.target;
         if (target.classList.contains('timeline-note')) return;
@@ -449,8 +453,8 @@ export function renderChordEditor(track, editorEl) {
         btn.className = 'timeline-note chord-note';
         const widthPct = ((DURATION_CELLS[val] || 1) / STEPS_PER_MEASURE) * 100;
         const leftPct = (localStep / STEPS_PER_MEASURE) * 100;
-        btn.style.left = `calc(${leftPct}% + 1px)`;
-        btn.style.width = `calc(${widthPct}% - 2px)`;
+        btn.style.left = `${leftPct}%`;
+        btn.style.width = `${widthPct}%`;
         if (inheritedChords[si]) {
             const col = ROOT_COLORS[inheritedChords[si].root] ?? '#111';
             btn.style.background = col;

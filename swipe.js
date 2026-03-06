@@ -1,6 +1,6 @@
 // swipe.js — スワイプで小節移動
 
-import { appState, callbacks } from './state.js';
+import { appState, callbacks } from './core/state.js';
 
 export function initSwipe() {
     const mainEl = document.getElementById('main');

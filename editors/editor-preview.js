@@ -1,11 +1,11 @@
 // editor-preview.js — 全トラックプレビュー画面
 
-import { appState, STEPS_PER_MEASURE } from './state.js';
-import { INST_TYPE, INST_LABEL } from './instruments.js';
-import { CHROMATIC, ROOT_COLORS } from './constants.js';
-import { selectTrack } from './track-manager.js';
-import { isStepOn } from './duration-utils.js';
-import { getMeasureCells, getMeasureGridColumns, getMeasureStart } from './rhythm-grid.js';
+import { appState, STEPS_PER_MEASURE } from '../core/state.js';
+import { INST_TYPE, INST_LABEL } from '../instruments.js';
+import { CHROMATIC, ROOT_COLORS } from '../core/constants.js';
+import { selectTrack } from '../track-manager.js';
+import { isStepOn } from '../core/duration-utils.js';
+import { getMeasureCells, getMeasureGridColumns, getMeasureStart } from '../core/rhythm-grid.js';
 
 export function renderPreview(containerEl) {
     const measureIndex = appState.currentMeasure;
