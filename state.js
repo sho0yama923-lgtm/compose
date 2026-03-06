@@ -10,6 +10,7 @@ export const appState = {
     numMeasures: 4,
     currentMeasure: 0,
     previewMode: false,
+    editorGridMode: 'normal',
     // デュレーション
     selectedDuration: '16n',   // ツールバーで選択中の音価
     dottedMode: false,         // 付点トグル

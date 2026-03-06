@@ -1,11 +1,11 @@
 // editor-chord.js — コードエディタ（専用トラックとして表示）
 
 import { appState, STEPS_PER_MEASURE, totalSteps, callbacks } from './state.js';
-import { CHORD_ROOTS, CHORD_TYPES, ROOT_COLORS } from './constants.js';
+import { CHORD_ROOTS, CHORD_TYPES, ROOT_COLORS, DURATION_CELLS } from './constants.js';
 import { INST_TYPE } from './instruments.js';
 import { toggleStep, isStepHead, isStepTie } from './duration-utils.js';
 import { renderDurationToolbar, getCurrentDuration } from './duration-toolbar.js';
-import { getMeasureCells, getMeasureGridColumns, getMeasureStart, getVisibleSpanCount } from './rhythm-grid.js';
+import { getEditorCells, getEditorGridColumns, getMeasureStart } from './rhythm-grid.js';
 
 // hex色をrgba(r,g,b,alpha)に変換するヘルパー
 function hexToRgba(hex, alpha) {
@@ -59,8 +59,8 @@ export function renderChordEditor(track, editorEl) {
     const measureIndex = appState.currentMeasure;
     const offset = getMeasureStart(measureIndex);
     const mEnd   = offset + STEPS_PER_MEASURE;
-    const cells = getMeasureCells(measureIndex);
-    const columns = getMeasureGridColumns(measureIndex);
+    const cells = getEditorCells();
+    const columns = getEditorGridColumns();
     const visibleStarts = cells.map(cell => offset + cell.localStep);
 
     // --- デュレーションツールバー ---
@@ -429,31 +429,41 @@ export function renderChordEditor(track, editorEl) {
     soundRow.appendChild(soundRowLbl);
     const soundCells = document.createElement('div');
     soundCells.className = 'chord-steps-cells';
-    soundCells.style.gridTemplateColumns = columns;
-    cells.forEach((cellInfo, idx) => {
-        const si = offset + cellInfo.localStep;
+    soundCells.style.setProperty('--timeline-columns', String(cells.length));
+    soundCells.addEventListener('click', (event) => {
+        const target = event.target;
+        if (target.classList.contains('timeline-note')) return;
+        const rect = soundCells.getBoundingClientRect();
+        const x = Math.max(0, Math.min(rect.width - 1, event.clientX - rect.left));
+        const column = Math.floor((x / rect.width) * cells.length);
+        const cellInfo = cells[Math.max(0, Math.min(cells.length - 1, column))];
+        const dur = getCurrentDuration();
+        toggleStep(track.soundSteps, offset + cellInfo.localStep, dur, mEnd);
+        callbacks.renderEditor();
+    });
+    for (let localStep = 0; localStep < STEPS_PER_MEASURE; localStep++) {
+        const si = offset + localStep;
         const val = track.soundSteps[si];
-        const head = isStepHead(val);
-        const tie = isStepTie(val);
-        if (tie) return;
-        const btn = document.createElement('button');
-        const span = head ? getVisibleSpanCount(cells, idx, offset, track.soundSteps, si, mEnd) : 1;
-        btn.className = 'chord-sound-btn'
-            + (head ? ' on' : '')
-            + (span > 1 ? ' head-span' : '');
-        btn.style.gridColumn = `${idx + 1} / span ${span}`;
-        if (head && inheritedChords[si]) {
+        if (isStepTie(val) || !isStepHead(val)) continue;
+        const btn = document.createElement('div');
+        btn.className = 'timeline-note chord-note';
+        const widthPct = ((DURATION_CELLS[val] || 1) / STEPS_PER_MEASURE) * 100;
+        const leftPct = (localStep / STEPS_PER_MEASURE) * 100;
+        btn.style.left = `calc(${leftPct}% + 1px)`;
+        btn.style.width = `calc(${widthPct}% - 2px)`;
+        if (inheritedChords[si]) {
             const col = ROOT_COLORS[inheritedChords[si].root] ?? '#111';
             btn.style.background = col;
             btn.style.borderColor = col;
         }
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', (event) => {
+            event.stopPropagation();
             const dur = getCurrentDuration();
             toggleStep(track.soundSteps, si, dur, mEnd);
             callbacks.renderEditor();
         });
         soundCells.appendChild(btn);
-    });
+    }
     soundRow.appendChild(soundCells);
     soundSection.appendChild(soundRow);
     bodyEl.appendChild(soundSection);

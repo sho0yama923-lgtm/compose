@@ -3,11 +3,6 @@
 import { appState } from './state.js';
 import { DURATION_LIST } from './constants.js';
 import { getEffectiveDuration } from './duration-utils.js';
-import {
-    applyBeatSubdivisionChange,
-    cycleBeatSubdivision,
-    getMeasureBeatConfig,
-} from './rhythm-grid.js';
 
 /**
  * デュレーションツールバーを生成してコンテナに追加
@@ -18,8 +13,32 @@ export function renderDurationToolbar(containerEl, onUpdate) {
     const toolbar = document.createElement('div');
     toolbar.className = 'duration-toolbar';
 
+    const modeTabs = document.createElement('div');
+    modeTabs.className = 'grid-mode-tabs';
+    [
+        { value: 'normal', label: '通常' },
+        { value: 'triplet', label: '3連' },
+    ].forEach(({ value, label }) => {
+        const btn = document.createElement('button');
+        btn.className = 'grid-mode-tab' + (appState.editorGridMode === value ? ' selected' : '');
+        btn.textContent = label;
+        btn.addEventListener('click', () => {
+            appState.editorGridMode = value;
+            if (value === 'triplet' && !appState.selectedDuration.endsWith('t')) {
+                appState.selectedDuration = '8t';
+            }
+            if (value === 'normal' && appState.selectedDuration.endsWith('t')) {
+                appState.selectedDuration = '16n';
+            }
+            appState.dottedMode = false;
+            if (onUpdate) onUpdate();
+        });
+        modeTabs.appendChild(btn);
+    });
+    toolbar.appendChild(modeTabs);
+
     // --- 音価ボタン ---
-    DURATION_LIST.forEach(({ value, label }) => {
+    getVisibleDurations().forEach(({ value, label }) => {
         const btn = document.createElement('button');
         btn.className = 'dur-btn' + (appState.selectedDuration === value ? ' selected' : '');
         btn.textContent = label;
@@ -36,7 +55,7 @@ export function renderDurationToolbar(containerEl, onUpdate) {
     });
 
     // --- 付点ボタン ---
-    const canDot = ['8n', '4n', '2n'].includes(appState.selectedDuration);
+    const canDot = appState.editorGridMode === 'normal' && ['8n', '4n', '2n'].includes(appState.selectedDuration);
     const dotBtn = document.createElement('button');
     dotBtn.className = 'dur-btn dotted' + (appState.dottedMode ? ' selected' : '');
     dotBtn.textContent = '付点';
@@ -47,24 +66,8 @@ export function renderDurationToolbar(containerEl, onUpdate) {
     });
     toolbar.appendChild(dotBtn);
 
-    // --- 3連符ボタン ---
-    const tripBtn = document.createElement('button');
-    tripBtn.className = 'dur-btn triplet' + (appState.tripletMode ? ' selected' : '');
-    tripBtn.textContent = '3連編集';
-    tripBtn.addEventListener('click', () => {
-        appState.tripletMode = !appState.tripletMode;
-        if (appState.tripletMode) {
-            appState.dottedMode = false;
-        }
-        if (onUpdate) onUpdate();
-    });
-    toolbar.appendChild(tripBtn);
-
     containerEl.appendChild(toolbar);
-
-    if (appState.tripletMode) {
-        renderTripletEditor(containerEl, onUpdate);
-    }
+    return toolbar;
 }
 
 /**
@@ -75,32 +78,9 @@ export function getCurrentDuration() {
     return getEffectiveDuration(appState.selectedDuration, appState.dottedMode);
 }
 
-function renderTripletEditor(containerEl, onUpdate) {
-    const editor = document.createElement('div');
-    editor.className = 'triplet-editor';
-
-    const label = document.createElement('div');
-    label.className = 'triplet-editor-label';
-    label.textContent = '拍ごとの分割';
-    editor.appendChild(label);
-
-    const beatConfig = getMeasureBeatConfig(appState.currentMeasure);
-    beatConfig.forEach((subs, beatIndex) => {
-        const btn = document.createElement('button');
-        btn.className = 'triplet-beat-btn';
-        btn.textContent = `${beatIndex + 1}: ${formatSubdivisionLabel(subs)}`;
-        btn.addEventListener('click', () => {
-            applyBeatSubdivisionChange(appState.currentMeasure, beatIndex, cycleBeatSubdivision(subs));
-            if (onUpdate) onUpdate();
-        });
-        editor.appendChild(btn);
-    });
-
-    containerEl.appendChild(editor);
-}
-
-function formatSubdivisionLabel(subs) {
-    if (subs === 3) return '1拍3連';
-    if (subs === 6) return '半拍3連';
-    return '4分割';
+function getVisibleDurations() {
+    if (appState.editorGridMode === 'triplet') {
+        return DURATION_LIST.filter(({ value }) => value.endsWith('t'));
+    }
+    return DURATION_LIST.filter(({ value }) => !value.endsWith('t'));
 }

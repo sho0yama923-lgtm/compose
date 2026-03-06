@@ -15,6 +15,11 @@ const STEP_OFFSETS = {
     6: [0, 2, 4, 6, 8, 10],
 };
 
+const EDITOR_MODE_OFFSETS = {
+    normal: [0, 3, 6, 9],
+    triplet: [0, 2, 4, 6, 8, 10],
+};
+
 export function normalizeBeatSubdivision(value) {
     return value === 3 || value === 6 ? value : 4;
 }
@@ -28,6 +33,32 @@ export function getMeasureGridColumns(measureIndex) {
     return getMeasureBeatConfig(measureIndex)
         .flatMap(subs => BEAT_COLUMN_WEIGHTS[subs] || BEAT_COLUMN_WEIGHTS[4])
         .join(' ');
+}
+
+export function getEditorCells(mode = appState.editorGridMode) {
+    const offsets = EDITOR_MODE_OFFSETS[mode] || EDITOR_MODE_OFFSETS.normal;
+    const cells = [];
+
+    for (let beat = 0; beat < 4; beat++) {
+        offsets.forEach((offset, slot) => {
+            cells.push({
+                beat,
+                slot,
+                localStep: beat * STEPS_PER_BEAT + offset,
+            });
+        });
+    }
+
+    return cells;
+}
+
+export function getEditorGridColumns(mode = appState.editorGridMode) {
+    const count = (EDITOR_MODE_OFFSETS[mode] || EDITOR_MODE_OFFSETS.normal).length * 4;
+    return `repeat(${count}, minmax(0, 1fr))`;
+}
+
+export function getGridModeLabel(mode = appState.editorGridMode) {
+    return mode === 'triplet' ? '3連' : '通常';
 }
 
 export function getMeasureCells(measureIndex) {

@@ -182,6 +182,7 @@ export function saveState() {
             nextId: appState.nextId,
             currentMeasure: appState.currentMeasure,
             activeTrackId: appState.activeTrackId,
+            editorGridMode: appState.editorGridMode,
             beatConfig: appState.beatConfig,
             tracks: appState.tracks.map(t => {
                 const clone = { ...t };
@@ -214,6 +215,7 @@ function restoreFromData(data) {
     appState.nextId         = data.nextId         ?? 0;
     appState.currentMeasure = data.currentMeasure ?? 0;
     appState.activeTrackId  = data.activeTrackId  ?? null;
+    appState.editorGridMode = data.editorGridMode === 'triplet' ? 'triplet' : 'normal';
     appState.beatConfig     = normalizeBeatConfig(appState.numMeasures, data.beatConfig);
 
     const length = totalSteps();

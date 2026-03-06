@@ -1,28 +1,25 @@
 // editor-melodic.js — メロディエディタ（オクターブ アコーディオン）
 
 import { appState, STEPS_PER_MEASURE, callbacks } from './state.js';
-import { CHROMATIC, BLACK_KEYS, OCT_COLOR } from './constants.js';
+import { CHROMATIC, BLACK_KEYS, OCT_COLOR, DURATION_CELLS } from './constants.js';
 import { toggleStep, isStepHead, isStepTie } from './duration-utils.js';
 import { renderDurationToolbar, getCurrentDuration } from './duration-toolbar.js';
 import {
-    applyBeatSubdivisionChange,
-    cycleBeatSubdivision,
-    getMeasureCells,
-    getMeasureGridColumns,
+    getEditorCells,
+    getEditorGridColumns,
     getMeasureStart,
-    getVisibleSpanCount,
 } from './rhythm-grid.js';
 
 export function renderMelodicEditor(track, editorEl) {
     const measureIndex = appState.currentMeasure;
     const offset = getMeasureStart(measureIndex);
     const maxIndex = offset + STEPS_PER_MEASURE;
-    const cells = getMeasureCells(measureIndex);
-    const columns = getMeasureGridColumns(measureIndex);
+    const cells = getEditorCells();
+    const columns = getEditorGridColumns();
     const octaves = [track.viewBase, track.viewBase + 1, track.viewBase + 2];
 
     // --- デュレーションツールバー ---
-    renderDurationToolbar(editorEl, () => callbacks.renderEditor());
+    const toolbarEl = renderDurationToolbar(editorEl, () => callbacks.renderEditor());
 
     // オクターブ範囲シフトコントロール
     const ctrlEl = document.createElement('div');
@@ -59,8 +56,12 @@ export function renderMelodicEditor(track, editorEl) {
     ctrlEl.appendChild(downBtn);
     ctrlEl.appendChild(rangeLabel);
     ctrlEl.appendChild(upBtn);
-    // 楽器名ヘッダーの右側に配置
-    editorEl.querySelector('.editor-header').appendChild(ctrlEl);
+    const header = editorEl.querySelector('.editor-header');
+    const modeTabs = toolbarEl.querySelector('.grid-mode-tabs');
+    if (modeTabs) {
+        header.appendChild(modeTabs);
+    }
+    header.appendChild(ctrlEl);
 
     const accordionEl = document.createElement('div');
     accordionEl.className = 'oct-accordion';
@@ -123,27 +124,17 @@ export function renderMelodicEditor(track, editorEl) {
         const gridScrollEl = document.createElement('div');
         gridScrollEl.className = 'steps-grid-scroll';
         const gridEl = document.createElement('div');
-        gridEl.className = 'steps-grid';
+        gridEl.className = 'timeline-grid';
 
         // ビートヘッダー
         const hdrEl = document.createElement('div');
-        hdrEl.className = 'steps-header';
+        hdrEl.className = 'timeline-header';
         hdrEl.style.gridTemplateColumns = columns;
         cells.forEach(cellInfo => {
             const cell = document.createElement('div');
-            cell.className = 'step-header-cell' + (cellInfo.slot === 0 ? ' beat' : '');
-            cell.textContent = cellInfo.slot === 0 ? String(cellInfo.beat + 1) : '·';
+            cell.className = 'timeline-header-cell' + (cellInfo.slot === 0 ? ' beat' : '');
+            cell.textContent = cellInfo.slot === 0 ? String(cellInfo.beat + 1) : '';
             if (cellInfo.slot === 0) cell.style.color = octStyle.on;
-
-            if (appState.tripletMode && cellInfo.slot === 0) {
-                cell.style.cursor = 'pointer';
-                cell.title = `${cellInfo.subs}分割`;
-                cell.addEventListener('click', () => {
-                    applyBeatSubdivisionChange(measureIndex, cellInfo.beat, cycleBeatSubdivision(cellInfo.subs));
-                    callbacks.renderEditor();
-                });
-            }
-
             hdrEl.appendChild(cell);
         });
         gridEl.appendChild(hdrEl);
@@ -160,30 +151,40 @@ export function renderMelodicEditor(track, editorEl) {
             keysEl.appendChild(keyEl);
 
             const rowEl = document.createElement('div');
-            rowEl.className = 'steps-row' + (isBlack ? ' black-key' : '');
-            rowEl.style.gridTemplateColumns = columns;
-            cells.forEach((cellInfo, idx) => {
-                const si = offset + cellInfo.localStep;
+            rowEl.className = 'timeline-row' + (isBlack ? ' black-key' : '');
+            rowEl.style.setProperty('--timeline-columns', String(cells.length));
+            rowEl.addEventListener('click', (event) => {
+                const target = event.target;
+                if (target.classList.contains('timeline-note')) return;
+                const rect = rowEl.getBoundingClientRect();
+                const x = Math.max(0, Math.min(rect.width - 1, event.clientX - rect.left));
+                const column = Math.floor((x / rect.width) * cells.length);
+                const cellInfo = cells[Math.max(0, Math.min(cells.length - 1, column))];
+                const dur = getCurrentDuration();
+                toggleStep(steps, offset + cellInfo.localStep, dur, maxIndex);
+                callbacks.renderEditor();
+            });
+
+            for (let localStep = 0; localStep < STEPS_PER_MEASURE; localStep++) {
+                const si = offset + localStep;
                 const val = steps[si];
-                const head = isStepHead(val);
-                const tie = isStepTie(val);
-                if (tie) return;
+                if (isStepTie(val) || !isStepHead(val)) continue;
 
-                const btn = document.createElement('button');
-                const span = head ? getVisibleSpanCount(cells, idx, offset, steps, si, maxIndex) : 1;
+                const btn = document.createElement('div');
+                btn.className = 'timeline-note melodic-note';
+                const widthPct = ((DURATION_CELLS[val] || 1) / STEPS_PER_MEASURE) * 100;
+                const leftPct = (localStep / STEPS_PER_MEASURE) * 100;
+                btn.style.left = `calc(${leftPct}% + 1px)`;
+                btn.style.width = `calc(${widthPct}% - 2px)`;
 
-                btn.className = 'step'
-                    + (head ? ' on' : '')
-                    + (span > 1 ? ' head-span' : '');
-                btn.style.gridColumn = `${idx + 1} / span ${span}`;
-
-                btn.addEventListener('click', () => {
+                btn.addEventListener('click', (event) => {
+                    event.stopPropagation();
                     const dur = getCurrentDuration();
                     toggleStep(steps, si, dur, maxIndex);
                     callbacks.renderEditor();
                 });
                 rowEl.appendChild(btn);
-            });
+            }
             gridEl.appendChild(rowEl);
         });
 
