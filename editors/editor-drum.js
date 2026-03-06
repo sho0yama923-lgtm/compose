@@ -24,7 +24,7 @@ export function renderDrumEditor(track, editorEl) {
     renderDurationToolbar(editorEl, () => callbacks.renderEditor());
 
     const wrapEl = document.createElement('div');
-    wrapEl.className = 'melodic-editor';
+    wrapEl.className = 'melodic-editor drum-editor';
 
     const keysEl = document.createElement('div');
     keysEl.className = 'piano-keys';
@@ -34,6 +34,7 @@ export function renderDrumEditor(track, editorEl) {
     gridScrollEl.className = 'steps-grid-scroll';
     const gridEl = document.createElement('div');
     gridEl.className = 'timeline-grid';
+    gridEl.dataset.measureStart = String(offset);
 
     // ビートヘッダー
     const hdrEl = document.createElement('div');
@@ -96,8 +97,29 @@ export function renderDrumEditor(track, editorEl) {
         gridEl.appendChild(rowEl);
     });
 
+    gridEl.appendChild(createPlayheadBar(offset));
+
     gridScrollEl.appendChild(gridEl);
     wrapEl.appendChild(keysEl);
     wrapEl.appendChild(gridScrollEl);
     editorEl.appendChild(wrapEl);
+}
+
+function createPlayheadBar(measureStart) {
+    const barEl = document.createElement('div');
+    barEl.className = 'playhead-bar';
+    barEl.dataset.measureStart = String(measureStart);
+    updatePlayheadBar(barEl, measureStart);
+    return barEl;
+}
+
+function updatePlayheadBar(barEl, measureStart) {
+    const step = appState.playheadStep;
+    if (step === null || step < measureStart || step >= measureStart + STEPS_PER_MEASURE) {
+        barEl.style.display = 'none';
+        return;
+    }
+    const localStep = step - measureStart;
+    barEl.style.display = 'block';
+    barEl.style.left = `${(localStep / STEPS_PER_MEASURE) * 100}%`;
 }

@@ -1,16 +1,25 @@
 // playback.js — 再生/停止 + スコア構築
 
-import { appState, STEPS_PER_MEASURE, totalSteps, callbacks } from './core/state.js';
+import { appState, STEPS_PER_MEASURE, totalSteps, callbacks, getNormalizedPlayRangeMeasures } from './core/state.js';
 import { play, stop } from './player.js';
 import { INST_TYPE } from './instruments.js';
 import { getChordNotes } from './core/constants.js';
 import { isStepHead } from './core/duration-utils.js';
 
 export function initPlayback() {
-    document.getElementById('playBtn').addEventListener('click', async () => {
+    const playToggleBtn = document.getElementById('playToggleBtn');
+    setPlaybackButtonState();
+
+    playToggleBtn.addEventListener('click', async () => {
+        if (appState.isPlaying) {
+            stopPlayback();
+            return;
+        }
+
         const bpm   = Number(document.getElementById('bpmInput').value) || 120;
         const ts    = totalSteps();
         const score = Array(ts).fill(null);
+        const playRange = getNormalizedPlayRangeMeasures();
 
         appState.tracks.forEach(track => {
             if (INST_TYPE[track.instrument] === 'rhythm') {
@@ -56,12 +65,29 @@ export function initPlayback() {
             }
         });
 
-        // beatConfig を渡す
-        await play(score, {
+        let startStep = 0;
+        let endStepExclusive = ts;
+        if (playRange) {
+            startStep = playRange.startMeasure * STEPS_PER_MEASURE;
+            endStepExclusive = (playRange.endMeasure + 1) * STEPS_PER_MEASURE;
+            if (appState.currentMeasure !== playRange.startMeasure) {
+                appState.isPlaying = true;
+                appState.currentMeasure = playRange.startMeasure;
+                callbacks.renderEditor();
+                appState.isPlaying = false;
+            }
+        }
+
+        appState.isPlaying = true;
+        setPlaybackButtonState();
+        const started = await play(score, {
             bpm,
             beatConfig: appState.beatConfig,
             numMeasures: appState.numMeasures,
+            startStep,
+            endStepExclusive,
             onStep(globalStep) {
+                appState.playheadStep = globalStep;
                 const measure = Math.floor(globalStep / STEPS_PER_MEASURE);
 
                 // 小節が変わったら自動ページ送り
@@ -75,13 +101,41 @@ export function initPlayback() {
                     .forEach(el => el.classList.remove('playing'));
                 document.querySelectorAll(`.preview-cell[data-start="${globalStep}"]`)
                     .forEach(el => el.classList.add('playing'));
+                updatePlayheadIndicators(globalStep);
             }
         });
+        appState.isPlaying = started;
+        setPlaybackButtonState();
     });
+}
 
-    document.getElementById('stopBtn').addEventListener('click', () => {
-        stop();
-        document.querySelectorAll('.preview-cell.playing')
-            .forEach(el => el.classList.remove('playing'));
+function updatePlayheadIndicators(globalStep) {
+    document.querySelectorAll('.playhead-bar').forEach((barEl) => {
+        const measureStart = Number(barEl.dataset.measureStart || '0');
+        if (globalStep === null || globalStep < measureStart || globalStep >= measureStart + STEPS_PER_MEASURE) {
+            barEl.style.display = 'none';
+            return;
+        }
+        const localStep = globalStep - measureStart;
+        barEl.style.display = 'block';
+        barEl.style.left = `${(localStep / STEPS_PER_MEASURE) * 100}%`;
     });
+}
+
+function stopPlayback() {
+    stop();
+    appState.isPlaying = false;
+    appState.playheadStep = null;
+    document.querySelectorAll('.preview-cell.playing')
+        .forEach(el => el.classList.remove('playing'));
+    updatePlayheadIndicators(null);
+    setPlaybackButtonState();
+}
+
+function setPlaybackButtonState() {
+    const playToggleBtn = document.getElementById('playToggleBtn');
+    if (!playToggleBtn) return;
+    playToggleBtn.textContent = appState.isPlaying ? '||' : '▶';
+    playToggleBtn.setAttribute('aria-label', appState.isPlaying ? '停止' : '再生');
+    playToggleBtn.classList.toggle('is-playing', appState.isPlaying);
 }

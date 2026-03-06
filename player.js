@@ -27,13 +27,21 @@ let _part = null;
  *   @param {number}  options.bpm  - テンポ（デフォルト: 120）
  *   @param {boolean} options.loop - ループ再生（デフォルト: true）
  *   @param {Function} options.onStep - 再生位置コールバック
- *   @param {Array}   options.beatConfig - 小節ごとの拍設定 [[4,4,4,4], ...]
  *   @param {number}  options.numMeasures - 小節数
+ *   @param {number}  options.startStep - 再生開始ステップ
+ *   @param {number}  options.endStepExclusive - 再生終了ステップ（exclusive）
  */
-export async function play(score, { bpm = 120, loop = true, onStep, beatConfig = [], numMeasures = 1 } = {}) {
+export async function play(score, {
+    bpm = 120,
+    loop = true,
+    onStep,
+    numMeasures = 1,
+    startStep = 0,
+    endStepExclusive = score.length,
+} = {}) {
     if (!globalThis.Tone) {
         alert('Tone.js の読み込みに失敗したため、再生できません。ネットワーク接続を確認して再読み込みしてください。');
-        return;
+        return false;
     }
 
     await Tone.start();
@@ -45,13 +53,14 @@ export async function play(score, { bpm = 120, loop = true, onStep, beatConfig =
 
     const beatDur = Tone.Time('4n').toSeconds();
     const events = [];
+    const normalizedStart = Math.max(0, Math.min(startStep, score.length));
+    const normalizedEnd = Math.max(normalizedStart + 1, Math.min(endStepExclusive, score.length));
 
-    for (let idx = 0; idx < score.length; idx++) {
-        const measure = Math.floor(idx / STEPS_PER_MEASURE);
-        const local = idx % STEPS_PER_MEASURE;
-        const beat = Math.floor(local / STEPS_PER_BEAT);
-        const micro = local % STEPS_PER_BEAT;
-        const time = (measure * 4 + beat) * beatDur + (micro / STEPS_PER_BEAT) * beatDur;
+    for (let idx = normalizedStart; idx < normalizedEnd; idx++) {
+        const relativeStep = idx - normalizedStart;
+        const beat = Math.floor(relativeStep / STEPS_PER_BEAT);
+        const micro = relativeStep % STEPS_PER_BEAT;
+        const time = beat * beatDur + (micro / STEPS_PER_BEAT) * beatDur;
         events.push([time, idx]);
     }
 
@@ -71,10 +80,12 @@ export async function play(score, { bpm = 120, loop = true, onStep, beatConfig =
     }, events);
 
     _part.loop = loop;
-    _part.loopEnd = numMeasures * 4 * beatDur;
+    _part.loopEnd = ((normalizedEnd - normalizedStart) / STEPS_PER_BEAT) * beatDur;
     _part.start(0);
 
+    Tone.Transport.position = 0;
     Tone.Transport.start();
+    return true;
 }
 
 /**

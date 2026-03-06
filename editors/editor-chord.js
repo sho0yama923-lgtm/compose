@@ -1,372 +1,234 @@
-// editor-chord.js — コードエディタ（専用トラックとして表示）
+// editor-chord.js — コードエディタ（初心者向け拍ベースUI）
 
-import { appState, STEPS_PER_MEASURE, totalSteps, callbacks } from '../core/state.js';
+import { appState, STEPS_PER_BEAT, STEPS_PER_MEASURE, totalSteps, callbacks } from '../core/state.js';
 import { CHORD_ROOTS, CHORD_TYPES, ROOT_COLORS, DURATION_CELLS } from '../core/constants.js';
 import { INST_TYPE } from '../instruments.js';
 import { toggleStep, isStepHead, isStepTie } from '../core/duration-utils.js';
 import { renderDurationToolbar, getCurrentDuration } from './duration-toolbar.js';
-import { getEditorCells, getEditorGridColumns, getEditorGridLineGroup, getMeasureStart } from '../core/rhythm-grid.js';
+import { getEditorCells, getEditorGridLineGroup, getMeasureStart } from '../core/rhythm-grid.js';
 
-// hex色をrgba(r,g,b,alpha)に変換するヘルパー
-function hexToRgba(hex, alpha) {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return `rgba(${r},${g},${b},${alpha})`;
-}
-
-// 選択中の区切り線を1ステップ移動するヘルパー
-function moveDivider(track, direction) {
-    if (track.selectedDivPos === null) return;
-    const idx = track.dividers.indexOf(track.selectedDivPos);
-    if (idx <= 0) return;
-    const measureIndex = appState.currentMeasure;
-    const measureStart = getMeasureStart(measureIndex);
-    const visibleStarts = getMeasureCells(measureIndex).map(cell => measureStart + cell.localStep);
-    const visibleIdx = visibleStarts.indexOf(track.selectedDivPos);
-    if (visibleIdx < 0) return;
-    const newPos = visibleStarts[visibleIdx + direction];
-    if (newPos === undefined) return;
-    const prevDiv = track.dividers[idx - 1];
-    const mEnd = (appState.currentMeasure + 1) * STEPS_PER_MEASURE;
-    const nextDiv = track.dividers[idx + 1] ?? mEnd;
-    if (newPos <= prevDiv || newPos >= nextDiv) return;
-
-    if (direction === 1) {
-        track.chordMap[track.selectedDivPos] = track.chordMap[track.selectedDivPos - 1] ?? null;
-    } else {
-        track.chordMap[newPos] = track.chordMap[track.selectedDivPos] ?? null;
-    }
-    track.dividers[idx] = newPos;
-    track.selectedDivPos = newPos;
-    callbacks.renderEditor();
-}
-
-// ビートヘッダー行を生成するヘルパー
-function buildBeatHeader() {
-    const hdrCells = document.createElement('div');
-    hdrCells.className = 'chord-steps-cells';
-    hdrCells.style.setProperty('--timeline-columns', String(STEPS_PER_MEASURE));
-    hdrCells.style.setProperty('--timeline-major', '4');
-    for (let i = 0; i < STEPS_PER_MEASURE; i++) {
-        const cell = document.createElement('div');
-        cell.className = 'chord-step-header-cell' + (i % 4 === 0 ? ' beat' : '');
-        cell.textContent = i % 4 === 0 ? String(i / 4 + 1) : '·';
-        hdrCells.appendChild(cell);
-    }
-    return hdrCells;
-}
+const CHORD_TYPE_ORDER = ['M', 'm', 'M7', 'm7', '7', 'dim', 'sus4', 'sus2', 'aug'];
 
 export function renderChordEditor(track, editorEl) {
     const measureIndex = appState.currentMeasure;
     const offset = getMeasureStart(measureIndex);
-    const mEnd   = offset + STEPS_PER_MEASURE;
+    const mEnd = offset + STEPS_PER_MEASURE;
     const cells = getEditorCells();
-    const columns = getEditorGridColumns();
     const majorGroup = getEditorGridLineGroup();
-    const visibleStarts = cells.map(cell => offset + cell.localStep);
 
-    // --- デュレーションツールバー ---
     renderDurationToolbar(editorEl, () => callbacks.renderEditor());
 
     const bodyEl = document.createElement('div');
     bodyEl.className = 'chord-panel-body';
 
-    // ===== パレット（ルート / タイプ / オクターブ）=====
+    bodyEl.appendChild(buildPalette(track));
+    bodyEl.appendChild(buildProgressSection(track, offset, mEnd));
+    bodyEl.appendChild(buildTimingSection(track, offset, mEnd, cells, majorGroup));
+
+    editorEl.appendChild(bodyEl);
+}
+
+function buildPalette(track) {
     const paletteEl = document.createElement('div');
     paletteEl.className = 'chord-palette';
 
-    // ルート選択
+    const paletteRow = document.createElement('div');
+    paletteRow.className = 'chord-palette-row';
+
     const rootRow = document.createElement('div');
-    rootRow.className = 'chord-selector-row';
-    const rootLabel = document.createElement('span');
-    rootLabel.className = 'chord-selector-label';
-    rootLabel.textContent = 'ルート';
-    rootRow.appendChild(rootLabel);
-    const rootList = document.createElement('div');
-    rootList.className = 'chord-root-list';
-    CHORD_ROOTS.forEach(r => {
-        const btn = document.createElement('button');
-        const isSelected = r === track.selectedChordRoot;
-        btn.className = 'chord-root-btn' + (isSelected ? ' selected' : '');
-        btn.textContent = r;
-        if (isSelected) {
-            const col = ROOT_COLORS[r] ?? '#111';
-            btn.style.background = col;
-            btn.style.borderColor = col;
-            btn.style.color = '#fff';
-        }
-        btn.addEventListener('click', () => {
-            track.selectedChordRoot = r;
-            rootList.querySelectorAll('.chord-root-btn').forEach(b => {
-                const sel = b.textContent === r;
-                b.classList.toggle('selected', sel);
-                const col = ROOT_COLORS[b.textContent] ?? '#111';
-                b.style.background = sel ? col : '';
-                b.style.borderColor = sel ? col : '';
-                b.style.color = sel ? '#fff' : '';
-            });
-        });
-        rootList.appendChild(btn);
+    rootRow.className = 'chord-selector-row horizontal chord-select-control';
+    rootRow.appendChild(buildLabel('ルート'));
+    const rootSelect = document.createElement('select');
+    rootSelect.className = 'chord-select-input';
+    rootSelect.style.borderColor = ROOT_COLORS[track.selectedChordRoot] ?? '#d0d0d0';
+    CHORD_ROOTS.forEach((root) => {
+        const option = document.createElement('option');
+        option.value = root;
+        option.textContent = root;
+        option.selected = root === track.selectedChordRoot;
+        rootSelect.appendChild(option);
     });
-    rootRow.appendChild(rootList);
-    paletteEl.appendChild(rootRow);
+    rootSelect.addEventListener('change', () => {
+        track.selectedChordRoot = rootSelect.value;
+        rootSelect.style.borderColor = ROOT_COLORS[track.selectedChordRoot] ?? '#d0d0d0';
+    });
+    rootRow.appendChild(rootSelect);
+    paletteRow.appendChild(rootRow);
 
-    // タイプ選択
     const typeRow = document.createElement('div');
-    typeRow.className = 'chord-selector-row';
-    const typeLabel = document.createElement('span');
-    typeLabel.className = 'chord-selector-label';
-    typeLabel.textContent = 'タイプ';
-    typeRow.appendChild(typeLabel);
-    const typeList = document.createElement('div');
-    typeList.className = 'chord-type-list';
-    Object.keys(CHORD_TYPES).forEach(t => {
-        const btn = document.createElement('button');
-        btn.className = 'chord-type-btn' + (t === track.selectedChordType ? ' selected' : '');
-        btn.textContent = t;
-        btn.addEventListener('click', () => {
-            track.selectedChordType = t;
-            typeList.querySelectorAll('.chord-type-btn').forEach(b => b.classList.toggle('selected', b.textContent === t));
-        });
-        typeList.appendChild(btn);
+    typeRow.className = 'chord-selector-row horizontal chord-select-control';
+    typeRow.appendChild(buildLabel('タイプ'));
+    const typeSelect = document.createElement('select');
+    typeSelect.className = 'chord-select-input';
+    CHORD_TYPE_ORDER.filter(type => type in CHORD_TYPES).forEach((type) => {
+        const option = document.createElement('option');
+        option.value = type;
+        option.textContent = type;
+        option.selected = type === track.selectedChordType;
+        typeSelect.appendChild(option);
     });
-    typeRow.appendChild(typeList);
-    paletteEl.appendChild(typeRow);
+    Object.keys(CHORD_TYPES)
+        .filter(type => !CHORD_TYPE_ORDER.includes(type))
+        .forEach((type) => {
+            const option = document.createElement('option');
+            option.value = type;
+            option.textContent = type;
+            option.selected = type === track.selectedChordType;
+            typeSelect.appendChild(option);
+        });
+    typeSelect.addEventListener('change', () => {
+        track.selectedChordType = typeSelect.value;
+    });
+    typeRow.appendChild(typeSelect);
+    paletteRow.appendChild(typeRow);
 
-    // オクターブ選択
     const octRow = document.createElement('div');
-    octRow.className = 'chord-selector-row horizontal';
-    const octLabel = document.createElement('span');
-    octLabel.className = 'chord-selector-label';
-    octLabel.textContent = 'オクターブ';
-    octRow.appendChild(octLabel);
+    octRow.className = 'chord-selector-row horizontal chord-oct-row';
+    octRow.appendChild(buildLabel('オクターブ'));
     const octCtrl = document.createElement('div');
     octCtrl.className = 'chord-oct-ctrl';
+
     const octDown = document.createElement('button');
     octDown.className = 'oct-range-btn';
     octDown.innerHTML = '◀<span class="btn-guide">低</span>';
     octDown.disabled = track.selectedChordOctave <= 1;
-    octDown.addEventListener('click', () => { track.selectedChordOctave--; callbacks.renderEditor(); });
+    octDown.addEventListener('click', () => {
+        track.selectedChordOctave--;
+        callbacks.renderEditor();
+    });
+
     const octVal = document.createElement('span');
     octVal.className = 'oct-range-label';
     octVal.textContent = track.selectedChordOctave;
+
     const octUp = document.createElement('button');
     octUp.className = 'oct-range-btn';
     octUp.innerHTML = '▶<span class="btn-guide">高</span>';
     octUp.disabled = track.selectedChordOctave >= 6;
-    octUp.addEventListener('click', () => { track.selectedChordOctave++; callbacks.renderEditor(); });
+    octUp.addEventListener('click', () => {
+        track.selectedChordOctave++;
+        callbacks.renderEditor();
+    });
+
     octCtrl.appendChild(octDown);
     octCtrl.appendChild(octVal);
     octCtrl.appendChild(octUp);
     octRow.appendChild(octCtrl);
-    paletteEl.appendChild(octRow);
+    paletteRow.appendChild(octRow);
 
-    bodyEl.appendChild(paletteEl);
+    paletteEl.appendChild(paletteRow);
+    return paletteEl;
+}
 
-    // ===== コード範囲セクション =====
-    const rangeSection = document.createElement('div');
-    rangeSection.className = 'chord-section';
+function buildProgressSection(track, offset, mEnd) {
+    const sectionEl = document.createElement('section');
+    sectionEl.className = 'chord-section chord-progress-section';
 
-    // セクションヘッダー: [◀][▶] コード範囲 [全クリア]
-    const rangeHeaderEl = document.createElement('div');
-    rangeHeaderEl.className = 'chord-section-header';
+    const titleEl = document.createElement('div');
+    titleEl.className = 'chord-section-title';
+    titleEl.textContent = 'コード進行';
+    sectionEl.appendChild(titleEl);
 
-    const canMove = track.selectedDivPos !== null && track.dividers.indexOf(track.selectedDivPos) > 0;
+    const descEl = document.createElement('div');
+    descEl.className = 'chord-section-desc';
+    descEl.textContent = '進行: どの拍でコードを変えるか';
+    sectionEl.appendChild(descEl);
 
-    const arrowL = document.createElement('button');
-    arrowL.className = 'chord-div-arrow';
-    arrowL.textContent = '◀';
-    arrowL.disabled = !canMove;
-    arrowL.addEventListener('click', () => moveDivider(track, -1));
+    const headEl = document.createElement('div');
+    headEl.className = 'chord-progress-head';
 
-    const arrowR = document.createElement('button');
-    arrowR.className = 'chord-div-arrow';
-    arrowR.textContent = '▶';
-    arrowR.disabled = !canMove;
-    arrowR.addEventListener('click', () => moveDivider(track, 1));
-
-    const rangeTitleEl = document.createElement('span');
-    rangeTitleEl.className = 'chord-section-title';
-    rangeTitleEl.style.flex = '1';
-    rangeTitleEl.textContent = 'コード範囲';
-
-    const rangeClearBtn = document.createElement('button');
-    rangeClearBtn.className = 'chord-quick-btn danger';
-    rangeClearBtn.textContent = '全クリア';
-    rangeClearBtn.addEventListener('click', () => {
+    const clearBtn = document.createElement('button');
+    clearBtn.className = 'chord-quick-btn danger';
+    clearBtn.textContent = '全クリア';
+    clearBtn.addEventListener('click', () => {
         for (let i = offset; i < mEnd; i++) track.chordMap[i] = null;
-        track.dividers = track.dividers.filter(d => d < offset || d >= mEnd);
-        track.dividers.push(offset);
-        track.dividers.sort((a, b) => a - b);
-        track.selectedDivPos = null;
         callbacks.renderEditor();
     });
+    headEl.appendChild(clearBtn);
+    sectionEl.appendChild(headEl);
 
-    // 区切り削除ボタン
-    const deleteDivBtn = document.createElement('button');
-    deleteDivBtn.className = 'chord-div-arrow chord-div-delete';
-    deleteDivBtn.textContent = '✕';
-    deleteDivBtn.disabled = !canMove;
-    deleteDivBtn.addEventListener('click', () => {
-        const idx = track.dividers.indexOf(track.selectedDivPos);
-        if (idx <= 0) return;
-        track.dividers.splice(idx, 1);
-        track.selectedDivPos = null;
-        callbacks.renderEditor();
-    });
+    const gridEl = document.createElement('div');
+    gridEl.className = 'chord-progress-grid';
 
-    rangeHeaderEl.appendChild(arrowL);
-    rangeHeaderEl.appendChild(arrowR);
-    rangeHeaderEl.appendChild(deleteDivBtn);
-    rangeHeaderEl.appendChild(rangeTitleEl);
-    rangeHeaderEl.appendChild(rangeClearBtn);
-    rangeSection.appendChild(rangeHeaderEl);
+    for (let beat = 0; beat < 4; beat++) {
+        const beatStart = offset + beat * STEPS_PER_BEAT;
+        const beatEnd = beatStart + STEPS_PER_BEAT;
+        const beatChord = track.chordMap[beatStart];
+        const beatCell = document.createElement('button');
+        beatCell.className = 'chord-progress-cell' + (beatChord ? ' on' : '');
+        beatCell.type = 'button';
 
-    // 現在小節内のディバイダーを取得（小節先頭を保証）
-    let measureDividers = track.dividers.filter(d => d >= offset && d < mEnd && visibleStarts.includes(d));
-    if (!measureDividers.includes(offset)) measureDividers.unshift(offset);
-    measureDividers.sort((a, b) => a - b);
+        if (beatChord) {
+            const color = ROOT_COLORS[beatChord.root] ?? '#111';
+            beatCell.style.setProperty('--chord-accent', color);
+        }
 
-    // ゾーン取得ヘルパー
-    function getZones(divs) {
-        return divs.map((pos, d) => ({
-            start: pos,
-            end: divs[d + 1] ?? mEnd,
-            divIdx: d,
-        }));
+        const beatNo = document.createElement('span');
+        beatNo.className = 'chord-progress-beat';
+        beatNo.textContent = `${beat + 1}拍`;
+        beatCell.appendChild(beatNo);
+
+        const beatName = document.createElement('span');
+        beatName.className = 'chord-progress-name';
+        beatName.textContent = beatChord
+            ? `${beatChord.root}${beatChord.type}`
+            : 'タップで設定';
+        beatCell.appendChild(beatName);
+
+        beatCell.addEventListener('click', () => {
+            const selected = {
+                root: track.selectedChordRoot,
+                type: track.selectedChordType,
+                octave: track.selectedChordOctave,
+            };
+            const sameChord = beatChord
+                && beatChord.root === selected.root
+                && beatChord.type === selected.type
+                && beatChord.octave === selected.octave;
+
+            for (let i = beatStart; i < beatEnd; i++) {
+                track.chordMap[i] = sameChord ? null : { ...selected };
+            }
+            callbacks.renderEditor();
+        });
+
+        gridEl.appendChild(beatCell);
     }
 
-    // コード範囲行
-    const rangeRow = document.createElement('div');
-    rangeRow.className = 'chord-range-row';
+    sectionEl.appendChild(gridEl);
+    return sectionEl;
+}
 
-    const zones = getZones(measureDividers);
+function buildTimingSection(track, offset, mEnd, cells, majorGroup) {
+    const sectionEl = document.createElement('section');
+    sectionEl.className = 'chord-section chord-timing-section';
 
-    zones.forEach((zone, d) => {
-        // ゾーン間区切り線
-        if (d > 0) {
-            const divEl = document.createElement('div');
-            const isSelected = track.selectedDivPos === zone.start;
-            divEl.className = 'chord-zone-div' + (isSelected ? ' selected' : '');
-            divEl.addEventListener('click', () => {
-                track.selectedDivPos = (track.selectedDivPos === zone.start) ? null : zone.start;
-                callbacks.renderEditor();
-            });
-            rangeRow.appendChild(divEl);
-        }
+    const titleEl = document.createElement('div');
+    titleEl.className = 'chord-section-title';
+    titleEl.textContent = '鳴らすタイミング';
+    sectionEl.appendChild(titleEl);
 
-        // ゾーンコンテナ
-        const zoneEl = document.createElement('div');
-        zoneEl.className = 'chord-range-zone';
-        const zoneStarts = visibleStarts.filter(start => start >= zone.start && start < zone.end);
-        zoneEl.style.flex = String(zoneStarts.length || 1);
-        zoneEl.style.minWidth = '0';
+    const descEl = document.createElement('div');
+    descEl.className = 'chord-section-desc';
+    descEl.textContent = 'タイミング: そのコードをどこで鳴らすか';
+    sectionEl.appendChild(descEl);
 
-        const zoneChord = track.chordMap[zone.start];
-        const zoneColor = zoneChord ? (ROOT_COLORS[zoneChord.root] ?? '#1a1a1a') : null;
-
-        if (zoneColor) {
-            zoneEl.style.background = hexToRgba(zoneColor, 0.13);
-            zoneEl.style.borderRadius = '4px';
-        }
-
-        // シングルタップ→コード適用 / ダブルタップ→分割線追加
-        const canSplit = (zone.end - zone.start) >= 1;
-        let zoneClickTimer = null;
-        zoneEl.addEventListener('click', (e) => {
-            if (zoneClickTimer) {
-                clearTimeout(zoneClickTimer);
-                zoneClickTimer = null;
-                if (!canSplit || zoneStarts.length < 2) return;
-                const rect = zoneEl.getBoundingClientRect();
-                const relX = e.clientX - rect.left;
-                const gapWidth = rect.width / zoneStarts.length;
-                let nearestGap = Math.round(relX / gapWidth);
-                nearestGap = Math.max(1, Math.min(zoneStarts.length - 1, nearestGap));
-                const newDivPos = zoneStarts[nearestGap];
-                if (!track.dividers.includes(newDivPos)) {
-                    track.dividers.push(newDivPos);
-                    track.dividers.sort((a, b) => a - b);
-                    callbacks.renderEditor();
-                }
-            } else {
-                zoneClickTimer = setTimeout(() => {
-                    zoneClickTimer = null;
-                    const localDivs = track.dividers.filter(d => d >= offset && d < mEnd && visibleStarts.includes(d));
-                    if (!localDivs.includes(offset)) localDivs.unshift(offset);
-                    localDivs.sort((a, b) => a - b);
-                    const z = getZones(localDivs).find(z => zone.start === z.start);
-                    if (!z) return;
-                    for (let j = z.start; j < z.end; j++) {
-                        track.chordMap[j] = {
-                            root: track.selectedChordRoot,
-                            type: track.selectedChordType,
-                            octave: track.selectedChordOctave,
-                        };
-                    }
-                    callbacks.renderEditor();
-                }, 250);
-            }
-        });
-
-        // ラベル
-        const labelEl = document.createElement('div');
-        labelEl.className = 'chord-zone-label';
-        if (zoneChord) {
-            labelEl.textContent = `${zoneChord.root}${zoneChord.type}`;
-            labelEl.style.color = zoneColor;
-        }
-        zoneEl.appendChild(labelEl);
-
-        // ドット行
-        const dotsEl = document.createElement('div');
-        dotsEl.className = 'chord-zone-dots';
-
-        zoneStarts.forEach((stepStart, idx) => {
-            if (idx > 0) {
-                const sep = document.createElement('div');
-                sep.className = 'chord-dot-sep';
-                dotsEl.appendChild(sep);
-            }
-            const btn = document.createElement('button');
-            btn.className = 'chord-dot-btn';
-            btn.textContent = '●';
-            btn.style.color = zoneChord ? '#222' : '#d0d0d0';
-            dotsEl.appendChild(btn);
-        });
-        zoneEl.appendChild(dotsEl);
-        rangeRow.appendChild(zoneEl);
-    });
-
-    rangeSection.appendChild(rangeRow);
-
-    // ガイドテキスト
-    const rangeGuide = document.createElement('div');
-    rangeGuide.className = 'chord-range-guide';
-    rangeGuide.textContent = '帯タップでコード適用 ／ 隙間ダブルタップで分割 ／ 分割線タップ→✕で削除・◀▶で移動';
-    rangeSection.appendChild(rangeGuide);
-
-    bodyEl.appendChild(rangeSection);
-
-    // ===== 発音セクション =====
-    const soundSection = document.createElement('div');
-    soundSection.className = 'chord-section';
-
-    const soundTitleEl = document.createElement('div');
-    soundTitleEl.className = 'chord-section-title';
-    soundTitleEl.textContent = '発音';
-    soundSection.appendChild(soundTitleEl);
-
-    // ドラムパターン参照
     const drumTracks = appState.tracks.filter(t => INST_TYPE[t.instrument] === 'rhythm');
     if (drumTracks.length > 0) {
+        const detailsEl = document.createElement('details');
+        detailsEl.className = 'chord-rhythm-details';
+        const summaryEl = document.createElement('summary');
+        summaryEl.className = 'chord-rhythm-summary';
+        summaryEl.textContent = 'ドラムを参照';
+        detailsEl.appendChild(summaryEl);
+
         const drumRefEl = document.createElement('div');
         drumRefEl.className = 'chord-rhythm-ref';
         drumTracks.forEach(dt => {
             dt.rows.forEach(row => {
                 const rowEl = document.createElement('div');
                 rowEl.className = 'chord-rhythm-row';
+
                 const chk = document.createElement('input');
                 chk.type = 'checkbox';
                 chk.className = 'chord-drum-check';
@@ -376,17 +238,18 @@ export function renderChordEditor(track, editorEl) {
                     else track.selectedDrumRows.delete(row.label);
                 });
                 rowEl.appendChild(chk);
+
                 const lbl = document.createElement('span');
                 lbl.className = 'chord-rhythm-row-label';
                 lbl.textContent = row.label;
                 rowEl.appendChild(lbl);
+
                 const cellsEl = document.createElement('div');
                 cellsEl.className = 'chord-rhythm-cells';
-                cellsEl.style.gridTemplateColumns = columns;
+                cellsEl.style.gridTemplateColumns = `repeat(${cells.length}, minmax(0, 1fr))`;
                 cells.forEach(cellInfo => {
-                    const val = row.steps[offset + cellInfo.localStep];
-                    const on = isStepHead(val);
                     const cell = document.createElement('span');
+                    const on = isStepHead(row.steps[offset + cellInfo.localStep]);
                     cell.className = 'chord-rhythm-cell' + (on ? ' on' : '');
                     cell.textContent = on ? '●' : '·';
                     cellsEl.appendChild(cell);
@@ -395,26 +258,29 @@ export function renderChordEditor(track, editorEl) {
                 drumRefEl.appendChild(rowEl);
             });
         });
-        // 統一同期ボタン
-        const syncAllBtn = document.createElement('button');
-        syncAllBtn.className = 'chord-sync-all-btn';
-        syncAllBtn.textContent = '同期';
-        syncAllBtn.addEventListener('click', () => {
+
+        const syncBtn = document.createElement('button');
+        syncBtn.className = 'chord-sync-all-btn';
+        syncBtn.textContent = '同期';
+        syncBtn.addEventListener('click', () => {
+            track.soundSteps.fill(null, offset, mEnd);
             drumTracks.forEach(dt => {
                 dt.rows.forEach(row => {
                     if (!track.selectedDrumRows.has(row.label)) return;
                     row.steps.forEach((val, i) => {
-                        if (isStepHead(val)) track.soundSteps[i] = '16n';
+                        if (i >= offset && i < mEnd && isStepHead(val)) {
+                            track.soundSteps[i] = '16n';
+                        }
                     });
                 });
             });
             callbacks.renderEditor();
         });
-        drumRefEl.appendChild(syncAllBtn);
-        soundSection.appendChild(drumRefEl);
+        drumRefEl.appendChild(syncBtn);
+        detailsEl.appendChild(drumRefEl);
+        sectionEl.appendChild(detailsEl);
     }
 
-    // 各ステップの継承コードを計算
     const ts = totalSteps();
     const inheritedChords = Array(ts).fill(null);
     let inherited = null;
@@ -423,15 +289,9 @@ export function renderChordEditor(track, editorEl) {
         inheritedChords[i] = inherited;
     }
 
-    // 発音ステップ行
-    const soundRow = document.createElement('div');
-    soundRow.className = 'chord-steps-row';
-    const soundRowLbl = document.createElement('span');
-    soundRowLbl.className = 'chord-steps-label';
-    soundRowLbl.textContent = '発音';
-    soundRow.appendChild(soundRowLbl);
     const soundCells = document.createElement('div');
-    soundCells.className = 'chord-steps-cells';
+    soundCells.className = 'chord-steps-cells chord-timing-grid';
+    soundCells.dataset.measureStart = String(offset);
     soundCells.style.setProperty('--timeline-columns', String(cells.length));
     soundCells.style.setProperty('--timeline-major', String(majorGroup));
     soundCells.addEventListener('click', (event) => {
@@ -441,36 +301,58 @@ export function renderChordEditor(track, editorEl) {
         const x = Math.max(0, Math.min(rect.width - 1, event.clientX - rect.left));
         const column = Math.floor((x / rect.width) * cells.length);
         const cellInfo = cells[Math.max(0, Math.min(cells.length - 1, column))];
-        const dur = getCurrentDuration();
-        toggleStep(track.soundSteps, offset + cellInfo.localStep, dur, mEnd);
+        toggleStep(track.soundSteps, offset + cellInfo.localStep, getCurrentDuration(), mEnd);
         callbacks.renderEditor();
     });
+
     for (let localStep = 0; localStep < STEPS_PER_MEASURE; localStep++) {
         const si = offset + localStep;
         const val = track.soundSteps[si];
         if (isStepTie(val) || !isStepHead(val)) continue;
         const btn = document.createElement('div');
         btn.className = 'timeline-note chord-note';
-        const widthPct = ((DURATION_CELLS[val] || 1) / STEPS_PER_MEASURE) * 100;
-        const leftPct = (localStep / STEPS_PER_MEASURE) * 100;
-        btn.style.left = `${leftPct}%`;
-        btn.style.width = `${widthPct}%`;
+        btn.style.left = `${(localStep / STEPS_PER_MEASURE) * 100}%`;
+        btn.style.width = `${((DURATION_CELLS[val] || 1) / STEPS_PER_MEASURE) * 100}%`;
         if (inheritedChords[si]) {
-            const col = ROOT_COLORS[inheritedChords[si].root] ?? '#111';
-            btn.style.background = col;
-            btn.style.borderColor = col;
+            const color = ROOT_COLORS[inheritedChords[si].root] ?? '#111';
+            btn.style.background = color;
+            btn.style.borderColor = color;
         }
         btn.addEventListener('click', (event) => {
             event.stopPropagation();
-            const dur = getCurrentDuration();
-            toggleStep(track.soundSteps, si, dur, mEnd);
+            toggleStep(track.soundSteps, si, getCurrentDuration(), mEnd);
             callbacks.renderEditor();
         });
         soundCells.appendChild(btn);
     }
-    soundRow.appendChild(soundCells);
-    soundSection.appendChild(soundRow);
-    bodyEl.appendChild(soundSection);
 
-    editorEl.appendChild(bodyEl);
+    soundCells.appendChild(createPlayheadBar(offset));
+    sectionEl.appendChild(soundCells);
+    return sectionEl;
+}
+
+function buildLabel(text) {
+    const el = document.createElement('span');
+    el.className = 'chord-selector-label';
+    el.textContent = text;
+    return el;
+}
+
+function createPlayheadBar(measureStart) {
+    const barEl = document.createElement('div');
+    barEl.className = 'playhead-bar';
+    barEl.dataset.measureStart = String(measureStart);
+    updatePlayheadBar(barEl, measureStart);
+    return barEl;
+}
+
+function updatePlayheadBar(barEl, measureStart) {
+    const step = appState.playheadStep;
+    if (step === null || step < measureStart || step >= measureStart + STEPS_PER_MEASURE) {
+        barEl.style.display = 'none';
+        return;
+    }
+    const localStep = step - measureStart;
+    barEl.style.display = 'block';
+    barEl.style.left = `${(localStep / STEPS_PER_MEASURE) * 100}%`;
 }

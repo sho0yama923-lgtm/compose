@@ -1,7 +1,7 @@
-// editor-melodic.js — メロディエディタ（オクターブ アコーディオン）
+// editor-melodic.js — メロディエディタ（縦スクロール式ピアノロール）
 
 import { appState, STEPS_PER_MEASURE, callbacks } from '../core/state.js';
-import { CHROMATIC, BLACK_KEYS, OCT_COLOR, DURATION_CELLS } from '../core/constants.js';
+import { CHROMATIC, BLACK_KEYS, DURATION_CELLS } from '../core/constants.js';
 import { toggleStep, isStepHead, isStepTie } from '../core/duration-utils.js';
 import { renderDurationToolbar, getCurrentDuration } from './duration-toolbar.js';
 import {
@@ -11,6 +11,8 @@ import {
     getMeasureStart,
 } from '../core/rhythm-grid.js';
 
+const MELODY_OCTAVES = [7, 6, 5, 4, 3, 2, 1];
+
 export function renderMelodicEditor(track, editorEl) {
     const measureIndex = appState.currentMeasure;
     const offset = getMeasureStart(measureIndex);
@@ -18,12 +20,9 @@ export function renderMelodicEditor(track, editorEl) {
     const cells = getEditorCells();
     const columns = getEditorGridColumns();
     const majorGroup = getEditorGridLineGroup();
-    const octaves = [track.viewBase, track.viewBase + 1, track.viewBase + 2];
 
-    // --- デュレーションツールバー ---
-    const toolbarEl = renderDurationToolbar(editorEl, () => callbacks.renderEditor());
+    renderDurationToolbar(editorEl, () => callbacks.renderEditor());
 
-    // オクターブ範囲シフトコントロール
     const ctrlEl = document.createElement('div');
     ctrlEl.className = 'oct-range-ctrl';
 
@@ -32,22 +31,22 @@ export function renderMelodicEditor(track, editorEl) {
     downBtn.innerHTML = '◀<span class="btn-guide">低</span>';
     downBtn.disabled = track.viewBase <= 1;
     downBtn.addEventListener('click', () => {
-        track.viewBase--;
-        if (!octaves.includes(track.activeOctave)) track.activeOctave = null;
+        track.viewBase = Math.max(1, track.viewBase - 1);
+        track.activeOctave = track.viewBase + 1;
         callbacks.renderEditor();
     });
 
     const rangeLabel = document.createElement('span');
     rangeLabel.className = 'oct-range-label';
-    rangeLabel.textContent = `Oct ${track.viewBase} – ${track.viewBase + 2}`;
+    rangeLabel.textContent = `縦スクロール  Oct ${track.viewBase} – ${Math.min(track.viewBase + 2, 7)}`;
 
     const upBtn = document.createElement('button');
     upBtn.className = 'oct-range-btn';
     upBtn.innerHTML = '▶<span class="btn-guide">高</span>';
     upBtn.disabled = track.viewBase >= 5;
     upBtn.addEventListener('click', () => {
-        track.viewBase++;
-        if (!octaves.includes(track.activeOctave)) track.activeOctave = null;
+        track.viewBase = Math.min(5, track.viewBase + 1);
+        track.activeOctave = track.viewBase + 1;
         callbacks.renderEditor();
     });
 
@@ -58,96 +57,46 @@ export function renderMelodicEditor(track, editorEl) {
     ctrlEl.appendChild(downBtn);
     ctrlEl.appendChild(rangeLabel);
     ctrlEl.appendChild(upBtn);
+
     const header = editorEl.querySelector('.editor-header');
-    const modeTabs = toolbarEl.querySelector('.grid-mode-tabs');
-    if (modeTabs) {
-        header.appendChild(modeTabs);
-    }
     header.appendChild(ctrlEl);
 
-    const accordionEl = document.createElement('div');
-    accordionEl.className = 'oct-accordion';
+    const wrapEl = document.createElement('div');
+    wrapEl.className = 'melodic-editor continuous-roll';
 
-    // 高オクターブが上になるよう逆順
-    [...octaves].reverse().forEach(o => {
-        const isOpen   = o === track.activeOctave;
-        const octStyle = OCT_COLOR[o];
+    const keysFrameEl = document.createElement('div');
+    keysFrameEl.className = 'piano-keys piano-keys-frame';
+    const keysEl = document.createElement('div');
+    keysEl.className = 'piano-keys-inner';
+    keysEl.appendChild(Object.assign(document.createElement('div'), { className: 'piano-key-spacer' }));
 
-        const sectionEl = document.createElement('div');
-        sectionEl.className = 'oct-section' + (isOpen ? ' open' : '');
+    const gridScrollEl = document.createElement('div');
+    gridScrollEl.className = 'steps-grid-scroll melody-grid-scroll';
+    const gridEl = document.createElement('div');
+    gridEl.className = 'timeline-grid';
+    gridEl.dataset.measureStart = String(offset);
 
-        // ヘッダー（クリックで開閉）
-        const headerEl = document.createElement('button');
-        headerEl.className = 'oct-section-header';
-        headerEl.style.setProperty('--oct-color', octStyle.on);
-        // ミニプレビュー: 12音×16ステップ のグリッド（現在小節分）
-        const miniEl = document.createElement('div');
-        miniEl.className = 'oct-section-mini';
-        miniEl.style.gridTemplateColumns = columns;
+    const hdrEl = document.createElement('div');
+    hdrEl.className = 'timeline-header';
+    hdrEl.style.gridTemplateColumns = columns;
+    hdrEl.style.setProperty('--timeline-columns', String(cells.length));
+    hdrEl.style.setProperty('--timeline-major', String(majorGroup));
+    cells.forEach(cellInfo => {
+        const cell = document.createElement('div');
+        cell.className = 'timeline-header-cell' + (cellInfo.slot === 0 ? ' beat' : '');
+        cell.textContent = cellInfo.slot === 0 ? String(cellInfo.beat + 1) : '';
+        hdrEl.appendChild(cell);
+    });
+    gridEl.appendChild(hdrEl);
+
+    MELODY_OCTAVES.forEach((octave) => {
+        keysEl.appendChild(buildOctaveKeyDivider(octave));
+        gridEl.appendChild(buildOctaveGridDivider(octave));
+
         [...CHROMATIC].reverse().forEach(noteName => {
-            const steps = track.stepsMap[`${noteName}${o}`];
-            cells.forEach(cellInfo => {
-                const val = steps[offset + cellInfo.localStep];
-                const cell = document.createElement('span');
-                cell.className = 'oct-mini-cell' + (val ? ' on' : '');
-                miniEl.appendChild(cell);
-            });
-        });
-
-        const labelEl = document.createElement('span');
-        labelEl.className = 'oct-section-label';
-        labelEl.textContent = octStyle.label;
-
-        const arrowEl = document.createElement('span');
-        arrowEl.className = 'oct-section-arrow';
-        arrowEl.textContent = isOpen ? '▼' : '▶';
-
-        headerEl.appendChild(labelEl);
-        headerEl.appendChild(miniEl);
-        headerEl.appendChild(arrowEl);
-        headerEl.addEventListener('click', () => {
-            track.activeOctave = (track.activeOctave === o) ? null : o;
-            callbacks.renderEditor();
-        });
-        sectionEl.appendChild(headerEl);
-
-        // ボディ（展開時のみ表示）
-        const bodyEl = document.createElement('div');
-        bodyEl.className = 'oct-section-body';
-
-        // ピアノ鍵盤 + グリッドのラッパー
-        const melodicEl = document.createElement('div');
-        melodicEl.className = 'melodic-editor';
-
-        const keysEl = document.createElement('div');
-        keysEl.className = 'piano-keys';
-        keysEl.appendChild(Object.assign(document.createElement('div'), { className: 'piano-key-spacer' }));
-
-        const gridScrollEl = document.createElement('div');
-        gridScrollEl.className = 'steps-grid-scroll';
-        const gridEl = document.createElement('div');
-        gridEl.className = 'timeline-grid';
-
-        // ビートヘッダー
-        const hdrEl = document.createElement('div');
-        hdrEl.className = 'timeline-header';
-        hdrEl.style.gridTemplateColumns = columns;
-        hdrEl.style.setProperty('--timeline-columns', String(cells.length));
-        hdrEl.style.setProperty('--timeline-major', String(majorGroup));
-        cells.forEach(cellInfo => {
-            const cell = document.createElement('div');
-            cell.className = 'timeline-header-cell' + (cellInfo.slot === 0 ? ' beat' : '');
-            cell.textContent = cellInfo.slot === 0 ? String(cellInfo.beat + 1) : '';
-            if (cellInfo.slot === 0) cell.style.color = octStyle.on;
-            hdrEl.appendChild(cell);
-        });
-        gridEl.appendChild(hdrEl);
-
-        // 12音行（B→C = 高→低）
-        [...CHROMATIC].reverse().forEach(noteName => {
-            const isBlack  = BLACK_KEYS.has(noteName);
-            const fullNote = `${noteName}${o}`;
-            const steps    = track.stepsMap[fullNote];
+            const isBlack = BLACK_KEYS.has(noteName);
+            const fullNote = `${noteName}${octave}`;
+            const steps = track.stepsMap[fullNote];
 
             const keyEl = document.createElement('div');
             keyEl.className = 'piano-key ' + (isBlack ? 'black-key' : 'white-key');
@@ -158,6 +107,7 @@ export function renderMelodicEditor(track, editorEl) {
             rowEl.className = 'timeline-row' + (isBlack ? ' black-key' : '');
             rowEl.style.setProperty('--timeline-columns', String(cells.length));
             rowEl.style.setProperty('--timeline-major', String(majorGroup));
+            rowEl.dataset.octave = String(octave);
             rowEl.addEventListener('click', (event) => {
                 const target = event.target;
                 if (target.classList.contains('timeline-note')) return;
@@ -165,8 +115,8 @@ export function renderMelodicEditor(track, editorEl) {
                 const x = Math.max(0, Math.min(rect.width - 1, event.clientX - rect.left));
                 const column = Math.floor((x / rect.width) * cells.length);
                 const cellInfo = cells[Math.max(0, Math.min(cells.length - 1, column))];
-                const dur = getCurrentDuration();
-                toggleStep(steps, offset + cellInfo.localStep, dur, maxIndex);
+                track.activeOctave = octave;
+                toggleStep(steps, offset + cellInfo.localStep, getCurrentDuration(), maxIndex);
                 callbacks.renderEditor();
             });
 
@@ -177,29 +127,85 @@ export function renderMelodicEditor(track, editorEl) {
 
                 const btn = document.createElement('div');
                 btn.className = 'timeline-note melodic-note';
-                const widthPct = ((DURATION_CELLS[val] || 1) / STEPS_PER_MEASURE) * 100;
-                const leftPct = (localStep / STEPS_PER_MEASURE) * 100;
-                btn.style.left = `${leftPct}%`;
-                btn.style.width = `${widthPct}%`;
+                btn.style.left = `${(localStep / STEPS_PER_MEASURE) * 100}%`;
+                btn.style.width = `${((DURATION_CELLS[val] || 1) / STEPS_PER_MEASURE) * 100}%`;
 
                 btn.addEventListener('click', (event) => {
                     event.stopPropagation();
-                    const dur = getCurrentDuration();
-                    toggleStep(steps, si, dur, maxIndex);
+                    track.activeOctave = octave;
+                    toggleStep(steps, si, getCurrentDuration(), maxIndex);
                     callbacks.renderEditor();
                 });
                 rowEl.appendChild(btn);
             }
+
             gridEl.appendChild(rowEl);
         });
-
-        gridScrollEl.appendChild(gridEl);
-        melodicEl.appendChild(keysEl);
-        melodicEl.appendChild(gridScrollEl);
-        bodyEl.appendChild(melodicEl);
-        sectionEl.appendChild(bodyEl);
-        accordionEl.appendChild(sectionEl);
     });
 
-    editorEl.appendChild(accordionEl);
+    gridEl.appendChild(createPlayheadBar(offset));
+    keysFrameEl.appendChild(keysEl);
+    gridScrollEl.appendChild(gridEl);
+    wrapEl.appendChild(keysFrameEl);
+    wrapEl.appendChild(gridScrollEl);
+    editorEl.appendChild(wrapEl);
+
+    bindContinuousRoll(track, keysEl, gridScrollEl);
+    requestAnimationFrame(() => {
+        if (typeof track.melodyScrollTop === 'number') {
+            gridScrollEl.scrollTop = track.melodyScrollTop;
+            syncKeyColumn(keysEl, track.melodyScrollTop);
+            return;
+        }
+        const targetOctave = Math.min(track.viewBase + 2, 7);
+        const target = gridEl.querySelector(`.timeline-octave-divider[data-octave="${targetOctave}"]`);
+        if (!target) return;
+        gridScrollEl.scrollTop = target.offsetTop;
+        syncKeyColumn(keysEl, target.offsetTop);
+    });
+}
+
+function buildOctaveKeyDivider(octave) {
+    const divider = document.createElement('div');
+    divider.className = 'piano-octave-divider';
+    divider.textContent = `Oct ${octave}`;
+    return divider;
+}
+
+function buildOctaveGridDivider(octave) {
+    const divider = document.createElement('div');
+    divider.className = 'timeline-octave-divider';
+    divider.dataset.octave = String(octave);
+    divider.textContent = `Oct ${octave}`;
+    return divider;
+}
+
+function bindContinuousRoll(track, keysEl, gridScrollEl) {
+    gridScrollEl.addEventListener('scroll', () => {
+        track.melodyScrollTop = gridScrollEl.scrollTop;
+        syncKeyColumn(keysEl, gridScrollEl.scrollTop);
+    });
+}
+
+function syncKeyColumn(keysEl, scrollTop) {
+    keysEl.style.transform = `translateY(${-scrollTop}px)`;
+}
+
+function createPlayheadBar(measureStart) {
+    const barEl = document.createElement('div');
+    barEl.className = 'playhead-bar';
+    barEl.dataset.measureStart = String(measureStart);
+    updatePlayheadBar(barEl, measureStart);
+    return barEl;
+}
+
+function updatePlayheadBar(barEl, measureStart) {
+    const step = appState.playheadStep;
+    if (step === null || step < measureStart || step >= measureStart + STEPS_PER_MEASURE) {
+        barEl.style.display = 'none';
+        return;
+    }
+    const localStep = step - measureStart;
+    barEl.style.display = 'block';
+    barEl.style.left = `${(localStep / STEPS_PER_MEASURE) * 100}%`;
 }

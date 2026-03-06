@@ -185,6 +185,8 @@ export function saveState() {
             activeTrackId: appState.activeTrackId,
             editorGridMode: appState.editorGridMode,
             selectedDuration: appState.selectedDuration,
+            lastNormalDuration: appState.lastNormalDuration,
+            lastTripletDuration: appState.lastTripletDuration,
             dottedMode: appState.dottedMode,
             beatConfig: appState.beatConfig,
             tracks: appState.tracks.map(t => {
@@ -218,15 +220,25 @@ function restoreFromData(data) {
     appState.nextId         = data.nextId         ?? 0;
     appState.currentMeasure = data.currentMeasure ?? 0;
     appState.activeTrackId  = data.activeTrackId  ?? null;
+    appState.playheadStep = null;
+    appState.isPlaying = false;
+    appState.playRangeStartMeasure = null;
+    appState.playRangeEndMeasure = null;
     appState.editorGridMode = data.editorGridMode === 'triplet' ? 'triplet' : 'normal';
     appState.selectedDuration = VALID_DURATIONS.has(data.selectedDuration)
         ? data.selectedDuration
         : '16n';
+    appState.lastNormalDuration = VALID_DURATIONS.has(data.lastNormalDuration) && !data.lastNormalDuration.endsWith('t')
+        ? data.lastNormalDuration
+        : '16n';
+    appState.lastTripletDuration = VALID_DURATIONS.has(data.lastTripletDuration) && data.lastTripletDuration.endsWith('t')
+        ? data.lastTripletDuration
+        : '8t';
     if (appState.editorGridMode === 'triplet' && !appState.selectedDuration.endsWith('t')) {
-        appState.selectedDuration = '8t';
+        appState.selectedDuration = appState.lastTripletDuration;
     }
     if (appState.editorGridMode === 'normal' && appState.selectedDuration.endsWith('t')) {
-        appState.selectedDuration = '16n';
+        appState.selectedDuration = appState.lastNormalDuration;
     }
     appState.dottedMode = appState.editorGridMode === 'normal'
         && ['8n', '4n', '2n'].includes(appState.selectedDuration)

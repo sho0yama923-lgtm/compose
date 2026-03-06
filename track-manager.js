@@ -1,6 +1,6 @@
 // track-manager.js — トラック管理（追加・削除・選択）+ 小節管理
 
-import { appState, STEPS_PER_MEASURE, totalSteps, callbacks } from './core/state.js';
+import { appState, STEPS_PER_MEASURE, totalSteps, callbacks, clampPlayRangeMeasures } from './core/state.js';
 import { INST_TYPE, OCTAVE_DEFAULT_BASE, DRUM_ROWS, INST_LABEL } from './instruments.js';
 import { CHROMATIC } from './core/constants.js';
 
@@ -105,6 +105,7 @@ export function addMeasure() {
             );
         }
     });
+    clampPlayRangeMeasures();
     callbacks.renderEditor();
 }
 
@@ -119,6 +120,7 @@ export function removeMeasure() {
     if (appState.currentMeasure >= appState.numMeasures) {
         appState.currentMeasure = appState.numMeasures - 1;
     }
+    clampPlayRangeMeasures();
     appState.tracks.forEach(track => {
         if (INST_TYPE[track.instrument] === 'rhythm') {
             track.rows.forEach(r => r.steps.splice(removeStart, STEPS_PER_MEASURE));
