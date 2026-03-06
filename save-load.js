@@ -1,9 +1,174 @@
 // save-load.js — 自動保存(localStorage) + JSONエクスポート/インポート
 
-import { appState, callbacks } from './state.js';
+import { appState, callbacks, totalSteps, STEPS_PER_MEASURE } from './state.js';
+import { INST_TYPE, OCTAVE_DEFAULT_BASE, DRUM_ROWS } from './instruments.js';
+import { CHROMATIC, DURATION_CELLS } from './constants.js';
 
 const STORAGE_KEY = 'compose_save';
-const DATA_VERSION = 1;
+const DATA_VERSION = 3;
+
+// -------------------------------------------------------
+// v1 → v2 マイグレーション: boolean → duration string
+// -------------------------------------------------------
+function migrateV1toV2(data) {
+    data.tracks.forEach(t => {
+        // rhythm: rows.steps
+        if (t.rows) {
+            t.rows.forEach(r => {
+                r.steps = r.steps.map(v => v === true ? '16n' : (v === false ? null : v));
+            });
+        }
+        // melody: stepsMap
+        if (t.stepsMap) {
+            Object.keys(t.stepsMap).forEach(k => {
+                t.stepsMap[k] = t.stepsMap[k].map(v => v === true ? '16n' : (v === false ? null : v));
+            });
+        }
+        // chord: soundSteps
+        if (t.soundSteps) {
+            t.soundSteps = t.soundSteps.map(v => v === true ? '16n' : (v === false ? null : v));
+        }
+    });
+    data.version = 2;
+}
+
+function normalizeStepArray(steps, length) {
+    if (Array.isArray(steps) && steps.length !== length) {
+        return null;
+    }
+    const normalized = Array.isArray(steps) ? [...steps] : [];
+    for (let i = 0; i < length; i++) {
+        const val = normalized[i];
+        if (val === true) normalized[i] = '16n';
+        else if (val === false || val === undefined) normalized[i] = null;
+    }
+    if (normalized.length < length) {
+        normalized.push(...Array(length - normalized.length).fill(null));
+    } else if (normalized.length > length) {
+        normalized.length = length;
+    }
+    return normalized;
+}
+
+function normalizeBeatConfig(numMeasures, beatConfig) {
+    const normalized = Array.isArray(beatConfig) ? beatConfig.slice(0, numMeasures) : [];
+    while (normalized.length < numMeasures) {
+        normalized.push([4, 4, 4, 4]);
+    }
+    return normalized.map(measure => {
+        const beats = Array.isArray(measure) ? measure.slice(0, 4) : [];
+        while (beats.length < 4) beats.push(4);
+        return beats.map(v => (v === 3 || v === 6) ? v : 4);
+    });
+}
+
+function toDurationValue(val) {
+    if (val === true) return '16n';
+    if (val === false || val === undefined) return null;
+    return val;
+}
+
+function legacyStepOffset(beatConfig, measure, beat, slot) {
+    const subs = beatConfig[measure]?.[beat] === 3 ? 3 : 4;
+    if (subs === 3) {
+        if (slot > 2) return null;
+        return [0, 4, 8][slot];
+    }
+    return [0, 3, 6, 9][slot] ?? null;
+}
+
+function expandLegacyStepArray(steps, numMeasures, beatConfig, fillTies = true) {
+    if (!Array.isArray(steps) || steps.length !== numMeasures * 16) return null;
+
+    const expanded = Array(numMeasures * STEPS_PER_MEASURE).fill(null);
+
+    steps.forEach((rawVal, legacyIndex) => {
+        const value = toDurationValue(rawVal);
+        if (!value || value === '_tie') return;
+
+        const measure = Math.floor(legacyIndex / 16);
+        const local = legacyIndex % 16;
+        const beat = Math.floor(local / 4);
+        const slot = local % 4;
+        const offset = legacyStepOffset(beatConfig, measure, beat, slot);
+        if (offset === null) return;
+
+        const start = measure * STEPS_PER_MEASURE + beat * 12 + offset;
+        expanded[start] = value;
+
+        if (fillTies) {
+            const span = DURATION_CELLS[value] || DURATION_CELLS['16n'];
+            for (let i = 1; i < span && start + i < expanded.length; i++) {
+                expanded[start + i] = '_tie';
+            }
+        }
+    });
+
+    return expanded;
+}
+
+function convertLegacyDivider(divider, numMeasures, beatConfig) {
+    if (typeof divider !== 'number') return null;
+    const measure = Math.floor(divider / 16);
+    const local = divider % 16;
+    const beat = Math.floor(local / 4);
+    const slot = local % 4;
+    const offset = legacyStepOffset(beatConfig, measure, beat, slot);
+    if (offset === null) return null;
+    return measure * STEPS_PER_MEASURE + beat * 12 + offset;
+}
+
+function normalizeTrack(track, length) {
+    const type = INST_TYPE[track.instrument];
+
+    if (type === 'rhythm') {
+        const rows = Array.isArray(track.rows) ? track.rows : DRUM_ROWS.map(r => ({ label: r.label, note: r.note, steps: [] }));
+        track.rows = rows.map((row, idx) => ({
+            label: row.label ?? DRUM_ROWS[idx]?.label ?? `Row ${idx + 1}`,
+            note: row.note ?? DRUM_ROWS[idx]?.note ?? 'C1',
+            steps: normalizeStepArray(row.steps, length) ?? expandLegacyStepArray(row.steps, appState.numMeasures, appState.beatConfig) ?? Array(length).fill(null),
+        }));
+        return track;
+    }
+
+    if (type === 'chord') {
+        const isLegacyResolution = Array.isArray(track.chordMap) && track.chordMap.length === appState.numMeasures * 16;
+        track.chordMap = normalizeStepArray(track.chordMap, length) ?? expandLegacyStepArray(track.chordMap, appState.numMeasures, appState.beatConfig, false) ?? Array(length).fill(null);
+        track.soundSteps = normalizeStepArray(track.soundSteps, length) ?? expandLegacyStepArray(track.soundSteps, appState.numMeasures, appState.beatConfig) ?? Array(length).fill(null);
+        track.selectedChordRoot = track.selectedChordRoot ?? 'C';
+        track.selectedChordType = track.selectedChordType ?? 'M';
+        track.selectedChordOctave = track.selectedChordOctave ?? 4;
+        if (Array.isArray(track.dividers) && track.dividers.length > 0) {
+            track.dividers = track.dividers
+                .map(divider => isLegacyResolution
+                    ? convertLegacyDivider(divider, appState.numMeasures, appState.beatConfig)
+                    : divider)
+                .filter(divider => divider !== null);
+        } else {
+            track.dividers = [0, STEPS_PER_MEASURE / 2];
+        }
+        track.selectedDivPos = isLegacyResolution
+            ? convertLegacyDivider(track.selectedDivPos, appState.numMeasures, appState.beatConfig)
+            : (track.selectedDivPos ?? null);
+        track.selectedDrumRows = new Set(Array.isArray(track.selectedDrumRows) ? track.selectedDrumRows : []);
+        return track;
+    }
+
+    const viewBase = track.viewBase ?? OCTAVE_DEFAULT_BASE[track.instrument] ?? 3;
+    track.viewBase = viewBase;
+    track.activeOctave = track.activeOctave ?? (viewBase + 1);
+    const stepsMap = track.stepsMap && typeof track.stepsMap === 'object' ? track.stepsMap : {};
+    for (let oct = 1; oct <= 7; oct++) {
+        CHROMATIC.forEach(note => {
+            const key = `${note}${oct}`;
+            stepsMap[key] = normalizeStepArray(stepsMap[key], length)
+                ?? expandLegacyStepArray(stepsMap[key], appState.numMeasures, appState.beatConfig)
+                ?? Array(length).fill(null);
+        });
+    }
+    track.stepsMap = stepsMap;
+    return track;
+}
 
 // -------------------------------------------------------
 // 保存
@@ -17,6 +182,7 @@ export function saveState() {
             nextId: appState.nextId,
             currentMeasure: appState.currentMeasure,
             activeTrackId: appState.activeTrackId,
+            beatConfig: appState.beatConfig,
             tracks: appState.tracks.map(t => {
                 const clone = { ...t };
                 // Set → Array 変換
@@ -34,6 +200,36 @@ export function saveState() {
 }
 
 // -------------------------------------------------------
+// JSON → appState 復元（共通ロジック）
+// -------------------------------------------------------
+function restoreFromData(data) {
+    if (!data || !Array.isArray(data.tracks)) return false;
+
+    // マイグレーション
+    if (data.version === 1 || !data.version) {
+        migrateV1toV2(data);
+    }
+
+    appState.numMeasures    = data.numMeasures   ?? 4;
+    appState.nextId         = data.nextId         ?? 0;
+    appState.currentMeasure = data.currentMeasure ?? 0;
+    appState.activeTrackId  = data.activeTrackId  ?? null;
+    appState.beatConfig     = normalizeBeatConfig(appState.numMeasures, data.beatConfig);
+
+    const length = totalSteps();
+    appState.tracks = data.tracks.map(t => normalizeTrack({ ...t }, length));
+    if (!appState.tracks.some(t => t.id === appState.activeTrackId)) {
+        appState.activeTrackId = appState.tracks[0]?.id ?? null;
+    }
+
+    if (data.bpm) {
+        document.getElementById('bpmInput').value = data.bpm;
+    }
+
+    return true;
+}
+
+// -------------------------------------------------------
 // 復元
 // -------------------------------------------------------
 export function loadState() {
@@ -42,57 +238,11 @@ export function loadState() {
         if (!raw) return false;
 
         const data = JSON.parse(raw);
-        if (!data || !Array.isArray(data.tracks)) return false;
-
-        // appState 復元
-        appState.numMeasures   = data.numMeasures   ?? 4;
-        appState.nextId        = data.nextId         ?? 0;
-        appState.currentMeasure = data.currentMeasure ?? 0;
-        appState.activeTrackId = data.activeTrackId  ?? null;
-
-        // トラック復元（Array → Set 変換）
-        appState.tracks = data.tracks.map(t => {
-            if (Array.isArray(t.selectedDrumRows)) {
-                t.selectedDrumRows = new Set(t.selectedDrumRows);
-            }
-            return t;
-        });
-
-        // BPM 復元
-        if (data.bpm) {
-            document.getElementById('bpmInput').value = data.bpm;
-        }
-
-        return true;
+        return restoreFromData(data);
     } catch (e) {
         console.warn('loadState failed:', e);
         return false;
     }
-}
-
-// -------------------------------------------------------
-// JSON → appState 復元（共通ロジック）
-// -------------------------------------------------------
-function restoreFromData(data) {
-    if (!data || !Array.isArray(data.tracks)) return false;
-
-    appState.numMeasures    = data.numMeasures   ?? 4;
-    appState.nextId         = data.nextId         ?? 0;
-    appState.currentMeasure = data.currentMeasure ?? 0;
-    appState.activeTrackId  = data.activeTrackId  ?? null;
-
-    appState.tracks = data.tracks.map(t => {
-        if (Array.isArray(t.selectedDrumRows)) {
-            t.selectedDrumRows = new Set(t.selectedDrumRows);
-        }
-        return t;
-    });
-
-    if (data.bpm) {
-        document.getElementById('bpmInput').value = data.bpm;
-    }
-
-    return true;
 }
 
 // -------------------------------------------------------

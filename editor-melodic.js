@@ -2,10 +2,27 @@
 
 import { appState, STEPS_PER_MEASURE, callbacks } from './state.js';
 import { CHROMATIC, BLACK_KEYS, OCT_COLOR } from './constants.js';
+import { toggleStep, isStepHead, isStepTie } from './duration-utils.js';
+import { renderDurationToolbar, getCurrentDuration } from './duration-toolbar.js';
+import {
+    applyBeatSubdivisionChange,
+    cycleBeatSubdivision,
+    getMeasureCells,
+    getMeasureGridColumns,
+    getMeasureStart,
+    getVisibleSpanCount,
+} from './rhythm-grid.js';
 
 export function renderMelodicEditor(track, editorEl) {
-    const offset = appState.currentMeasure * STEPS_PER_MEASURE;
+    const measureIndex = appState.currentMeasure;
+    const offset = getMeasureStart(measureIndex);
+    const maxIndex = offset + STEPS_PER_MEASURE;
+    const cells = getMeasureCells(measureIndex);
+    const columns = getMeasureGridColumns(measureIndex);
     const octaves = [track.viewBase, track.viewBase + 1, track.viewBase + 2];
+
+    // --- デュレーションツールバー ---
+    renderDurationToolbar(editorEl, () => callbacks.renderEditor());
 
     // オクターブ範囲シフトコントロール
     const ctrlEl = document.createElement('div');
@@ -63,13 +80,15 @@ export function renderMelodicEditor(track, editorEl) {
         // ミニプレビュー: 12音×16ステップ のグリッド（現在小節分）
         const miniEl = document.createElement('div');
         miniEl.className = 'oct-section-mini';
+        miniEl.style.gridTemplateColumns = columns;
         [...CHROMATIC].reverse().forEach(noteName => {
             const steps = track.stepsMap[`${noteName}${o}`];
-            for (let i = 0; i < STEPS_PER_MEASURE; i++) {
+            cells.forEach(cellInfo => {
+                const val = steps[offset + cellInfo.localStep];
                 const cell = document.createElement('span');
-                cell.className = 'oct-mini-cell' + (steps[offset + i] ? ' on' : '');
+                cell.className = 'oct-mini-cell' + (val ? ' on' : '');
                 miniEl.appendChild(cell);
-            }
+            });
         });
 
         const labelEl = document.createElement('span');
@@ -109,13 +128,24 @@ export function renderMelodicEditor(track, editorEl) {
         // ビートヘッダー
         const hdrEl = document.createElement('div');
         hdrEl.className = 'steps-header';
-        for (let i = 0; i < STEPS_PER_MEASURE; i++) {
+        hdrEl.style.gridTemplateColumns = columns;
+        cells.forEach(cellInfo => {
             const cell = document.createElement('div');
-            cell.className = 'step-header-cell' + (i % 4 === 0 ? ' beat' : '');
-            cell.textContent = i % 4 === 0 ? String(i / 4 + 1) : '·';
-            if (i % 4 === 0) cell.style.color = octStyle.on;
+            cell.className = 'step-header-cell' + (cellInfo.slot === 0 ? ' beat' : '');
+            cell.textContent = cellInfo.slot === 0 ? String(cellInfo.beat + 1) : '·';
+            if (cellInfo.slot === 0) cell.style.color = octStyle.on;
+
+            if (appState.tripletMode && cellInfo.slot === 0) {
+                cell.style.cursor = 'pointer';
+                cell.title = `${cellInfo.subs}分割`;
+                cell.addEventListener('click', () => {
+                    applyBeatSubdivisionChange(measureIndex, cellInfo.beat, cycleBeatSubdivision(cellInfo.subs));
+                    callbacks.renderEditor();
+                });
+            }
+
             hdrEl.appendChild(cell);
-        }
+        });
         gridEl.appendChild(hdrEl);
 
         // 12音行（B→C = 高→低）
@@ -131,17 +161,29 @@ export function renderMelodicEditor(track, editorEl) {
 
             const rowEl = document.createElement('div');
             rowEl.className = 'steps-row' + (isBlack ? ' black-key' : '');
+            rowEl.style.gridTemplateColumns = columns;
+            cells.forEach((cellInfo, idx) => {
+                const si = offset + cellInfo.localStep;
+                const val = steps[si];
+                const head = isStepHead(val);
+                const tie = isStepTie(val);
+                if (tie) return;
 
-            for (let i = 0; i < STEPS_PER_MEASURE; i++) {
-                const si = offset + i;
                 const btn = document.createElement('button');
-                btn.className = 'step' + (steps[si] ? ' on' : '');
+                const span = head ? getVisibleSpanCount(cells, idx, offset, steps, si, maxIndex) : 1;
+
+                btn.className = 'step'
+                    + (head ? ' on' : '')
+                    + (span > 1 ? ' head-span' : '');
+                btn.style.gridColumn = `${idx + 1} / span ${span}`;
+
                 btn.addEventListener('click', () => {
-                    steps[si] = !steps[si];
-                    btn.classList.toggle('on', steps[si]);
+                    const dur = getCurrentDuration();
+                    toggleStep(steps, si, dur, maxIndex);
+                    callbacks.renderEditor();
                 });
                 rowEl.appendChild(btn);
-            }
+            });
             gridEl.appendChild(rowEl);
         });
 

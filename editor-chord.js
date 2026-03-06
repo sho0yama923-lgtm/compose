@@ -1,8 +1,11 @@
 // editor-chord.js — コードエディタ（専用トラックとして表示）
 
 import { appState, STEPS_PER_MEASURE, totalSteps, callbacks } from './state.js';
-import { CHROMATIC, CHORD_ROOTS, CHORD_TYPES, ROOT_COLORS } from './constants.js';
+import { CHORD_ROOTS, CHORD_TYPES, ROOT_COLORS } from './constants.js';
 import { INST_TYPE } from './instruments.js';
+import { toggleStep, isStepHead, isStepTie } from './duration-utils.js';
+import { renderDurationToolbar, getCurrentDuration } from './duration-toolbar.js';
+import { getMeasureCells, getMeasureGridColumns, getMeasureStart, getVisibleSpanCount } from './rhythm-grid.js';
 
 // hex色をrgba(r,g,b,alpha)に変換するヘルパー
 function hexToRgba(hex, alpha) {
@@ -17,7 +20,13 @@ function moveDivider(track, direction) {
     if (track.selectedDivPos === null) return;
     const idx = track.dividers.indexOf(track.selectedDivPos);
     if (idx <= 0) return;
-    const newPos = track.selectedDivPos + direction;
+    const measureIndex = appState.currentMeasure;
+    const measureStart = getMeasureStart(measureIndex);
+    const visibleStarts = getMeasureCells(measureIndex).map(cell => measureStart + cell.localStep);
+    const visibleIdx = visibleStarts.indexOf(track.selectedDivPos);
+    if (visibleIdx < 0) return;
+    const newPos = visibleStarts[visibleIdx + direction];
+    if (newPos === undefined) return;
     const prevDiv = track.dividers[idx - 1];
     const mEnd = (appState.currentMeasure + 1) * STEPS_PER_MEASURE;
     const nextDiv = track.dividers[idx + 1] ?? mEnd;
@@ -47,8 +56,15 @@ function buildBeatHeader() {
 }
 
 export function renderChordEditor(track, editorEl) {
-    const offset = appState.currentMeasure * STEPS_PER_MEASURE;
+    const measureIndex = appState.currentMeasure;
+    const offset = getMeasureStart(measureIndex);
     const mEnd   = offset + STEPS_PER_MEASURE;
+    const cells = getMeasureCells(measureIndex);
+    const columns = getMeasureGridColumns(measureIndex);
+    const visibleStarts = cells.map(cell => offset + cell.localStep);
+
+    // --- デュレーションツールバー ---
+    renderDurationToolbar(editorEl, () => callbacks.renderEditor());
 
     const bodyEl = document.createElement('div');
     bodyEl.className = 'chord-panel-body';
@@ -205,7 +221,7 @@ export function renderChordEditor(track, editorEl) {
     rangeSection.appendChild(rangeHeaderEl);
 
     // 現在小節内のディバイダーを取得（小節先頭を保証）
-    let measureDividers = track.dividers.filter(d => d >= offset && d < mEnd);
+    let measureDividers = track.dividers.filter(d => d >= offset && d < mEnd && visibleStarts.includes(d));
     if (!measureDividers.includes(offset)) measureDividers.unshift(offset);
     measureDividers.sort((a, b) => a - b);
 
@@ -213,7 +229,7 @@ export function renderChordEditor(track, editorEl) {
     function getZones(divs) {
         return divs.map((pos, d) => ({
             start: pos,
-            end: (divs[d + 1] ?? mEnd) - 1,
+            end: divs[d + 1] ?? mEnd,
             divIdx: d,
         }));
     }
@@ -240,7 +256,8 @@ export function renderChordEditor(track, editorEl) {
         // ゾーンコンテナ
         const zoneEl = document.createElement('div');
         zoneEl.className = 'chord-range-zone';
-        zoneEl.style.flex = String(zone.end - zone.start + 1);
+        const zoneStarts = visibleStarts.filter(start => start >= zone.start && start < zone.end);
+        zoneEl.style.flex = String(zoneStarts.length || 1);
         zoneEl.style.minWidth = '0';
 
         const zoneChord = track.chordMap[zone.start];
@@ -258,14 +275,13 @@ export function renderChordEditor(track, editorEl) {
             if (zoneClickTimer) {
                 clearTimeout(zoneClickTimer);
                 zoneClickTimer = null;
-                if (!canSplit) return;
+                if (!canSplit || zoneStarts.length < 2) return;
                 const rect = zoneEl.getBoundingClientRect();
                 const relX = e.clientX - rect.left;
-                const zoneSteps = zone.end - zone.start + 1;
-                const stepWidth = rect.width / zoneSteps;
-                let nearestGap = Math.round(relX / stepWidth);
-                nearestGap = Math.max(1, Math.min(zoneSteps - 1, nearestGap));
-                const newDivPos = zone.start + nearestGap;
+                const gapWidth = rect.width / zoneStarts.length;
+                let nearestGap = Math.round(relX / gapWidth);
+                nearestGap = Math.max(1, Math.min(zoneStarts.length - 1, nearestGap));
+                const newDivPos = zoneStarts[nearestGap];
                 if (!track.dividers.includes(newDivPos)) {
                     track.dividers.push(newDivPos);
                     track.dividers.sort((a, b) => a - b);
@@ -274,12 +290,12 @@ export function renderChordEditor(track, editorEl) {
             } else {
                 zoneClickTimer = setTimeout(() => {
                     zoneClickTimer = null;
-                    const localDivs = track.dividers.filter(d => d >= offset && d < mEnd);
+                    const localDivs = track.dividers.filter(d => d >= offset && d < mEnd && visibleStarts.includes(d));
                     if (!localDivs.includes(offset)) localDivs.unshift(offset);
                     localDivs.sort((a, b) => a - b);
                     const z = getZones(localDivs).find(z => zone.start === z.start);
                     if (!z) return;
-                    for (let j = z.start; j <= z.end; j++) {
+                    for (let j = z.start; j < z.end; j++) {
                         track.chordMap[j] = {
                             root: track.selectedChordRoot,
                             type: track.selectedChordType,
@@ -304,8 +320,8 @@ export function renderChordEditor(track, editorEl) {
         const dotsEl = document.createElement('div');
         dotsEl.className = 'chord-zone-dots';
 
-        for (let i = zone.start; i <= zone.end; i++) {
-            if (i > zone.start) {
+        zoneStarts.forEach((stepStart, idx) => {
+            if (idx > 0) {
                 const sep = document.createElement('div');
                 sep.className = 'chord-dot-sep';
                 dotsEl.appendChild(sep);
@@ -315,7 +331,7 @@ export function renderChordEditor(track, editorEl) {
             btn.textContent = '●';
             btn.style.color = zoneChord ? '#222' : '#d0d0d0';
             dotsEl.appendChild(btn);
-        }
+        });
         zoneEl.appendChild(dotsEl);
         rangeRow.appendChild(zoneEl);
     });
@@ -363,13 +379,15 @@ export function renderChordEditor(track, editorEl) {
                 rowEl.appendChild(lbl);
                 const cellsEl = document.createElement('div');
                 cellsEl.className = 'chord-rhythm-cells';
-                for (let i = 0; i < STEPS_PER_MEASURE; i++) {
-                    const on = row.steps[offset + i];
+                cellsEl.style.gridTemplateColumns = columns;
+                cells.forEach(cellInfo => {
+                    const val = row.steps[offset + cellInfo.localStep];
+                    const on = isStepHead(val);
                     const cell = document.createElement('span');
                     cell.className = 'chord-rhythm-cell' + (on ? ' on' : '');
                     cell.textContent = on ? '●' : '·';
                     cellsEl.appendChild(cell);
-                }
+                });
                 rowEl.appendChild(cellsEl);
                 drumRefEl.appendChild(rowEl);
             });
@@ -382,7 +400,9 @@ export function renderChordEditor(track, editorEl) {
             drumTracks.forEach(dt => {
                 dt.rows.forEach(row => {
                     if (!track.selectedDrumRows.has(row.label)) return;
-                    row.steps.forEach((on, i) => { if (on) track.soundSteps[i] = true; });
+                    row.steps.forEach((val, i) => {
+                        if (isStepHead(val)) track.soundSteps[i] = '16n';
+                    });
                 });
             });
             callbacks.renderEditor();
@@ -409,29 +429,31 @@ export function renderChordEditor(track, editorEl) {
     soundRow.appendChild(soundRowLbl);
     const soundCells = document.createElement('div');
     soundCells.className = 'chord-steps-cells';
-    for (let i = 0; i < STEPS_PER_MEASURE; i++) {
-        const si = offset + i;
+    soundCells.style.gridTemplateColumns = columns;
+    cells.forEach((cellInfo, idx) => {
+        const si = offset + cellInfo.localStep;
+        const val = track.soundSteps[si];
+        const head = isStepHead(val);
+        const tie = isStepTie(val);
+        if (tie) return;
         const btn = document.createElement('button');
-        btn.className = 'chord-sound-btn' + (track.soundSteps[si] ? ' on' : '');
-        if (track.soundSteps[si] && inheritedChords[si]) {
+        const span = head ? getVisibleSpanCount(cells, idx, offset, track.soundSteps, si, mEnd) : 1;
+        btn.className = 'chord-sound-btn'
+            + (head ? ' on' : '')
+            + (span > 1 ? ' head-span' : '');
+        btn.style.gridColumn = `${idx + 1} / span ${span}`;
+        if (head && inheritedChords[si]) {
             const col = ROOT_COLORS[inheritedChords[si].root] ?? '#111';
             btn.style.background = col;
             btn.style.borderColor = col;
         }
         btn.addEventListener('click', () => {
-            track.soundSteps[si] = !track.soundSteps[si];
-            btn.classList.toggle('on', track.soundSteps[si]);
-            if (track.soundSteps[si] && inheritedChords[si]) {
-                const col = ROOT_COLORS[inheritedChords[si].root] ?? '#111';
-                btn.style.background = col;
-                btn.style.borderColor = col;
-            } else {
-                btn.style.background = '';
-                btn.style.borderColor = '';
-            }
+            const dur = getCurrentDuration();
+            toggleStep(track.soundSteps, si, dur, mEnd);
+            callbacks.renderEditor();
         });
         soundCells.appendChild(btn);
-    }
+    });
     soundRow.appendChild(soundCells);
     soundSection.appendChild(soundRow);
     bodyEl.appendChild(soundSection);

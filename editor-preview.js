@@ -4,10 +4,15 @@ import { appState, STEPS_PER_MEASURE } from './state.js';
 import { INST_TYPE, INST_LABEL } from './instruments.js';
 import { CHROMATIC, ROOT_COLORS } from './constants.js';
 import { selectTrack } from './track-manager.js';
+import { isStepOn } from './duration-utils.js';
+import { getMeasureCells, getMeasureGridColumns, getMeasureStart } from './rhythm-grid.js';
 
 export function renderPreview(containerEl) {
-    const offset = appState.currentMeasure * STEPS_PER_MEASURE;
+    const measureIndex = appState.currentMeasure;
+    const offset = getMeasureStart(measureIndex);
     const mEnd = offset + STEPS_PER_MEASURE;
+    const cells = getMeasureCells(measureIndex);
+    const columns = getMeasureGridColumns(measureIndex);
     const wrapEl = document.createElement('div');
     wrapEl.className = 'preview-wrap';
 
@@ -25,32 +30,28 @@ export function renderPreview(containerEl) {
         // ドットグリッド
         const gridEl = document.createElement('div');
         gridEl.className = 'preview-grid';
+        gridEl.style.gridTemplateColumns = columns;
 
         const type = INST_TYPE[track.instrument];
 
         if (type === 'rhythm') {
-            // ドラム: rows数 × 16ステップ
             gridEl.style.gridTemplateRows = `repeat(${track.rows.length}, 1fr)`;
             track.rows.forEach(row => {
-                for (let i = 0; i < STEPS_PER_MEASURE; i++) {
+                cells.forEach(cellInfo => {
                     const cell = document.createElement('span');
-                    cell.className = 'preview-cell' + (row.steps[offset + i] ? ' on' : '');
-                    cell.dataset.step = i;
+                    const start = offset + cellInfo.localStep;
+                    cell.className = 'preview-cell' + (isStepOn(row.steps[start]) ? ' on' : '');
+                    cell.dataset.start = start;
                     gridEl.appendChild(cell);
-                }
+                });
             });
         } else if (type === 'chord') {
             // コード: ゾーンラベル行 + soundSteps ドット行
             gridEl.style.gridTemplateRows = 'auto auto';
 
-            // --- ゾーン計算 ---
-            // この小節に含まれるdivider位置を抽出（ローカルステップ）
-            const localDivs = new Set([0]);
-            for (const d of track.dividers) {
-                const local = d - offset;
-                if (local > 0 && local < STEPS_PER_MEASURE) localDivs.add(local);
-            }
-            const sortedDivs = [...localDivs].sort((a, b) => a - b);
+            const zoneStarts = cells
+                .map(cell => offset + cell.localStep)
+                .filter(start => track.dividers.includes(start) || start === offset);
 
             // 継承コード配列を事前計算（0〜mEndまで走査）
             const inheritedChords = [];
@@ -61,14 +62,18 @@ export function renderPreview(containerEl) {
             }
 
             // ゾーンごとのラベル生成
-            for (let z = 0; z < sortedDivs.length; z++) {
-                const start = sortedDivs[z];
-                const end = (z + 1 < sortedDivs.length) ? sortedDivs[z + 1] : STEPS_PER_MEASURE;
-                const chord = inheritedChords[start];
+            for (let z = 0; z < zoneStarts.length; z++) {
+                const start = zoneStarts[z];
+                const end = zoneStarts[z + 1] ?? mEnd;
+                const chord = inheritedChords[start - offset];
 
                 const label = document.createElement('span');
                 label.className = 'preview-chord-label';
-                label.style.gridColumn = `span ${end - start}`;
+                const span = cells.filter(cell => {
+                    const visibleStart = offset + cell.localStep;
+                    return visibleStart >= start && visibleStart < end;
+                }).length;
+                label.style.gridColumn = `span ${span || 1}`;
                 if (z > 0) label.style.borderLeft = '1px solid #999';
 
                 if (chord) {
@@ -83,24 +88,26 @@ export function renderPreview(containerEl) {
             }
 
             // --- ドット行 ---
-            for (let i = 0; i < STEPS_PER_MEASURE; i++) {
+            cells.forEach(cellInfo => {
                 const cell = document.createElement('span');
-                cell.className = 'preview-cell' + (track.soundSteps[offset + i] ? ' on' : '');
-                cell.dataset.step = i;
+                const start = offset + cellInfo.localStep;
+                cell.className = 'preview-cell' + (isStepOn(track.soundSteps[start]) ? ' on' : '');
+                cell.dataset.start = start;
                 gridEl.appendChild(cell);
-            }
+            });
         } else {
-            // メロディ: activeOctave の 12音 × 16ステップ
+            // メロディ: activeOctave の 12音 × 可変ステップ
             const oct = track.activeOctave ?? (track.viewBase + 1);
             gridEl.style.gridTemplateRows = `repeat(12, 1fr)`;
             [...CHROMATIC].reverse().forEach(noteName => {
                 const steps = track.stepsMap[`${noteName}${oct}`];
-                for (let i = 0; i < STEPS_PER_MEASURE; i++) {
+                cells.forEach(cellInfo => {
                     const cell = document.createElement('span');
-                    cell.className = 'preview-cell' + (steps[offset + i] ? ' on' : '');
-                    cell.dataset.step = i;
+                    const start = offset + cellInfo.localStep;
+                    cell.className = 'preview-cell' + (isStepOn(steps[start]) ? ' on' : '');
+                    cell.dataset.start = start;
                     gridEl.appendChild(cell);
-                }
+                });
             });
         }
 

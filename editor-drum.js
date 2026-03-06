@@ -1,9 +1,27 @@
 // editor-drum.js — ドラムエディタ描画
 
-import { appState, STEPS_PER_MEASURE } from './state.js';
+import { appState, STEPS_PER_MEASURE, callbacks } from './state.js';
+import { toggleStep, isStepHead, isStepTie } from './duration-utils.js';
+import { renderDurationToolbar, getCurrentDuration } from './duration-toolbar.js';
+import {
+    applyBeatSubdivisionChange,
+    cycleBeatSubdivision,
+    getMeasureCells,
+    getMeasureGridColumns,
+    getMeasureStart,
+    getVisibleSpanCount,
+} from './rhythm-grid.js';
 
 export function renderDrumEditor(track, editorEl) {
-    const offset = appState.currentMeasure * STEPS_PER_MEASURE;
+    const measureIndex = appState.currentMeasure;
+    const offset = getMeasureStart(measureIndex);
+    const maxIndex = offset + STEPS_PER_MEASURE;
+    const cells = getMeasureCells(measureIndex);
+    const columns = getMeasureGridColumns(measureIndex);
+
+    // --- デュレーションツールバー ---
+    renderDurationToolbar(editorEl, () => callbacks.renderEditor());
+
     const wrapEl = document.createElement('div');
     wrapEl.className = 'melodic-editor';
 
@@ -19,12 +37,23 @@ export function renderDrumEditor(track, editorEl) {
     // ビートヘッダー
     const hdrEl = document.createElement('div');
     hdrEl.className = 'steps-header';
-    for (let i = 0; i < STEPS_PER_MEASURE; i++) {
+    hdrEl.style.gridTemplateColumns = columns;
+    cells.forEach(cellInfo => {
         const cell = document.createElement('div');
-        cell.className = 'step-header-cell' + (i % 4 === 0 ? ' beat' : '');
-        cell.textContent = i % 4 === 0 ? String(i / 4 + 1) : '·';
+        cell.className = 'step-header-cell' + (cellInfo.slot === 0 ? ' beat' : '');
+        cell.textContent = cellInfo.slot === 0 ? String(cellInfo.beat + 1) : '·';
+
+        if (appState.tripletMode && cellInfo.slot === 0) {
+            cell.style.cursor = 'pointer';
+            cell.title = `${cellInfo.subs}分割`;
+            cell.addEventListener('click', () => {
+                applyBeatSubdivisionChange(measureIndex, cellInfo.beat, cycleBeatSubdivision(cellInfo.subs));
+                callbacks.renderEditor();
+            });
+        }
+
         hdrEl.appendChild(cell);
-    }
+    });
     gridEl.appendChild(hdrEl);
 
     track.rows.forEach(row => {
@@ -35,16 +64,29 @@ export function renderDrumEditor(track, editorEl) {
 
         const rowEl = document.createElement('div');
         rowEl.className = 'steps-row';
-        for (let i = 0; i < STEPS_PER_MEASURE; i++) {
-            const si = offset + i;
+        rowEl.style.gridTemplateColumns = columns;
+        cells.forEach((cellInfo, idx) => {
+            const si = offset + cellInfo.localStep;
+            const val = row.steps[si];
+            const head = isStepHead(val);
+            const tie = isStepTie(val);
+            if (tie) return;
+
             const btn = document.createElement('button');
-            btn.className = 'step' + (row.steps[si] ? ' on' : '');
+            const span = head ? getVisibleSpanCount(cells, idx, offset, row.steps, si, maxIndex) : 1;
+
+            btn.className = 'step'
+                + (head ? ' on' : '')
+                + (span > 1 ? ' head-span' : '');
+            btn.style.gridColumn = `${idx + 1} / span ${span}`;
+
             btn.addEventListener('click', () => {
-                row.steps[si] = !row.steps[si];
-                btn.classList.toggle('on', row.steps[si]);
+                const dur = getCurrentDuration();
+                toggleStep(row.steps, si, dur, maxIndex);
+                callbacks.renderEditor();
             });
             rowEl.appendChild(btn);
-        }
+        });
         gridEl.appendChild(rowEl);
     });
 

@@ -1,6 +1,7 @@
 // state.js — 共有状態管理
 
-export const STEPS_PER_MEASURE = 16;
+export const STEPS_PER_BEAT = 12;
+export const STEPS_PER_MEASURE = STEPS_PER_BEAT * 4;
 
 export const appState = {
     tracks: [],
@@ -9,6 +10,12 @@ export const appState = {
     numMeasures: 4,
     currentMeasure: 0,
     previewMode: false,
+    // デュレーション
+    selectedDuration: '16n',   // ツールバーで選択中の音価
+    dottedMode: false,         // 付点トグル
+    tripletMode: false,        // 3連符配置モード
+    // 3連符: beatConfig[measure] = [4,4,4,4] (拍ごとのサブディビジョン数)
+    beatConfig: [],
 };
 
 export function totalSteps() {

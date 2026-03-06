@@ -47,13 +47,13 @@ export function addTrack(instrument) {
     if (INST_TYPE[instrument] === 'rhythm') {
         track = {
             id, instrument,
-            rows: DRUM_ROWS.map(r => ({ label: r.label, note: r.note, steps: Array(ts).fill(false) })),
+            rows: DRUM_ROWS.map(r => ({ label: r.label, note: r.note, steps: Array(ts).fill(null) })),
         };
     } else if (INST_TYPE[instrument] === 'chord') {
         track = {
             id, instrument,
             chordMap:        Array(ts).fill(null),
-            soundSteps:      Array(ts).fill(false),
+            soundSteps:      Array(ts).fill(null),
             selectedChordRoot:   'C',
             selectedChordType:   'M',
             selectedChordOctave: 4,
@@ -64,7 +64,7 @@ export function addTrack(instrument) {
     } else {
         const stepsMap = {};
         for (let oct = 1; oct <= 7; oct++) {
-            CHROMATIC.forEach(n => { stepsMap[`${n}${oct}`] = Array(ts).fill(false); });
+            CHROMATIC.forEach(n => { stepsMap[`${n}${oct}`] = Array(ts).fill(null); });
         }
         const viewBase = OCTAVE_DEFAULT_BASE[instrument] ?? 3;
         track = {
@@ -84,20 +84,24 @@ export function addTrack(instrument) {
 // -------------------------------------------------------
 export function addMeasure() {
     appState.numMeasures++;
+    // beatConfig に新しい小節を追加（デフォルト: 全拍4分割）
+    if (appState.beatConfig.length < appState.numMeasures) {
+        appState.beatConfig.push([4, 4, 4, 4]);
+    }
     const newStart = (appState.numMeasures - 1) * STEPS_PER_MEASURE;
     appState.tracks.forEach(track => {
         if (INST_TYPE[track.instrument] === 'rhythm') {
-            track.rows.forEach(r => r.steps.push(...Array(STEPS_PER_MEASURE).fill(false)));
+            track.rows.forEach(r => r.steps.push(...Array(STEPS_PER_MEASURE).fill(null)));
         } else if (INST_TYPE[track.instrument] === 'chord') {
             track.chordMap.push(...Array(STEPS_PER_MEASURE).fill(null));
-            track.soundSteps.push(...Array(STEPS_PER_MEASURE).fill(false));
+            track.soundSteps.push(...Array(STEPS_PER_MEASURE).fill(null));
             if (!track.dividers.includes(newStart)) {
                 track.dividers.push(newStart);
                 track.dividers.sort((a, b) => a - b);
             }
         } else {
             Object.values(track.stepsMap).forEach(steps =>
-                steps.push(...Array(STEPS_PER_MEASURE).fill(false))
+                steps.push(...Array(STEPS_PER_MEASURE).fill(null))
             );
         }
     });
@@ -108,6 +112,10 @@ export function removeMeasure() {
     if (appState.numMeasures <= 1) return;
     const removeStart = (appState.numMeasures - 1) * STEPS_PER_MEASURE;
     appState.numMeasures--;
+    // beatConfig の末尾を削除
+    if (appState.beatConfig.length > appState.numMeasures) {
+        appState.beatConfig.pop();
+    }
     if (appState.currentMeasure >= appState.numMeasures) {
         appState.currentMeasure = appState.numMeasures - 1;
     }

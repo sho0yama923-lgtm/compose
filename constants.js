@@ -1,5 +1,27 @@
 // constants.js — アプリ全体で使う定数
 
+// 音価 → 占有セル数のマッピング
+export const DURATION_CELLS = {
+    '16t': 2,  // 半拍三連
+    '16n': 3,
+    '8t':  4,  // 1拍三連
+    '8n':  6,  '8d':  9,
+    '4n':  12, '4d':  18,
+    '2n':  24, '2d':  36,
+    '1n':  48,
+};
+
+// ツールバー用ラベル（左から長い → 短い）
+export const DURATION_LIST = [
+    { value: '8t',  label: '1拍3連' },
+    { value: '16t', label: '半拍3連' },
+    { value: '1n',  label: '全' },
+    { value: '2n',  label: '2分' },
+    { value: '4n',  label: '4分' },
+    { value: '8n',  label: '8分' },
+    { value: '16n', label: '16分' },
+];
+
 // クロマチック音名（C〜B）
 export const CHROMATIC  = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 export const BLACK_KEYS = new Set(['C#','D#','F#','G#','A#']);
