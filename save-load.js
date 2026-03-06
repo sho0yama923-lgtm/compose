@@ -5,7 +5,8 @@ import { INST_TYPE, OCTAVE_DEFAULT_BASE, DRUM_ROWS } from './instruments.js';
 import { CHROMATIC, DURATION_CELLS } from './core/constants.js';
 
 const STORAGE_KEY = 'compose_save';
-const DATA_VERSION = 3;
+const DATA_VERSION = 4;
+const VALID_DURATIONS = new Set(Object.keys(DURATION_CELLS));
 
 // -------------------------------------------------------
 // v1 → v2 マイグレーション: boolean → duration string
@@ -183,6 +184,8 @@ export function saveState() {
             currentMeasure: appState.currentMeasure,
             activeTrackId: appState.activeTrackId,
             editorGridMode: appState.editorGridMode,
+            selectedDuration: appState.selectedDuration,
+            dottedMode: appState.dottedMode,
             beatConfig: appState.beatConfig,
             tracks: appState.tracks.map(t => {
                 const clone = { ...t };
@@ -216,6 +219,18 @@ function restoreFromData(data) {
     appState.currentMeasure = data.currentMeasure ?? 0;
     appState.activeTrackId  = data.activeTrackId  ?? null;
     appState.editorGridMode = data.editorGridMode === 'triplet' ? 'triplet' : 'normal';
+    appState.selectedDuration = VALID_DURATIONS.has(data.selectedDuration)
+        ? data.selectedDuration
+        : '16n';
+    if (appState.editorGridMode === 'triplet' && !appState.selectedDuration.endsWith('t')) {
+        appState.selectedDuration = '8t';
+    }
+    if (appState.editorGridMode === 'normal' && appState.selectedDuration.endsWith('t')) {
+        appState.selectedDuration = '16n';
+    }
+    appState.dottedMode = appState.editorGridMode === 'normal'
+        && ['8n', '4n', '2n'].includes(appState.selectedDuration)
+        && data.dottedMode === true;
     appState.beatConfig     = normalizeBeatConfig(appState.numMeasures, data.beatConfig);
 
     const length = totalSteps();
