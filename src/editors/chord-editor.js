@@ -40,7 +40,6 @@ export function renderChordEditor(track, editorEl) {
         `${track.selectedChordRoot}${track.selectedChordType}`,
         `Oct ${track.selectedChordOctave}`,
     ], header.querySelector('.measure-actions')));
-    editorEl.appendChild(buildEditorHint('コードを決める', '上でコードを選び、先に進行、その下で鳴らすタイミングを決めます。'));
 
     const bodyEl = document.createElement('div');
     bodyEl.className = 'chord-panel-body';
@@ -50,6 +49,11 @@ export function renderChordEditor(track, editorEl) {
     bodyEl.appendChild(buildTimingSection(track, offset, mEnd, cells, majorGroup));
 
     editorEl.appendChild(bodyEl);
+
+    const drumTracks = appState.tracks.filter(t => INST_TYPE[t.instrument] === 'rhythm');
+    if (appState.chordDrumSheetOpen && drumTracks.length > 0) {
+        editorEl.appendChild(buildDrumReferenceSheet(track, drumTracks, offset, mEnd, cells));
+    }
 }
 
 function buildPalette(track) {
@@ -153,13 +157,13 @@ function buildProgressSection(track, offset, mEnd) {
     titleEl.textContent = 'コード進行';
     sectionEl.appendChild(titleEl);
 
+    const headEl = document.createElement('div');
+    headEl.className = 'chord-progress-head';
+
     const descEl = document.createElement('div');
     descEl.className = 'chord-section-desc';
     descEl.textContent = '進行: どの拍でコードを変えるか';
-    sectionEl.appendChild(descEl);
-
-    const headEl = document.createElement('div');
-    headEl.className = 'chord-progress-head';
+    headEl.appendChild(descEl);
 
     const clearBtn = document.createElement('button');
     clearBtn.className = 'chord-quick-btn danger';
@@ -239,70 +243,15 @@ function buildTimingSection(track, offset, mEnd, cells, majorGroup) {
 
     const drumTracks = appState.tracks.filter(t => INST_TYPE[t.instrument] === 'rhythm');
     if (drumTracks.length > 0) {
-        const detailsEl = document.createElement('details');
-        detailsEl.className = 'chord-rhythm-details';
-        const summaryEl = document.createElement('summary');
-        summaryEl.className = 'chord-rhythm-summary';
-        summaryEl.textContent = 'ドラムを参照';
-        detailsEl.appendChild(summaryEl);
-
-        const drumRefEl = document.createElement('div');
-        drumRefEl.className = 'chord-rhythm-ref';
-        drumTracks.forEach(dt => {
-            dt.rows.forEach(row => {
-                const rowEl = document.createElement('div');
-                rowEl.className = 'chord-rhythm-row';
-
-                const chk = document.createElement('input');
-                chk.type = 'checkbox';
-                chk.className = 'chord-drum-check';
-                chk.checked = track.selectedDrumRows.has(row.label);
-                chk.addEventListener('change', () => {
-                    if (chk.checked) track.selectedDrumRows.add(row.label);
-                    else track.selectedDrumRows.delete(row.label);
-                });
-                rowEl.appendChild(chk);
-
-                const lbl = document.createElement('span');
-                lbl.className = 'chord-rhythm-row-label';
-                lbl.textContent = row.label;
-                rowEl.appendChild(lbl);
-
-                const cellsEl = document.createElement('div');
-                cellsEl.className = 'chord-rhythm-cells';
-                cellsEl.style.gridTemplateColumns = `repeat(${cells.length}, minmax(0, 1fr))`;
-                cells.forEach(cellInfo => {
-                    const cell = document.createElement('span');
-                    const on = isStepHead(row.steps[offset + cellInfo.localStep]);
-                    cell.className = 'chord-rhythm-cell' + (on ? ' on' : '');
-                    cell.textContent = on ? '●' : '·';
-                    cellsEl.appendChild(cell);
-                });
-                rowEl.appendChild(cellsEl);
-                drumRefEl.appendChild(rowEl);
-            });
-        });
-
-        const syncBtn = document.createElement('button');
-        syncBtn.className = 'chord-sync-all-btn';
-        syncBtn.textContent = '同期';
-        syncBtn.addEventListener('click', () => {
-            track.soundSteps.fill(null, offset, mEnd);
-            drumTracks.forEach(dt => {
-                dt.rows.forEach(row => {
-                    if (!track.selectedDrumRows.has(row.label)) return;
-                    row.steps.forEach((val, i) => {
-                        if (i >= offset && i < mEnd && isStepHead(val)) {
-                            track.soundSteps[i] = '16n';
-                        }
-                    });
-                });
-            });
+        const openBtn = document.createElement('button');
+        openBtn.className = 'chord-rhythm-summary';
+        openBtn.type = 'button';
+        openBtn.textContent = 'ドラムを参照';
+        openBtn.addEventListener('click', () => {
+            appState.chordDrumSheetOpen = true;
             callbacks.renderEditor();
         });
-        drumRefEl.appendChild(syncBtn);
-        detailsEl.appendChild(drumRefEl);
-        sectionEl.appendChild(detailsEl);
+        sectionEl.appendChild(openBtn);
     }
 
     const ts = totalSteps();
@@ -353,6 +302,112 @@ function buildTimingSection(track, offset, mEnd, cells, majorGroup) {
     soundCells.appendChild(createPlayheadBar(offset));
     sectionEl.appendChild(soundCells);
     return sectionEl;
+}
+
+function buildDrumReferenceSheet(track, drumTracks, offset, mEnd, cells) {
+    const overlayEl = document.createElement('div');
+    overlayEl.className = 'chord-drum-sheet-overlay';
+    overlayEl.addEventListener('click', (event) => {
+        if (event.target !== overlayEl) return;
+        appState.chordDrumSheetOpen = false;
+        callbacks.renderEditor();
+    });
+
+    const sheetEl = document.createElement('section');
+    sheetEl.className = 'chord-drum-sheet';
+
+    const handleEl = document.createElement('div');
+    handleEl.className = 'chord-drum-sheet-handle';
+    sheetEl.appendChild(handleEl);
+
+    const titleEl = document.createElement('div');
+    titleEl.className = 'chord-drum-sheet-title';
+    titleEl.textContent = 'ドラムを参照';
+    sheetEl.appendChild(titleEl);
+
+    const descEl = document.createElement('div');
+    descEl.className = 'chord-drum-sheet-desc';
+    descEl.textContent = '参照したいドラム行にチェックを入れて、同期を押します。';
+    sheetEl.appendChild(descEl);
+
+    const listEl = document.createElement('div');
+    listEl.className = 'chord-drum-sheet-list';
+    drumTracks.forEach(dt => {
+        dt.rows.forEach(row => {
+            const rowEl = document.createElement('label');
+            rowEl.className = 'chord-rhythm-row';
+
+            const chk = document.createElement('input');
+            chk.type = 'checkbox';
+            chk.className = 'chord-drum-check';
+            chk.checked = track.selectedDrumRows.has(row.label);
+            chk.addEventListener('change', () => {
+                if (chk.checked) track.selectedDrumRows.add(row.label);
+                else track.selectedDrumRows.delete(row.label);
+            });
+            rowEl.appendChild(chk);
+
+            const lbl = document.createElement('span');
+            lbl.className = 'chord-rhythm-row-label';
+            lbl.textContent = row.label;
+            rowEl.appendChild(lbl);
+
+            const cellsEl = document.createElement('div');
+            cellsEl.className = 'chord-rhythm-cells';
+            cellsEl.style.gridTemplateColumns = `repeat(${cells.length}, minmax(0, 1fr))`;
+            cells.forEach(cellInfo => {
+                const cell = document.createElement('span');
+                const on = isStepHead(row.steps[offset + cellInfo.localStep]);
+                cell.className = 'chord-rhythm-cell' + (on ? ' on' : '');
+                cell.textContent = on ? '●' : '·';
+                cellsEl.appendChild(cell);
+            });
+            rowEl.appendChild(cellsEl);
+            listEl.appendChild(rowEl);
+        });
+    });
+    sheetEl.appendChild(listEl);
+
+    const actionsEl = document.createElement('div');
+    actionsEl.className = 'chord-drum-sheet-actions';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'chord-quick-btn';
+    closeBtn.type = 'button';
+    closeBtn.textContent = '閉じる';
+    closeBtn.addEventListener('click', () => {
+        appState.chordDrumSheetOpen = false;
+        callbacks.renderEditor();
+    });
+
+    const syncBtn = document.createElement('button');
+    syncBtn.className = 'chord-sync-all-btn';
+    syncBtn.type = 'button';
+    syncBtn.textContent = '同期';
+    syncBtn.addEventListener('click', () => {
+        syncSelectedDrumRows(track, drumTracks, offset, mEnd);
+        appState.chordDrumSheetOpen = false;
+        callbacks.renderEditor();
+    });
+
+    actionsEl.append(closeBtn, syncBtn);
+    sheetEl.appendChild(actionsEl);
+    overlayEl.appendChild(sheetEl);
+    return overlayEl;
+}
+
+function syncSelectedDrumRows(track, drumTracks, offset, mEnd) {
+    track.soundSteps.fill(null, offset, mEnd);
+    drumTracks.forEach(dt => {
+        dt.rows.forEach(row => {
+            if (!track.selectedDrumRows.has(row.label)) return;
+            row.steps.forEach((val, i) => {
+                if (i >= offset && i < mEnd && isStepHead(val)) {
+                    track.soundSteps[i] = '16n';
+                }
+            });
+        });
+    });
 }
 
 function buildLabel(text) {

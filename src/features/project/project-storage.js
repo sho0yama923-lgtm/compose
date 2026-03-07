@@ -227,6 +227,7 @@ function restoreFromData(data) {
     appState.isPlaying = false;
     appState.playRangeStartMeasure = null;
     appState.playRangeEndMeasure = null;
+    appState.chordDrumSheetOpen = false;
     appState.drumHintDismissed = data.drumHintDismissed === true;
     appState.chordHintDismissed = data.chordHintDismissed === true;
     appState.melodicHintDismissed = data.melodicHintDismissed === true;
@@ -311,6 +312,7 @@ export async function importJSON(file) {
 
         saveState();
         appState.previewMode = true;
+        appState.chordDrumSheetOpen = false;
         callbacks.renderEditor();
         callbacks.renderSidebar();
     } catch (e) {

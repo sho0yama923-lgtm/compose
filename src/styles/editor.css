@@ -842,10 +842,10 @@ body {
 
 /* ======= コードエディタ ======= */
 .chord-panel-body {
-    padding: 6px 10px 10px;
+    padding: 4px 8px 8px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
 }
 /* パレット（ルート/タイプ/オクターブ）*/
 .chord-palette {
@@ -880,11 +880,11 @@ body {
 .chord-section {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 3px;
     background: #f8f8f8;
     border: 1px solid #e0e0e0;
     border-radius: 8px;
-    padding: 8px 10px 10px;
+    padding: 6px 8px 8px;
 }
 .chord-section-title {
     font-size: 10px;
@@ -1680,6 +1680,49 @@ body {
     border-color: #dce3ef;
     padding: 4px 6px;
 }
+.chord-track-editor .melody-topbar {
+    gap: 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+.chord-track-editor .melody-topbar::-webkit-scrollbar {
+    display: none;
+}
+.chord-track-editor .melody-topbar .duration-mode-row,
+.chord-track-editor .melody-topbar .duration-value-row {
+    padding: 3px 5px;
+    gap: 4px;
+    flex: 0 0 auto;
+}
+.chord-track-editor .melody-topbar .duration-mode-row {
+    width: 122px;
+}
+.chord-track-editor .melody-topbar .duration-value-row {
+    width: 208px;
+}
+.chord-track-editor .melody-topbar .duration-row-label {
+    font-size: 8px;
+}
+.chord-track-editor .melody-topbar .grid-mode-tab {
+    min-width: 40px;
+    height: 26px;
+}
+.chord-track-editor .melody-topbar .dur-btn {
+    min-width: 34px;
+    height: 28px;
+}
+.chord-track-editor .melody-topbar .editor-help {
+    padding: 3px 6px;
+}
+.chord-track-editor .melody-topbar .editor-help strong {
+    font-size: 11px;
+}
+.chord-track-editor .melody-topbar .editor-help span {
+    font-size: 9px;
+    line-height: 1.25;
+}
 .drum-track-editor > .editor-help,
 .chord-track-editor > .editor-help {
     display: none;
@@ -1867,7 +1910,7 @@ body {
     .drum-track-editor .melody-topbar .duration-value-row,
     .chord-track-editor .melody-topbar .duration-mode-row,
     .chord-track-editor .melody-topbar .duration-value-row {
-        flex: 1 1 100%;
+        flex: 0 0 auto;
     }
     .melodic-track-editor .melody-topbar .duration-value-buttons,
     .drum-track-editor .melody-topbar .duration-value-buttons,
@@ -1882,23 +1925,27 @@ body {
 }
 
 .chord-section-desc {
-    font-size: 10px;
+    font-size: 9px;
     color: #7c7c7c;
-    line-height: 1.4;
+    line-height: 1.25;
 }
 .chord-progress-head {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
     align-items: center;
+    gap: 8px;
+}
+.chord-progress-head .chord-section-desc {
+    flex: 1 1 auto;
 }
 .chord-progress-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 8px;
+    gap: 6px;
 }
 .chord-progress-cell {
     min-width: 0;
-    min-height: 76px;
+    min-height: 58px;
     border: 1.5px solid #d9d9d9;
     border-radius: 10px;
     background: #fff;
@@ -1907,7 +1954,7 @@ body {
     flex-direction: column;
     align-items: flex-start;
     justify-content: space-between;
-    padding: 10px 8px;
+    padding: 8px 7px;
     text-align: left;
     touch-action: manipulation;
 }
@@ -1921,7 +1968,7 @@ body {
     font-weight: 700;
 }
 .chord-progress-name {
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 800;
     color: #222;
 }
@@ -1932,24 +1979,74 @@ body {
     overflow: hidden;
 }
 .chord-rhythm-summary {
-    list-style: none;
     cursor: pointer;
     font-size: 11px;
     font-weight: 700;
     color: #666;
-    padding: 8px 10px;
-}
-.chord-rhythm-summary::-webkit-details-marker {
-    display: none;
+    padding: 6px 9px;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    background: #fff;
+    text-align: left;
 }
 .chord-rhythm-ref {
     border-top: 1px solid #ececec;
     border-radius: 0;
     background: #fafafa;
 }
+.chord-drum-sheet-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 220;
+    background: rgba(0, 0, 0, 0.28);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+.chord-drum-sheet {
+    width: min(100%, 520px);
+    max-height: min(72vh, 560px);
+    background: #fff;
+    border-radius: 16px 16px 0 0;
+    padding: 10px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.18);
+}
+.chord-drum-sheet-handle {
+    width: 40px;
+    height: 4px;
+    border-radius: 999px;
+    background: #d4d4d4;
+    margin: 0 auto;
+}
+.chord-drum-sheet-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: #222;
+}
+.chord-drum-sheet-desc {
+    font-size: 10px;
+    line-height: 1.35;
+    color: #6b7280;
+}
+.chord-drum-sheet-list {
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-right: 2px;
+}
+.chord-drum-sheet-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
 .chord-timing-grid {
-    margin-top: 4px;
-    min-height: 88px;
+    margin-top: 2px;
+    min-height: 132px;
     border: 1px solid #e5e5e5;
     border-radius: 8px;
     background:

@@ -14,6 +14,7 @@ export const appState = {
     playRangeStartMeasure: null,
     playRangeEndMeasure: null,
     previewMode: false,
+    chordDrumSheetOpen: false,
     drumHintDismissed: false,
     chordHintDismissed: false,
     melodicHintDismissed: false,
