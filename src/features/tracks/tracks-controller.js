@@ -1,8 +1,9 @@
 // track-manager.js — トラック管理（追加・削除・選択）+ 小節管理
 
-import { appState, STEPS_PER_MEASURE, totalSteps, callbacks, clampPlayRangeMeasures } from './core/state.js';
-import { INST_TYPE, OCTAVE_DEFAULT_BASE, DRUM_ROWS, INST_LABEL } from './instruments.js';
-import { CHROMATIC } from './core/constants.js';
+import { appState, STEPS_PER_MEASURE, totalSteps, callbacks, clampPlayRangeMeasures } from '../../core/state.js';
+import { INST_TYPE, OCTAVE_DEFAULT_BASE, DRUM_ROWS, INST_LABEL } from './instrument-map.js';
+import { CHROMATIC } from '../../core/constants.js';
+import { setTopbarTitle } from '../../ui/topbar.js';
 
 // -------------------------------------------------------
 // トラック選択
@@ -15,7 +16,7 @@ export function selectTrack(id) {
     callbacks.closeSidebar();
 
     const track = appState.tracks.find(t => t.id === id);
-    if (track) document.getElementById('topbarTitle').textContent = INST_LABEL[track.instrument];
+    if (track) setTopbarTitle(INST_LABEL[track.instrument]);
 }
 
 // -------------------------------------------------------
@@ -30,7 +31,7 @@ export function deleteTrack(id) {
         const title = appState.activeTrackId
             ? INST_LABEL[appState.tracks.find(t => t.id === appState.activeTrackId).instrument]
             : '作曲ツール';
-        document.getElementById('topbarTitle').textContent = title;
+        setTopbarTitle(title);
     }
     callbacks.renderSidebar();
     callbacks.renderEditor();
@@ -111,25 +112,28 @@ export function addMeasure() {
 
 export function removeMeasure() {
     if (appState.numMeasures <= 1) return;
-    const removeStart = (appState.numMeasures - 1) * STEPS_PER_MEASURE;
+    const removedMeasure = appState.currentMeasure;
+    const removeStart = removedMeasure * STEPS_PER_MEASURE;
     appState.numMeasures--;
-    // beatConfig の末尾を削除
-    if (appState.beatConfig.length > appState.numMeasures) {
-        appState.beatConfig.pop();
+    if (appState.beatConfig.length > removedMeasure) {
+        appState.beatConfig.splice(removedMeasure, 1);
     }
     if (appState.currentMeasure >= appState.numMeasures) {
         appState.currentMeasure = appState.numMeasures - 1;
     }
-    clampPlayRangeMeasures();
+    shiftPlayRangeAfterMeasureRemoval(removedMeasure);
     appState.tracks.forEach(track => {
         if (INST_TYPE[track.instrument] === 'rhythm') {
             track.rows.forEach(r => r.steps.splice(removeStart, STEPS_PER_MEASURE));
         } else if (INST_TYPE[track.instrument] === 'chord') {
             track.chordMap.splice(removeStart, STEPS_PER_MEASURE);
             track.soundSteps.splice(removeStart, STEPS_PER_MEASURE);
-            track.dividers = track.dividers.filter(d => d < removeStart);
-            if (track.selectedDivPos !== null && track.selectedDivPos >= removeStart) {
-                track.selectedDivPos = null;
+            track.dividers = track.dividers
+                .filter(d => d !== removeStart)
+                .map(d => d > removeStart ? d - STEPS_PER_MEASURE : d);
+            if (track.selectedDivPos !== null) {
+                if (track.selectedDivPos === removeStart) track.selectedDivPos = null;
+                else if (track.selectedDivPos > removeStart) track.selectedDivPos -= STEPS_PER_MEASURE;
             }
         } else {
             Object.values(track.stepsMap).forEach(steps =>
@@ -137,5 +141,17 @@ export function removeMeasure() {
             );
         }
     });
+    clampPlayRangeMeasures();
     callbacks.renderEditor();
+}
+
+function shiftPlayRangeAfterMeasureRemoval(removedMeasure) {
+    if (appState.playRangeStartMeasure !== null) {
+        if (appState.playRangeStartMeasure === removedMeasure) appState.playRangeStartMeasure = null;
+        else if (appState.playRangeStartMeasure > removedMeasure) appState.playRangeStartMeasure--;
+    }
+    if (appState.playRangeEndMeasure !== null) {
+        if (appState.playRangeEndMeasure === removedMeasure) appState.playRangeEndMeasure = null;
+        else if (appState.playRangeEndMeasure > removedMeasure) appState.playRangeEndMeasure--;
+    }
 }

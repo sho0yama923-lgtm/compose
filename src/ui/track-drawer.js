@@ -1,18 +1,24 @@
 // sidebar.js — サイドバー開閉 + トラックリスト描画
 
-import { appState } from './core/state.js';
-import { INST_LABEL } from './instruments.js';
-import { selectTrack, deleteTrack } from './track-manager.js';
+import { appState } from '../core/state.js';
+import { INST_LABEL } from '../features/tracks/instrument-map.js';
+import { selectTrack, deleteTrack } from '../features/tracks/tracks-controller.js';
 
-const sidebarEl = document.getElementById('sidebar');
-const overlayEl = document.getElementById('sidebarOverlay');
+function getSidebarElements() {
+    return {
+        sidebarEl: document.getElementById('sidebar'),
+        overlayEl: document.getElementById('sidebarOverlay'),
+    };
+}
 
 export function openSidebar() {
+    const { sidebarEl, overlayEl } = getSidebarElements();
     sidebarEl.classList.add('open');
     overlayEl.classList.add('open');
 }
 
 export function closeSidebar() {
+    const { sidebarEl, overlayEl } = getSidebarElements();
     sidebarEl.classList.remove('open');
     overlayEl.classList.remove('open');
 }
@@ -40,6 +46,7 @@ export function renderSidebar() {
 }
 
 export function initSidebar() {
+    const { overlayEl } = getSidebarElements();
     document.getElementById('menuBtn').addEventListener('click', openSidebar);
     overlayEl.addEventListener('click', closeSidebar);
 }

@@ -2,7 +2,7 @@
 
 import { appState } from '../core/state.js';
 import { DURATION_LIST } from '../core/constants.js';
-import { getEffectiveDuration } from '../core/duration-utils.js';
+import { getEffectiveDuration } from '../core/duration.js';
 
 /**
  * デュレーションツールバーを生成してコンテナに追加

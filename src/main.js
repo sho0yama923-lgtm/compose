@@ -2,11 +2,13 @@
 
 import { appState, callbacks } from './core/state.js';
 import { renderEditor } from './editors/editor-router.js';
-import { renderSidebar, closeSidebar, initSidebar } from './sidebar.js';
-import { addTrack } from './track-manager.js';
-import { initPlayback } from './playback.js';
-import { initModal } from './modal.js';
-import { saveState, loadState, initSaveLoad } from './save-load.js';
+import { renderSidebar, closeSidebar, initSidebar } from './ui/track-drawer.js';
+import { addTrack } from './features/tracks/tracks-controller.js';
+import { initPlayback } from './features/playback/playback-controller.js';
+import { initModal } from './ui/instrument-modal.js';
+import { initOnboarding } from './ui/onboarding.js';
+import { syncViewToggleButton } from './ui/topbar.js';
+import { saveState, loadState, initSaveLoad } from './features/project/project-storage.js';
 
 // 循環依存を回避するコールバック登録（自動保存フック付き）
 callbacks.renderEditor = (...args) => {
@@ -39,9 +41,13 @@ try {
     initModal();
     initSaveLoad();
 
-    // トップバータイトルクリックでプレビュー画面トグル
-    document.getElementById('topbarTitle').addEventListener('click', () => {
-        appState.previewMode = !appState.previewMode;
+    document.getElementById('trackModeBtn').addEventListener('click', () => {
+        if (appState.activeTrackId === null) return;
+        appState.previewMode = false;
+        callbacks.renderEditor();
+    });
+    document.getElementById('viewToggleBtn').addEventListener('click', () => {
+        appState.previewMode = true;
         callbacks.renderEditor();
     });
 
@@ -63,7 +69,9 @@ try {
 
     // 起動時はプレビュー画面を表示
     appState.previewMode = true;
+    syncViewToggleButton(true);
     callbacks.renderEditor();
+    initOnboarding();
 } catch (error) {
     showBootError(error);
 }

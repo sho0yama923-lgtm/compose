@@ -1,5 +1,5 @@
 import { appState, STEPS_PER_BEAT, STEPS_PER_MEASURE } from './state.js';
-import { clearNote, isStepHead, noteReachesIndex } from './duration-utils.js';
+import { clearNote, isStepHead, noteReachesIndex } from './duration.js';
 
 export const DEFAULT_BEAT_CONFIG = [4, 4, 4, 4];
 

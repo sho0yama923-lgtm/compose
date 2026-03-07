@@ -1,8 +1,8 @@
 // modal.js — 楽器選択モーダル
 
-import { INSTRUMENT_LIST } from './instruments.js';
-import { addTrack } from './track-manager.js';
-import { closeSidebar } from './sidebar.js';
+import { INSTRUMENT_LIST } from '../features/tracks/instrument-map.js';
+import { addTrack } from '../features/tracks/tracks-controller.js';
+import { closeSidebar } from './track-drawer.js';
 
 export function initModal() {
     const modal = document.getElementById('modal');

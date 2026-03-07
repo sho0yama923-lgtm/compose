@@ -21,6 +21,13 @@ body {
     flex-shrink: 0;
     height: 56px;
 }
+.topbar-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
 .btn-menu {
     font-size: 20px;
     background: none;
@@ -34,16 +41,6 @@ body {
     touch-action: manipulation;
 }
 .btn-menu:active { background: #222; }
-.topbar-title {
-    font-size: 15px;
-    font-weight: 600;
-    color: #fff;
-    flex: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    letter-spacing: 0.05em;
-}
 .topbar-right {
     display: flex;
     align-items: center;
@@ -81,6 +78,24 @@ body {
 .btn:active { opacity: 0.7; }
 /* 白鍵イメージの再生ボタン */
 .btn-play { background: #fff; color: #111; }
+.topbar-mode-btn {
+    background: transparent;
+    color: #d6d6d6;
+    border: 1px solid #4a4a4a;
+    padding: 7px 10px;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+    max-width: 140px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.topbar-mode-btn.is-active {
+    background: #fff;
+    color: #111;
+    border-color: #fff;
+}
 .btn-play.is-playing {
     background: #333;
     color: #fff;
@@ -249,6 +264,63 @@ body {
     gap: 6px;
     margin-bottom: 8px;
     justify-content: space-between;
+}
+.measure-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fafafa;
+}
+.measure-actions-label {
+    font-size: 10px;
+    font-weight: 800;
+    color: #777;
+    letter-spacing: 0.08em;
+}
+.measure-action-btn {
+    width: 34px;
+    height: 34px;
+    border: 1px solid #cfcfcf;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.measure-action-btn.add {
+    color: #2e7d32;
+}
+.measure-action-btn.remove {
+    color: #c62828;
+}
+.measure-action-btn:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+.editor-help {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    background: #fafafa;
+    border: 1px solid #e4e4e4;
+    border-radius: 8px;
+}
+.editor-help strong {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: #333;
+}
+.editor-help span {
+    font-size: 11px;
+    line-height: 1.45;
+    color: #777;
 }
 
 /* ======= ドラム行 ======= */
@@ -1156,23 +1228,74 @@ body {
 }
 
 /* ======= 小節シークバー（エディタ内） ======= */
+.measure-seek-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.measure-seek-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.measure-seek-meta strong {
+    font-size: 11px;
+    color: #333;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+}
+.measure-seek-meta span {
+    font-size: 10px;
+    color: #7d7d7d;
+    line-height: 1.4;
+}
+.measure-seek-label {
+    margin-top: 2px;
+    font-size: 11px;
+    color: #555;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    white-space: normal;
+    line-height: 1.35;
+}
 .measure-seek {
     display: flex;
     align-items: center;
     gap: 6px;
     padding: 6px 0;
 }
+.measure-seek .mb-btn:first-child,
+.measure-seek .mb-btn:last-of-type {
+    font-size: 14px;
+}
 .mb-range-btn.selected {
     background: #111;
     border-color: #111;
     color: #fff;
 }
-.measure-seek-label {
-    font-size: 11px;
-    color: #555;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    white-space: nowrap;
+.mb-btn-guide {
+    display: block;
+    font-size: 8px;
+    line-height: 1;
+    margin-top: 1px;
+    font-weight: 500;
+}
+.mb-range-btn {
+    width: 36px;
+    height: 36px;
+    flex-direction: column;
+    gap: 1px;
+    font-size: 13px;
+}
+.mb-range-btn.range-start:not(.selected) {
+    color: #b42318;
+    border-color: #e7b5b0;
+    background: #fff7f6;
+}
+.mb-range-btn.range-end:not(.selected) {
+    color: #175cd3;
+    border-color: #b3ccff;
+    background: #f5f9ff;
 }
 .mb-btn {
     width: 30px;
@@ -1192,9 +1315,6 @@ body {
 }
 .mb-btn:disabled { opacity: 0.25; cursor: default; }
 .mb-btn:not(:disabled):active { background: #e0e0e0; }
-.mb-remove { color: #c00; }
-.mb-add { color: #2e7d32; }
-
 .mb-slider-wrap {
     flex: 1;
     position: relative;
@@ -1243,6 +1363,86 @@ body {
     background: #2563eb;
 }
 
+.onboarding-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 10, 10, 0.56);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 18px 12px calc(18px + env(safe-area-inset-bottom, 0px));
+    z-index: 300;
+}
+.onboarding-card {
+    width: 100%;
+    max-width: 420px;
+    background: #fff;
+    border-radius: 18px;
+    padding: 18px 16px 16px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+}
+.onboarding-kicker {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    color: #8a8a8a;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+.onboarding-title {
+    margin: 0 0 14px;
+    font-size: 22px;
+    line-height: 1.2;
+    color: #111;
+}
+.onboarding-points {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.onboarding-point {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: #f7f7f7;
+    border: 1px solid #ececec;
+}
+.onboarding-point strong {
+    font-size: 13px;
+    color: #222;
+}
+.onboarding-point span {
+    font-size: 12px;
+    line-height: 1.5;
+    color: #666;
+}
+.onboarding-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+}
+.onboarding-btn {
+    flex: 1;
+    min-height: 44px;
+    border-radius: 10px;
+    border: 1px solid #d7d7d7;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.onboarding-btn.primary {
+    background: #111;
+    color: #fff;
+    border-color: #111;
+}
+.onboarding-btn.secondary {
+    background: #fff;
+    color: #222;
+}
+
 /* ======= スマホ向けUI改善 上書き ======= */
 .drum-track-editor .drum-editor {
     flex: 0 0 auto;
@@ -1284,52 +1484,93 @@ body {
 }
 
 .melodic-track-editor .continuous-roll {
+    --melody-key-width: 28px;
     flex: 1;
     min-height: 0;
+    overflow: hidden;
 }
-.melodic-track-editor .continuous-roll .piano-keys-frame,
-.melodic-track-editor .continuous-roll .melody-grid-scroll {
+.melodic-track-editor .continuous-roll .melody-roll-scroll {
+    flex: 1;
     min-height: 0;
+    overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
 }
-.melodic-track-editor .continuous-roll .piano-keys-frame::-webkit-scrollbar,
-.melodic-track-editor .continuous-roll .melody-grid-scroll::-webkit-scrollbar {
+.melodic-track-editor .continuous-roll .melody-roll-scroll::-webkit-scrollbar {
     display: none;
 }
-.melodic-track-editor .continuous-roll .piano-keys {
+.melodic-track-editor .continuous-roll .melody-roll-content {
     position: relative;
-    overflow: hidden;
+    min-height: max-content;
+    width: 100%;
+    min-width: 100%;
 }
-.melodic-track-editor .continuous-roll .piano-keys-inner {
-    display: flex;
-    flex-direction: column;
-    will-change: transform;
+.melodic-track-editor .continuous-roll .melody-roll-header,
+.melodic-track-editor .continuous-roll .melody-lane,
+.melodic-track-editor .continuous-roll .melody-lane-divider {
+    display: grid;
+    grid-template-columns: var(--melody-key-width) minmax(0, 1fr);
+    align-items: stretch;
+    width: 100%;
 }
-.melodic-track-editor .continuous-roll .timeline-grid {
-    flex: 0 0 auto;
-    min-height: auto;
+.melodic-track-editor .continuous-roll .melody-key-header-spacer {
+    height: 22px;
+    background: #fafafa;
+    border-right: 1px solid #d7d7d7;
+    border-bottom: 1px solid #e8e8e8;
 }
-.melodic-track-editor .continuous-roll .piano-keys-frame {
-    overflow: hidden;
-    background: #efefef;
-}
-.melodic-track-editor .continuous-roll .melody-grid-scroll {
-    overflow-y: auto;
-}
-.melodic-track-editor .continuous-roll .timeline-header {
+.melodic-track-editor .continuous-roll .melody-grid-header {
+    display: grid;
+    grid-auto-flow: column;
     position: sticky;
     top: 0;
     z-index: 4;
+    min-width: 0;
+    gap: 0;
+    padding: 0;
+    height: 22px;
+    align-items: center;
+    border-bottom: 1px solid #e8e8e8;
+    background:
+        repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            #b1b1b1 calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            #b1b1b1 calc(100% / (var(--timeline-columns) / var(--timeline-major, 4)))
+        ),
+        repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent calc((100% / var(--timeline-columns)) - 1px),
+            #e5e5e5 calc((100% / var(--timeline-columns)) - 1px),
+            #e5e5e5 calc(100% / var(--timeline-columns))
+        ),
+        #fafafa;
 }
 .melodic-track-editor .continuous-roll .piano-key,
-.melodic-track-editor .continuous-roll .timeline-row {
-    flex: none;
+.melodic-track-editor .continuous-roll .melody-grid-row {
     height: 34px;
 }
-.piano-octave-divider,
-.timeline-octave-divider {
-    flex: none;
+.melodic-track-editor .continuous-roll .piano-key {
+    width: var(--melody-key-width);
+    min-width: var(--melody-key-width);
+    max-width: var(--melody-key-width);
+}
+.melodic-track-editor .continuous-roll .melody-key-octave-divider {
+    width: var(--melody-key-width);
+    min-width: var(--melody-key-width);
+    max-width: var(--melody-key-width);
+}
+.melodic-track-editor .continuous-roll .melody-grid-row,
+.melodic-track-editor .continuous-roll .melody-grid-header,
+.melodic-track-editor .continuous-roll .melody-grid-octave-divider {
+    min-width: 0;
+    width: auto;
+    max-width: none;
+}
+.melody-key-octave-divider,
+.melody-grid-octave-divider {
     height: 22px;
     display: flex;
     align-items: center;
@@ -1337,18 +1578,87 @@ body {
     font-weight: 700;
     letter-spacing: 0.08em;
 }
-.piano-octave-divider {
+.melody-key-octave-divider {
     justify-content: flex-end;
     padding-right: 4px;
     color: #777;
     background: #efefef;
     border-bottom: 1px solid #dbdbdb;
+    border-right: 1px solid #d7d7d7;
 }
-.timeline-octave-divider {
+.melody-grid-octave-divider {
     padding-left: 8px;
     color: #666;
     background: linear-gradient(90deg, #f3f3f3, #f8f8f8);
     border-bottom: 1px solid #dbdbdb;
+}
+.melodic-track-editor .continuous-roll .melody-grid-header-cell {
+    min-width: 0;
+    font-size: 9px;
+    text-align: center;
+    color: #b8b8b8;
+}
+.melodic-track-editor .continuous-roll .melody-grid-header-cell.beat {
+    color: #888;
+    font-weight: 700;
+    font-size: 10px;
+}
+.melodic-track-editor .continuous-roll .melody-grid-row {
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid #f0f0f0;
+    background:
+        repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            #b5b5b5 calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            #b5b5b5 calc(100% / (var(--timeline-columns) / var(--timeline-major, 4)))
+        ),
+        repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent calc((100% / var(--timeline-columns)) - 1px),
+            #e1e1e1 calc((100% / var(--timeline-columns)) - 1px),
+            #e1e1e1 calc(100% / var(--timeline-columns))
+        ),
+        linear-gradient(to bottom, transparent calc(100% - 1px), #ececec calc(100% - 1px)),
+        #f8f8f8;
+}
+.melodic-track-editor .continuous-roll .melody-grid-row.black-key {
+    background:
+        repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            #a9a9a9 calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            #a9a9a9 calc(100% / (var(--timeline-columns) / var(--timeline-major, 4)))
+        ),
+        repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent calc((100% / var(--timeline-columns)) - 1px),
+            #d7d7d7 calc((100% / var(--timeline-columns)) - 1px),
+            #d7d7d7 calc(100% / var(--timeline-columns))
+        ),
+        linear-gradient(to bottom, transparent calc(100% - 1px), #d8d8d8 calc(100% - 1px)),
+        #f0f0f0;
+}
+.melodic-track-editor .continuous-roll .melody-grid-note {
+    display: block;
+    position: absolute;
+    top: 2px;
+    height: calc(100% - 4px);
+    border: 1px solid #1d4ed8;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #1d4ed8, #2563eb);
+    box-shadow: none;
+    cursor: pointer;
+    z-index: 2;
+}
+.melody-playhead {
+    top: 22px;
+    bottom: 0;
 }
 
 .chord-section-desc {
@@ -1568,33 +1878,6 @@ body {
     min-height: 0;
 }
 
-/* 4. 鍵盤とマスの「固定の高さ(26px)」を解除し、画面の高さに合わせて均等に割り振る */
-.piano-keys {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-.steps-grid-scroll {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow-y: hidden; /* 縦スクロール禁止 */
-    overflow-x: auto;   /* 小節が横に長い場合の横スクロールは維持 */
-}
-.timeline-grid {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-}
-/* 鍵盤行とタイムライン行を同じ高さで均等分割 */
-.piano-key,
-.timeline-row {
-    height: auto;
-    flex: 1;
-    min-height: 0;
-}
-
 /* 6. シークバーは潰れないようにサイズを固定 */
 .measure-seek {
     flex-shrink: 0;
@@ -1610,6 +1893,25 @@ body {
     flex-direction: column;
     gap: 8px;
     min-height: 0;
+}
+.preview-help {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 12px;
+    background: #fafafa;
+    border: 1px solid #e1e1e1;
+    border-radius: 8px;
+}
+.preview-help strong {
+    font-size: 11px;
+    font-weight: 800;
+    color: #333;
+}
+.preview-help span {
+    font-size: 11px;
+    line-height: 1.45;
+    color: #777;
 }
 .preview-card {
     background: #fff;
@@ -1630,10 +1932,21 @@ body {
 }
 .preview-card-header:active { opacity: 0.75; }
 .preview-grid {
-    display: grid;
-    gap: 1px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
     padding: 6px;
     background: #fafafa;
+}
+.preview-row-track {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(48, minmax(0, 1fr));
+    gap: 1px;
+}
+.preview-chord-zone-grid {
+    display: grid;
+    gap: 1px;
 }
 .preview-cell {
     aspect-ratio: 1;
@@ -1644,11 +1957,37 @@ body {
 .preview-cell.on {
     background: #333;
 }
+.preview-cell.beat-start {
+    box-shadow: inset 1px 0 0 #b5b5b5;
+}
+.preview-cell.beat-end {
+    margin-right: 1px;
+}
 .preview-cell.playing {
     outline: 2px solid #f5c518;
     outline-offset: -1px;
     z-index: 1;
     position: relative;
+}
+.preview-note-bar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-radius: 2px;
+    z-index: 2;
+    pointer-events: none;
+}
+.preview-note-bar.rhythm {
+    background: rgba(17, 17, 17, 0.78);
+    border: 1px solid rgba(17, 17, 17, 0.88);
+}
+.preview-note-bar.melody {
+    background: rgba(37, 99, 235, 0.78);
+    border: 1px solid rgba(29, 78, 216, 0.9);
+}
+.preview-note-bar.chord {
+    background: rgba(90, 90, 90, 0.78);
+    border: 1px solid rgba(70, 70, 70, 0.9);
 }
 /* コードゾーンラベル */
 .preview-chord-label {
@@ -1662,12 +2001,6 @@ body {
     white-space: nowrap;
     overflow: hidden;
 }
-/* トップバータイトルをタップ可能に */
-.topbar-title {
-    cursor: pointer;
-    touch-action: manipulation;
-}
-
 /* ======= デュレーションツールバー ======= */
 .duration-toolbar {
     display: flex;

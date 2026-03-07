@@ -1,7 +1,7 @@
 // player.js
 // Tone.js はグローバル変数として使用（HTMLでCDN読み込み済み）
-import instruments from './instruments.js';
-import { STEPS_PER_BEAT, STEPS_PER_MEASURE } from './core/state.js';
+import instruments from '../tracks/instrument-map.js';
+import { STEPS_PER_BEAT, STEPS_PER_MEASURE } from '../../core/state.js';
 
 // ==========================================================
 // スコアのデータ形式

@@ -2,8 +2,8 @@
 
 import { appState, STEPS_PER_BEAT, STEPS_PER_MEASURE, totalSteps, callbacks } from '../core/state.js';
 import { CHORD_ROOTS, CHORD_TYPES, ROOT_COLORS, DURATION_CELLS } from '../core/constants.js';
-import { INST_TYPE } from '../instruments.js';
-import { toggleStep, isStepHead, isStepTie } from '../core/duration-utils.js';
+import { INST_TYPE } from '../features/tracks/instrument-map.js';
+import { toggleStep, isStepHead, isStepTie } from '../core/duration.js';
 import { renderDurationToolbar, getCurrentDuration } from './duration-toolbar.js';
 import { getEditorCells, getEditorGridLineGroup, getMeasureStart } from '../core/rhythm-grid.js';
 
@@ -17,6 +17,7 @@ export function renderChordEditor(track, editorEl) {
     const majorGroup = getEditorGridLineGroup();
 
     renderDurationToolbar(editorEl, () => callbacks.renderEditor());
+    editorEl.appendChild(buildEditorHint('コードを決める', '上でコードを選び、先に進行、その下で鳴らすタイミングを決めます。'));
 
     const bodyEl = document.createElement('div');
     bodyEl.className = 'chord-panel-body';
@@ -335,6 +336,13 @@ function buildLabel(text) {
     const el = document.createElement('span');
     el.className = 'chord-selector-label';
     el.textContent = text;
+    return el;
+}
+
+function buildEditorHint(title, body) {
+    const el = document.createElement('div');
+    el.className = 'editor-help';
+    el.innerHTML = `<strong>${title}</strong><span>${body}</span>`;
     return el;
 }
 

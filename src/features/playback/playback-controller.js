@@ -1,10 +1,10 @@
 // playback.js — 再生/停止 + スコア構築
 
-import { appState, STEPS_PER_MEASURE, totalSteps, callbacks, getNormalizedPlayRangeMeasures } from './core/state.js';
-import { play, stop } from './player.js';
-import { INST_TYPE } from './instruments.js';
-import { getChordNotes } from './core/constants.js';
-import { isStepHead } from './core/duration-utils.js';
+import { appState, STEPS_PER_MEASURE, totalSteps, callbacks, getNormalizedPlayRangeMeasures } from '../../core/state.js';
+import { play, stop } from './scheduler.js';
+import { INST_TYPE } from '../tracks/instrument-map.js';
+import { getChordNotes } from '../../core/constants.js';
+import { isStepHead } from '../../core/duration.js';
 
 export function initPlayback() {
     const playToggleBtn = document.getElementById('playToggleBtn');

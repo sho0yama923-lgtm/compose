@@ -2,7 +2,7 @@
 
 import { appState, STEPS_PER_MEASURE, callbacks } from '../core/state.js';
 import { DURATION_CELLS } from '../core/constants.js';
-import { toggleStep, isStepHead, isStepTie } from '../core/duration-utils.js';
+import { toggleStep, isStepHead, isStepTie } from '../core/duration.js';
 import { renderDurationToolbar, getCurrentDuration } from './duration-toolbar.js';
 import {
     getEditorCells,
@@ -22,6 +22,7 @@ export function renderDrumEditor(track, editorEl) {
 
     // --- デュレーションツールバー ---
     renderDurationToolbar(editorEl, () => callbacks.renderEditor());
+    editorEl.appendChild(buildEditorHint('リズムを作る', '4行を見比べながらタップで置く。黒いブロックの切れ目で拍を確認できます。'));
 
     const wrapEl = document.createElement('div');
     wrapEl.className = 'melodic-editor drum-editor';
@@ -122,4 +123,11 @@ function updatePlayheadBar(barEl, measureStart) {
     const localStep = step - measureStart;
     barEl.style.display = 'block';
     barEl.style.left = `${(localStep / STEPS_PER_MEASURE) * 100}%`;
+}
+
+function buildEditorHint(title, body) {
+    const el = document.createElement('div');
+    el.className = 'editor-help';
+    el.innerHTML = `<strong>${title}</strong><span>${body}</span>`;
+    return el;
 }

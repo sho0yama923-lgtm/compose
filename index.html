@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>作曲ツール</title>
-    <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="./src/styles/editor.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
 </head>
 <body>
@@ -12,7 +12,10 @@
 <!-- ======= トップバー ======= -->
 <header class="topbar">
     <button class="btn-menu" id="menuBtn">☰</button>
-    <span class="topbar-title" id="topbarTitle">作曲ツール</span>
+    <div class="topbar-main">
+        <button class="btn topbar-mode-btn" id="trackModeBtn" aria-label="トラック編集へ切替">作曲ツール</button>
+        <button class="btn topbar-mode-btn" id="viewToggleBtn" aria-label="全体表示へ切替">全体</button>
+    </div>
     <div class="topbar-right">
         <div class="bpm-wrap">
             BPM<input type="number" class="bpm-input" id="bpmInput" value="120" min="30" max="300">
@@ -61,6 +64,6 @@
     </div>
 </div>
 
-<script type="module" src="./app.js"></script>
+<script type="module" src="./src/main.js"></script>
 </body>
 </html>

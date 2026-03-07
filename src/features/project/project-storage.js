@@ -1,8 +1,8 @@
 // save-load.js — 自動保存(localStorage) + JSONエクスポート/インポート
 
-import { appState, callbacks, totalSteps, STEPS_PER_MEASURE } from './core/state.js';
-import { INST_TYPE, OCTAVE_DEFAULT_BASE, DRUM_ROWS } from './instruments.js';
-import { CHROMATIC, DURATION_CELLS } from './core/constants.js';
+import { appState, callbacks, totalSteps, STEPS_PER_MEASURE } from '../../core/state.js';
+import { INST_TYPE, OCTAVE_DEFAULT_BASE, DRUM_ROWS } from '../tracks/instrument-map.js';
+import { CHROMATIC, DURATION_CELLS } from '../../core/constants.js';
 
 const STORAGE_KEY = 'compose_save';
 const DATA_VERSION = 4;
