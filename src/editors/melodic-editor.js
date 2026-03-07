@@ -21,7 +21,7 @@ export function renderMelodicEditor(track, editorEl) {
     const topbarEl = document.createElement('section');
     topbarEl.className = 'melody-topbar';
     editorEl.insertBefore(topbarEl, header);
-    topbarEl.appendChild(header);
+    header.remove();
 
     const toolbarEl = renderDurationToolbar(topbarEl, () => callbacks.renderEditor());
     toolbarEl.classList.add('melody-duration-toolbar');
@@ -54,7 +54,7 @@ export function renderMelodicEditor(track, editorEl) {
 
     const rangeLabel = document.createElement('span');
     rangeLabel.className = 'oct-range-label';
-    rangeLabel.textContent = `表示 Oct ${track.viewBase} - ${Math.min(track.viewBase + 2, 7)}`;
+    rangeLabel.textContent = `表示 ${track.viewBase} - ${Math.min(track.viewBase + 2, 7)}`;
 
     const upBtn = document.createElement('button');
     upBtn.className = 'oct-range-btn';
@@ -70,14 +70,9 @@ export function renderMelodicEditor(track, editorEl) {
 
     const octTitle = document.createElement('span');
     octTitle.className = 'ctrl-title';
-    octTitle.textContent = '音域';
+    octTitle.textContent = '';
     ctrlEl.append(octTitle, downBtn, rangeLabel, upBtn);
-
-    header.classList.add('melody-editor-header');
-    header.style.removeProperty('justify-content');
-    header.replaceChildren(
-        buildMelodyHeaderActions(ctrlEl, header.querySelector('.measure-actions'), visibleOctaves)
-    );
+    rebuildMelodyToolbar(toolbarEl, ctrlEl);
 
     const wrapEl = document.createElement('div');
     wrapEl.className = 'melodic-editor melody-roll continuous-roll';
@@ -213,33 +208,27 @@ function getVisibleOctaves(viewBase) {
     return octaves;
 }
 
-function buildMelodyHeaderActions(octCtrlEl, measureActions, visibleOctaves) {
-    const wrap = document.createElement('div');
-    wrap.className = 'melody-header-actions';
+function rebuildMelodyToolbar(toolbarEl, octCtrlEl) {
+    const modeRow = toolbarEl.querySelector('.duration-mode-row');
+    const valueRow = toolbarEl.querySelector('.duration-value-row');
+    if (!modeRow || !valueRow) return;
 
-    const measureGroup = document.createElement('div');
-    measureGroup.className = 'melody-header-group';
-    measureGroup.appendChild(buildMelodyMetaChip(`小節 ${appState.currentMeasure + 1}/${appState.numMeasures}`));
-    if (measureActions) measureGroup.appendChild(measureActions);
+    const primaryRow = document.createElement('div');
+    primaryRow.className = 'melody-toolbar-primary';
 
     const divider = document.createElement('span');
-    divider.className = 'melody-header-divider';
+    divider.className = 'melody-toolbar-divider';
     divider.textContent = '|';
 
-    const octaveGroup = document.createElement('div');
-    octaveGroup.className = 'melody-header-group';
-    octaveGroup.appendChild(buildMelodyMetaChip(`Oct ${visibleOctaves[visibleOctaves.length - 1]}-${visibleOctaves[0]}`));
-    octaveGroup.appendChild(octCtrlEl);
+    const octRow = document.createElement('div');
+    octRow.className = 'melody-oct-row';
+    const octLabel = document.createElement('span');
+    octLabel.className = 'duration-row-label';
+    octLabel.textContent = 'oct';
+    octRow.append(octLabel, octCtrlEl);
 
-    wrap.append(measureGroup, divider, octaveGroup);
-    return wrap;
-}
-
-function buildMelodyMetaChip(text) {
-    const chip = document.createElement('span');
-    chip.className = 'melody-header-chip';
-    chip.textContent = text;
-    return chip;
+    primaryRow.append(modeRow, divider, octRow);
+    toolbarEl.replaceChildren(primaryRow, valueRow);
 }
 
 function bindMelodyScroll(track, scrollEl) {

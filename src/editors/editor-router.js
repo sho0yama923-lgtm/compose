@@ -8,7 +8,6 @@ import { renderChordEditor } from './chord-editor.js';
 import { renderPreview } from './preview-editor.js';
 import { buildSeekBar } from '../ui/bottom-bar.js';
 import { setTopbarTitle, syncViewToggleButton } from '../ui/topbar.js';
-import { addMeasure, removeMeasure } from '../features/tracks/tracks-controller.js';
 
 export function renderEditor() {
     const emptyState = document.getElementById('emptyState');
@@ -47,8 +46,6 @@ export function renderEditor() {
 
     const header = document.createElement('div');
     header.className = 'editor-header';
-    header.style.justifyContent = 'flex-end';
-    header.appendChild(buildMeasureActions());
     editorEl.appendChild(header);
 
     if (INST_TYPE[track.instrument] === 'rhythm') {
@@ -68,37 +65,4 @@ export function renderEditor() {
 function getCurrentTrackTitle() {
     const track = appState.tracks.find((t) => t.id === appState.activeTrackId);
     return track ? INST_LABEL[track.instrument] : '作曲ツール';
-}
-
-function buildMeasureActions() {
-    const wrap = document.createElement('div');
-    wrap.className = 'measure-actions';
-
-    const label = document.createElement('span');
-    label.className = 'measure-actions-label';
-    label.textContent = '小節';
-    wrap.appendChild(label);
-
-    const removeBtn = document.createElement('button');
-    removeBtn.className = 'measure-action-btn remove';
-    removeBtn.type = 'button';
-    removeBtn.textContent = '削除';
-    removeBtn.title = '小節を削除';
-    removeBtn.disabled = appState.numMeasures <= 1;
-    removeBtn.addEventListener('click', () => {
-        if (confirm(`今見ている ${appState.currentMeasure + 1} 小節目を削除しますか？`)) {
-            removeMeasure();
-        }
-    });
-
-    const addBtn = document.createElement('button');
-    addBtn.className = 'measure-action-btn add';
-    addBtn.type = 'button';
-    addBtn.textContent = '追加';
-    addBtn.title = '小節を追加';
-    addBtn.addEventListener('click', addMeasure);
-
-    wrap.appendChild(removeBtn);
-    wrap.appendChild(addBtn);
-    return wrap;
 }

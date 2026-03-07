@@ -1,18 +1,26 @@
 import { appState, getNormalizedPlayRangeMeasures } from '../core/state.js';
+import { addMeasure, removeMeasure } from '../features/tracks/tracks-controller.js';
 
 export function buildSeekBar(renderEditor) {
     const seekShell = document.createElement('div');
     seekShell.className = 'measure-seek-shell';
     const seekMeta = document.createElement('div');
     seekMeta.className = 'measure-seek-meta';
+    const seekMetaTop = document.createElement('div');
+    seekMetaTop.className = 'measure-seek-meta-top';
+    const seekMetaText = document.createElement('div');
+    seekMetaText.className = 'measure-seek-meta-text';
     const seekTitle = document.createElement('strong');
     seekTitle.textContent = '小節操作';
     const seekDesc = document.createElement('span');
     seekDesc.textContent = '移動と範囲再生をここでまとめて操作します。';
     const seekLabel = document.createElement('span');
     seekLabel.className = 'measure-seek-label';
-    seekMeta.appendChild(seekTitle);
-    seekMeta.appendChild(seekDesc);
+    seekMetaText.appendChild(seekTitle);
+    seekMetaText.appendChild(seekDesc);
+    seekMetaTop.appendChild(seekMetaText);
+    seekMetaTop.appendChild(buildMeasureActions(renderEditor));
+    seekMeta.appendChild(seekMetaTop);
     seekMeta.appendChild(seekLabel);
     seekShell.appendChild(seekMeta);
 
@@ -145,4 +153,37 @@ function buildRangeMarker(type, measure) {
         ? `再生開始: ${measure + 1}小節目`
         : `再生停止: ${measure + 1}小節目`;
     return marker;
+}
+
+function buildMeasureActions(renderEditor) {
+    const wrap = document.createElement('div');
+    wrap.className = 'measure-actions seek-measure-actions';
+
+    const label = document.createElement('span');
+    label.className = 'measure-actions-label';
+    label.textContent = '小節';
+    wrap.appendChild(label);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'measure-action-btn remove';
+    removeBtn.type = 'button';
+    removeBtn.textContent = '削除';
+    removeBtn.title = '今見ている小節を削除';
+    removeBtn.disabled = appState.numMeasures <= 1;
+    removeBtn.addEventListener('click', () => {
+        if (!confirm(`今見ている ${appState.currentMeasure + 1} 小節目を削除しますか？`)) return;
+        removeMeasure();
+    });
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'measure-action-btn add';
+    addBtn.type = 'button';
+    addBtn.textContent = '追加';
+    addBtn.title = '小節を追加';
+    addBtn.addEventListener('click', () => {
+        addMeasure();
+    });
+
+    wrap.append(removeBtn, addBtn);
+    return wrap;
 }

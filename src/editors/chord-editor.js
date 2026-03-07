@@ -19,7 +19,7 @@ export function renderChordEditor(track, editorEl) {
     const topbarEl = document.createElement('section');
     topbarEl.className = 'melody-topbar';
     editorEl.insertBefore(topbarEl, header);
-    topbarEl.appendChild(header);
+    header.remove();
 
     const toolbarEl = renderDurationToolbar(topbarEl, () => callbacks.renderEditor());
     toolbarEl.classList.add('melody-duration-toolbar');
@@ -33,14 +33,6 @@ export function renderChordEditor(track, editorEl) {
             }
         ));
     }
-    header.classList.add('melody-editor-header');
-    header.style.removeProperty('justify-content');
-    header.replaceChildren(buildCompactHeaderActions([
-        `${measureIndex + 1}小節/${appState.numMeasures}小節`,
-        `${track.selectedChordRoot}${track.selectedChordType}`,
-        `Oct ${track.selectedChordOctave}`,
-    ], header.querySelector('.measure-actions')));
-
     const bodyEl = document.createElement('div');
     bodyEl.className = 'chord-panel-body';
 
@@ -440,18 +432,6 @@ function buildEditorHint(title, body, onDismiss) {
     return el;
 }
 
-function buildCompactHeaderActions(chips, measureActions) {
-    const wrap = document.createElement('div');
-    wrap.className = 'melody-header-actions';
-    chips.forEach((text) => {
-        const chip = document.createElement('span');
-        chip.className = 'melody-header-chip';
-        chip.textContent = text;
-        wrap.appendChild(chip);
-    });
-    if (measureActions) wrap.appendChild(measureActions);
-    return wrap;
-}
 
 function createPlayheadBar(measureStart) {
     const barEl = document.createElement('div');

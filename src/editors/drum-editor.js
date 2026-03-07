@@ -22,7 +22,7 @@ export function renderDrumEditor(track, editorEl) {
     const topbarEl = document.createElement('section');
     topbarEl.className = 'melody-topbar';
     editorEl.insertBefore(topbarEl, header);
-    topbarEl.appendChild(header);
+    header.remove();
 
     const toolbarEl = renderDurationToolbar(topbarEl, () => callbacks.renderEditor());
     toolbarEl.classList.add('melody-duration-toolbar');
@@ -37,13 +37,6 @@ export function renderDrumEditor(track, editorEl) {
             }
         ));
     }
-
-    header.classList.add('melody-editor-header');
-    header.style.removeProperty('justify-content');
-    header.replaceChildren(buildCompactHeaderActions([
-        `${measureIndex + 1}小節/${appState.numMeasures}小節`,
-        `Rows ${track.rows.length}`,
-    ], header.querySelector('.measure-actions')));
 
     const wrapEl = document.createElement('div');
     wrapEl.className = 'melodic-editor drum-editor';
@@ -165,17 +158,4 @@ function buildEditorHint(title, body, onDismiss) {
 
     el.append(titleEl, bodyEl);
     return el;
-}
-
-function buildCompactHeaderActions(chips, measureActions) {
-    const wrap = document.createElement('div');
-    wrap.className = 'melody-header-actions';
-    chips.forEach((text) => {
-        const chip = document.createElement('span');
-        chip.className = 'melody-header-chip';
-        chip.textContent = text;
-        wrap.appendChild(chip);
-    });
-    if (measureActions) wrap.appendChild(measureActions);
-    return wrap;
 }

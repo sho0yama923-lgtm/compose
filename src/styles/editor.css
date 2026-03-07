@@ -265,6 +265,10 @@ body {
     margin-bottom: 8px;
     justify-content: space-between;
 }
+.editor-header:empty {
+    display: none;
+    margin: 0;
+}
 .melody-topbar {
     display: flex;
     flex-direction: column;
@@ -1340,11 +1344,30 @@ body {
     display: flex;
     flex-direction: column;
     gap: 6px;
+    flex-shrink: 0;
+    margin-top: auto;
+    padding: 6px 8px 0;
+}
+#trackEditor > .measure-seek-shell {
+    width: 100%;
+    box-sizing: border-box;
 }
 .measure-seek-meta {
     display: flex;
     flex-direction: column;
     gap: 2px;
+}
+.measure-seek-meta-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+.measure-seek-meta-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
 }
 .measure-seek-meta strong {
     font-size: 11px;
@@ -1371,6 +1394,27 @@ body {
     align-items: center;
     gap: 6px;
     padding: 6px 0;
+}
+.seek-measure-actions {
+    padding: 1px;
+    gap: 2px;
+    border: 0;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.82);
+    box-shadow: inset 0 0 0 1px #dce3ef;
+    flex-shrink: 0;
+}
+.seek-measure-actions .measure-actions-label {
+    display: none;
+}
+.seek-measure-actions .measure-action-btn {
+    width: auto;
+    min-width: 42px;
+    height: 30px;
+    border-radius: 8px;
+    border-color: #d5ddea;
+    font-size: 11px;
+    padding: 0 10px;
 }
 .measure-seek .mb-btn:first-child,
 .measure-seek .mb-btn:last-of-type {
@@ -1553,11 +1597,12 @@ body {
 
 /* ======= スマホ向けUI改善 上書き ======= */
 .drum-track-editor .drum-editor {
-    flex: 0 0 auto;
-    min-height: auto;
+    flex: 1;
+    min-height: 0;
 }
 .drum-track-editor .drum-editor .timeline-grid {
-    flex: 0 0 auto;
+    flex: 1;
+    min-height: 0;
 }
 .drum-track-editor .drum-editor .piano-key-spacer {
     height: 18px;
@@ -1632,6 +1677,79 @@ body {
 .chord-track-editor .melody-topbar .duration-value-row {
     flex: 1 1 240px;
 }
+.melodic-track-editor .melody-topbar .duration-toolbar {
+    gap: 6px;
+}
+.melodic-track-editor .melody-topbar .melody-toolbar-primary {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    width: 100%;
+    min-width: 0;
+    flex-wrap: nowrap;
+}
+.melodic-track-editor .melody-topbar .melody-toolbar-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 700;
+    flex: 0 0 auto;
+}
+.melodic-track-editor .melody-topbar .melody-oct-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    margin: 0;
+    padding: 4px 6px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid #dce3ef;
+    flex: 1 1 auto;
+}
+.melodic-track-editor .melody-topbar .melody-oct-row .duration-row-label {
+    min-width: auto;
+}
+.melodic-track-editor .melody-topbar .duration-mode-row {
+    flex: 0 0 auto;
+    margin: 0;
+}
+.melodic-track-editor .melody-topbar .duration-value-row {
+    flex: 0 0 auto;
+    width: 100%;
+}
+.melodic-track-editor .melody-topbar .duration-value-buttons,
+.drum-track-editor .melody-topbar .duration-value-buttons,
+.chord-track-editor .melody-topbar .duration-value-buttons {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 4px;
+    width: 100%;
+    overflow: visible;
+}
+.melodic-track-editor .melody-topbar .dur-btn,
+.drum-track-editor .melody-topbar .dur-btn,
+.chord-track-editor .melody-topbar .dur-btn {
+    min-width: 0;
+    width: 100%;
+    height: 38px;
+    padding: 1px 2px;
+}
+.melodic-track-editor .melody-topbar .oct-range-ctrl {
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: space-between;
+}
+.melodic-track-editor .melody-topbar .ctrl-title {
+    display: inline-flex;
+    color: #64748b;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
 .melodic-track-editor .melody-topbar .duration-row-label,
 .drum-track-editor .melody-topbar .duration-row-label,
 .chord-track-editor .melody-topbar .duration-row-label {
@@ -1697,10 +1815,10 @@ body {
     flex: 0 0 auto;
 }
 .chord-track-editor .melody-topbar .duration-mode-row {
-    width: 122px;
+    width: 132px;
 }
 .chord-track-editor .melody-topbar .duration-value-row {
-    width: 208px;
+    width: 332px;
 }
 .chord-track-editor .melody-topbar .duration-row-label {
     font-size: 8px;
@@ -2163,6 +2281,15 @@ body {
     flex-direction: row;
     overflow: hidden;
     min-height: 0;
+}
+.drum-track-editor .steps-grid-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.drum-track-editor .piano-keys {
+    flex-shrink: 0;
 }
 
 /* コードエディタは縦並びのままでOK */
