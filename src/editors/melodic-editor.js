@@ -1,5 +1,5 @@
 ﻿import { appState, STEPS_PER_BEAT, STEPS_PER_MEASURE, callbacks } from '../core/state.js';
-import { CHROMATIC, DURATION_CELLS } from '../core/constants.js';
+import { CHROMATIC, BLACK_KEYS, DURATION_CELLS } from '../core/constants.js';
 import { toggleStep, isStepHead, isStepTie } from '../core/duration.js';
 import { renderDurationToolbar, getCurrentDuration } from './duration-toolbar.js';
 import { getChordPitchClasses, getEffectiveChordAtStep, getScalePitchClasses } from '../core/music-theory.js';
@@ -134,6 +134,7 @@ export function renderMelodicEditor(track, editorEl) {
         contentEl.appendChild(dividerRowEl);
 
         [...CHROMATIC].reverse().forEach((noteName) => {
+            const isBlack = BLACK_KEYS.has(noteName);
             const fullNote = `${noteName}${octave}`;
             const steps = track.stepsMap[fullNote];
             const isScaleTone = scalePitchClasses.has(noteName);
@@ -144,8 +145,7 @@ export function renderMelodicEditor(track, editorEl) {
             applyLaneLayout(laneEl);
 
             const keyEl = document.createElement('div');
-            keyEl.className = 'piano-key melody-tone-key';
-            keyEl.classList.add(isScaleTone ? 'is-scale-tone' : 'is-non-scale-tone');
+            keyEl.className = 'piano-key melody-tone-key ' + (isBlack ? 'black-key' : 'white-key');
             keyEl.textContent = noteName;
             keyEl.style.width = '28px';
             keyEl.style.minWidth = '28px';

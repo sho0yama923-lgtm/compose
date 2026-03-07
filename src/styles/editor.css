@@ -1377,7 +1377,7 @@ body {
 .measure-seek-shell {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 2px;
     flex-shrink: 0;
     margin-top: auto;
     padding: 6px 8px 0;
@@ -1388,46 +1388,33 @@ body {
 }
 .measure-seek-meta {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-.measure-seek-meta-top {
-    display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 10px;
-}
-.measure-seek-meta-text {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+    gap: 8px;
     min-width: 0;
 }
-.measure-seek-meta strong {
+.measure-seek-title {
+    flex: 0 0 auto;
     font-size: 11px;
     color: #333;
     font-weight: 800;
     letter-spacing: 0.04em;
 }
-.measure-seek-meta span {
-    font-size: 10px;
-    color: #7d7d7d;
-    line-height: 1.4;
-}
 .measure-seek-label {
-    margin-top: 2px;
     font-size: 11px;
     color: #555;
     font-weight: 700;
     letter-spacing: 0.05em;
-    white-space: normal;
-    line-height: 1.35;
+    white-space: nowrap;
+    line-height: 1.2;
+    margin-left: 6px;
+    margin-right: auto;
 }
 .measure-seek {
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 0;
+    padding: 4px 0 6px;
 }
 .seek-measure-actions {
     padding: 1px;
@@ -1948,20 +1935,11 @@ body {
     max-width: var(--melody-key-width);
 }
 .melodic-track-editor .continuous-roll .melody-tone-key {
-    justify-content: center;
-    padding-right: 0;
+    justify-content: flex-end;
+    padding-right: 3px;
     font-size: 10px;
     font-weight: 700;
     border-right: 1px solid #d7d7d7;
-    border-bottom: 1px solid #dedede;
-    color: #444;
-}
-.melodic-track-editor .continuous-roll .melody-tone-key.is-scale-tone {
-    background: #fcfcfc;
-}
-.melodic-track-editor .continuous-roll .melody-tone-key.is-non-scale-tone {
-    background: #e3e3e3;
-    color: #555;
 }
 .melodic-track-editor .continuous-roll .melody-key-octave-divider {
     width: var(--melody-key-width);
@@ -2405,7 +2383,7 @@ body {
 /* 6. シークバーは潰れないようにサイズを固定 */
 .measure-seek {
     flex-shrink: 0;
-    padding: 8px 0 0 0;
+    padding: 4px 0 0 0;
 }
 
 /* ======= 全トラックプレビュー ======= */

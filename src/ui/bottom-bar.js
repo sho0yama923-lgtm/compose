@@ -6,22 +6,14 @@ export function buildSeekBar(renderEditor) {
     seekShell.className = 'measure-seek-shell';
     const seekMeta = document.createElement('div');
     seekMeta.className = 'measure-seek-meta';
-    const seekMetaTop = document.createElement('div');
-    seekMetaTop.className = 'measure-seek-meta-top';
-    const seekMetaText = document.createElement('div');
-    seekMetaText.className = 'measure-seek-meta-text';
-    const seekTitle = document.createElement('strong');
-    seekTitle.textContent = '小節操作';
     const seekDesc = document.createElement('span');
-    seekDesc.textContent = '移動と範囲再生をここでまとめて操作します。';
+    seekDesc.className = 'measure-seek-title';
+    seekDesc.textContent = '小節';
     const seekLabel = document.createElement('span');
     seekLabel.className = 'measure-seek-label';
-    seekMetaText.appendChild(seekTitle);
-    seekMetaText.appendChild(seekDesc);
-    seekMetaTop.appendChild(seekMetaText);
-    seekMetaTop.appendChild(buildMeasureActions(renderEditor));
-    seekMeta.appendChild(seekMetaTop);
+    seekMeta.appendChild(seekDesc);
     seekMeta.appendChild(seekLabel);
+    seekMeta.appendChild(buildMeasureActions(renderEditor));
     seekShell.appendChild(seekMeta);
 
     const seekRow = document.createElement('div');
