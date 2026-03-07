@@ -265,6 +265,52 @@ body {
     margin-bottom: 8px;
     justify-content: space-between;
 }
+.melody-topbar {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 0 8px 6px;
+    padding: 4px 6px;
+    border: 1px solid #d7deea;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #fbfcff 0%, #f4f6fb 100%);
+}
+.melody-editor-header {
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 0;
+}
+.melody-header-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 22px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid #dce3ef;
+    color: #475569;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+.melody-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+.melody-header-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.melody-header-divider {
+    color: #94a3b8;
+    font-size: 11px;
+    font-weight: 700;
+}
 .measure-actions {
     display: inline-flex;
     align-items: center;
@@ -405,6 +451,48 @@ body {
     border-radius: 6px;
     padding: 4px 6px;
     background: #fafafa;
+}
+.melody-topbar .oct-range-ctrl {
+    padding: 1px;
+    gap: 4px;
+    border: 0;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.82);
+    box-shadow: inset 0 0 0 1px #dce3ef;
+}
+.melody-topbar .ctrl-title {
+    display: none;
+}
+.melody-topbar .oct-range-btn {
+    width: 24px;
+    min-height: 24px;
+    border-radius: 7px;
+    border-color: #d5ddea;
+}
+.melody-topbar .oct-range-label {
+    color: #334155;
+    font-size: 10px;
+    padding-inline: 1px;
+}
+.melody-topbar .measure-actions {
+    padding: 1px;
+    gap: 2px;
+    border: 0;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.82);
+    box-shadow: inset 0 0 0 1px #dce3ef;
+}
+.melody-topbar .measure-actions-label {
+    display: none;
+}
+.melody-topbar .measure-action-btn {
+    width: auto;
+    min-width: 42px;
+    height: 24px;
+    border-radius: 7px;
+    border-color: #d5ddea;
+    font-size: 10px;
+    padding: 0 8px;
 }
 .oct-range-btn {
     width: 30px;
@@ -1509,6 +1597,93 @@ body {
     min-height: 0;
     overflow: hidden;
 }
+.melodic-track-editor .melody-topbar .duration-toolbar,
+.drum-track-editor .melody-topbar .duration-toolbar,
+.chord-track-editor .melody-topbar .duration-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 0;
+    align-items: stretch;
+}
+.melodic-track-editor .melody-topbar .duration-mode-row,
+.melodic-track-editor .melody-topbar .duration-value-row,
+.drum-track-editor .melody-topbar .duration-mode-row,
+.drum-track-editor .melody-topbar .duration-value-row,
+.chord-track-editor .melody-topbar .duration-mode-row,
+.chord-track-editor .melody-topbar .duration-value-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    margin: 0;
+    padding: 4px 6px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid #dce3ef;
+}
+.melodic-track-editor .melody-topbar .duration-mode-row,
+.drum-track-editor .melody-topbar .duration-mode-row,
+.chord-track-editor .melody-topbar .duration-mode-row {
+    flex: 0 0 auto;
+}
+.melodic-track-editor .melody-topbar .duration-value-row,
+.drum-track-editor .melody-topbar .duration-value-row,
+.chord-track-editor .melody-topbar .duration-value-row {
+    flex: 1 1 240px;
+}
+.melodic-track-editor .melody-topbar .duration-row-label,
+.drum-track-editor .melody-topbar .duration-row-label,
+.chord-track-editor .melody-topbar .duration-row-label {
+    min-width: auto;
+    color: #64748b;
+    font-size: 9px;
+}
+.melodic-track-editor .melody-topbar .grid-mode-tab,
+.drum-track-editor .melody-topbar .grid-mode-tab,
+.chord-track-editor .melody-topbar .grid-mode-tab {
+    min-width: 42px;
+    height: 28px;
+    border-radius: 7px;
+    font-size: 10px;
+}
+.melodic-track-editor .melody-topbar .dur-btn,
+.drum-track-editor .melody-topbar .dur-btn,
+.chord-track-editor .melody-topbar .dur-btn {
+    min-width: 36px;
+    height: 30px;
+    border-radius: 7px;
+    padding: 1px 3px;
+}
+.melodic-track-editor .melody-topbar .dur-icon,
+.drum-track-editor .melody-topbar .dur-icon,
+.chord-track-editor .melody-topbar .dur-icon {
+    font-size: 16px;
+    min-width: 16px;
+    min-height: 16px;
+}
+.melodic-track-editor .melody-topbar .dur-label,
+.drum-track-editor .melody-topbar .dur-label,
+.chord-track-editor .melody-topbar .dur-label {
+    font-size: 8px;
+}
+.melodic-track-editor .melody-topbar .dur-icon-wrap,
+.drum-track-editor .melody-topbar .dur-icon-wrap,
+.chord-track-editor .melody-topbar .dur-icon-wrap {
+    min-height: 16px;
+}
+.melodic-track-editor .melody-topbar .editor-help,
+.drum-track-editor .melody-topbar .editor-help,
+.chord-track-editor .melody-topbar .editor-help {
+    margin: 0;
+    background: rgba(255, 255, 255, 0.82);
+    border-color: #dce3ef;
+    padding: 4px 6px;
+}
+.drum-track-editor > .editor-help,
+.chord-track-editor > .editor-help {
+    display: none;
+}
 .melodic-track-editor .continuous-roll .melody-roll-scroll {
     flex: 1;
     min-height: 0;
@@ -1681,6 +1856,31 @@ body {
     bottom: 0;
 }
 
+@media (max-width: 720px) {
+    .melody-header-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    .melodic-track-editor .melody-topbar .duration-mode-row,
+    .melodic-track-editor .melody-topbar .duration-value-row,
+    .drum-track-editor .melody-topbar .duration-mode-row,
+    .drum-track-editor .melody-topbar .duration-value-row,
+    .chord-track-editor .melody-topbar .duration-mode-row,
+    .chord-track-editor .melody-topbar .duration-value-row {
+        flex: 1 1 100%;
+    }
+    .melodic-track-editor .melody-topbar .duration-value-buttons,
+    .drum-track-editor .melody-topbar .duration-value-buttons,
+    .chord-track-editor .melody-topbar .duration-value-buttons {
+        gap: 4px;
+    }
+    .melodic-track-editor .melody-topbar .dur-btn,
+    .drum-track-editor .melody-topbar .dur-btn,
+    .chord-track-editor .melody-topbar .dur-btn {
+        min-width: 36px;
+    }
+}
+
 .chord-section-desc {
     font-size: 10px;
     color: #7c7c7c;
@@ -1829,6 +2029,9 @@ body {
 }
 #trackEditor.melodic-track-editor .editor-header {
     padding-inline: 12px;
+}
+#trackEditor.melodic-track-editor .melody-editor-header {
+    padding-inline: 0;
 }
 #trackEditor.melodic-track-editor .oct-section {
     border-left: 0;

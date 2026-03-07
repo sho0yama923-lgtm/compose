@@ -14,6 +14,8 @@ export const appState = {
     playRangeStartMeasure: null,
     playRangeEndMeasure: null,
     previewMode: false,
+    drumHintDismissed: false,
+    chordHintDismissed: false,
     melodicHintDismissed: false,
     editorGridMode: 'normal',
     // デュレーション

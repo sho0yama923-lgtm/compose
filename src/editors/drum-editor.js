@@ -1,6 +1,4 @@
-// editor-drum.js — ドラムエディタ描画
-
-import { appState, STEPS_PER_MEASURE, callbacks } from '../core/state.js';
+﻿import { appState, STEPS_PER_MEASURE, callbacks } from '../core/state.js';
 import { DURATION_CELLS } from '../core/constants.js';
 import { toggleStep, isStepHead, isStepTie } from '../core/duration.js';
 import { renderDurationToolbar, getCurrentDuration } from './duration-toolbar.js';
@@ -20,9 +18,32 @@ export function renderDrumEditor(track, editorEl) {
     const columns = getEditorGridColumns();
     const majorGroup = getEditorGridLineGroup();
 
-    // --- デュレーションツールバー ---
-    renderDurationToolbar(editorEl, () => callbacks.renderEditor());
-    editorEl.appendChild(buildEditorHint('リズムを作る', '4行を見比べながらタップで置く。黒いブロックの切れ目で拍を確認できます。'));
+    const header = editorEl.querySelector('.editor-header');
+    const topbarEl = document.createElement('section');
+    topbarEl.className = 'melody-topbar';
+    editorEl.insertBefore(topbarEl, header);
+    topbarEl.appendChild(header);
+
+    const toolbarEl = renderDurationToolbar(topbarEl, () => callbacks.renderEditor());
+    toolbarEl.classList.add('melody-duration-toolbar');
+
+    if (!appState.drumHintDismissed) {
+        topbarEl.appendChild(buildEditorHint(
+            'リズムを作る',
+            '行をタップして音を置きます。黒いブロックの切れ目で拍を確認できます。',
+            () => {
+                appState.drumHintDismissed = true;
+                callbacks.renderEditor();
+            }
+        ));
+    }
+
+    header.classList.add('melody-editor-header');
+    header.style.removeProperty('justify-content');
+    header.replaceChildren(buildCompactHeaderActions([
+        `${measureIndex + 1}小節/${appState.numMeasures}小節`,
+        `Rows ${track.rows.length}`,
+    ], header.querySelector('.measure-actions')));
 
     const wrapEl = document.createElement('div');
     wrapEl.className = 'melodic-editor drum-editor';
@@ -37,14 +58,13 @@ export function renderDrumEditor(track, editorEl) {
     gridEl.className = 'timeline-grid';
     gridEl.dataset.measureStart = String(offset);
 
-    // ビートヘッダー
     const hdrEl = document.createElement('div');
     hdrEl.className = 'timeline-header';
     hdrEl.style.gridTemplateColumns = columns;
     hdrEl.style.setProperty('--timeline-columns', String(cells.length));
     hdrEl.style.setProperty('--timeline-major', String(majorGroup));
     const modeLabel = getGridModeLabel();
-    cells.forEach(cellInfo => {
+    cells.forEach((cellInfo) => {
         const cell = document.createElement('div');
         cell.className = 'timeline-header-cell' + (cellInfo.slot === 0 ? ' beat' : '');
         cell.textContent = cellInfo.slot === 0 ? `${cellInfo.beat + 1}` : '';
@@ -53,7 +73,7 @@ export function renderDrumEditor(track, editorEl) {
     });
     gridEl.appendChild(hdrEl);
 
-    track.rows.forEach(row => {
+    track.rows.forEach((row) => {
         const keyEl = document.createElement('div');
         keyEl.className = 'piano-key white-key drum-key';
         keyEl.textContent = row.label;
@@ -99,7 +119,6 @@ export function renderDrumEditor(track, editorEl) {
     });
 
     gridEl.appendChild(createPlayheadBar(offset));
-
     gridScrollEl.appendChild(gridEl);
     wrapEl.appendChild(keysEl);
     wrapEl.appendChild(gridScrollEl);
@@ -125,9 +144,38 @@ function updatePlayheadBar(barEl, measureStart) {
     barEl.style.left = `${(localStep / STEPS_PER_MEASURE) * 100}%`;
 }
 
-function buildEditorHint(title, body) {
+function buildEditorHint(title, body, onDismiss) {
     const el = document.createElement('div');
     el.className = 'editor-help';
-    el.innerHTML = `<strong>${title}</strong><span>${body}</span>`;
+    if (typeof onDismiss === 'function') {
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'editor-help-close';
+        closeBtn.type = 'button';
+        closeBtn.setAttribute('aria-label', '案内を閉じる');
+        closeBtn.textContent = '×';
+        closeBtn.addEventListener('click', onDismiss);
+        el.appendChild(closeBtn);
+    }
+
+    const titleEl = document.createElement('strong');
+    titleEl.textContent = title;
+
+    const bodyEl = document.createElement('span');
+    bodyEl.textContent = body;
+
+    el.append(titleEl, bodyEl);
     return el;
+}
+
+function buildCompactHeaderActions(chips, measureActions) {
+    const wrap = document.createElement('div');
+    wrap.className = 'melody-header-actions';
+    chips.forEach((text) => {
+        const chip = document.createElement('span');
+        chip.className = 'melody-header-chip';
+        chip.textContent = text;
+        wrap.appendChild(chip);
+    });
+    if (measureActions) wrap.appendChild(measureActions);
+    return wrap;
 }

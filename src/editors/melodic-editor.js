@@ -1,6 +1,4 @@
-// melodic-editor.js — メロディエディタ（単一スクロールのピアノロール）
-
-import { appState, STEPS_PER_MEASURE, callbacks } from '../core/state.js';
+﻿import { appState, STEPS_PER_MEASURE, callbacks } from '../core/state.js';
 import { CHROMATIC, BLACK_KEYS, DURATION_CELLS } from '../core/constants.js';
 import { toggleStep, isStepHead, isStepTie } from '../core/duration.js';
 import { renderDurationToolbar, getCurrentDuration } from './duration-toolbar.js';
@@ -19,10 +17,17 @@ export function renderMelodicEditor(track, editorEl) {
     const columns = getEditorGridColumns();
     const majorGroup = getEditorGridLineGroup();
     const visibleOctaves = getVisibleOctaves(track.viewBase);
+    const header = editorEl.querySelector('.editor-header');
+    const topbarEl = document.createElement('section');
+    topbarEl.className = 'melody-topbar';
+    editorEl.insertBefore(topbarEl, header);
+    topbarEl.appendChild(header);
 
-    renderDurationToolbar(editorEl, () => callbacks.renderEditor());
+    const toolbarEl = renderDurationToolbar(topbarEl, () => callbacks.renderEditor());
+    toolbarEl.classList.add('melody-duration-toolbar');
+
     if (!appState.melodicHintDismissed) {
-        editorEl.appendChild(buildEditorHint(
+        topbarEl.appendChild(buildEditorHint(
             'メロディを置く',
             '音程ボタンで表示オクターブを切り替え、グリッドをタップして音符を置きます。',
             () => {
@@ -37,7 +42,8 @@ export function renderMelodicEditor(track, editorEl) {
 
     const downBtn = document.createElement('button');
     downBtn.className = 'oct-range-btn';
-    downBtn.innerHTML = '◀<span class="btn-guide">低</span>';
+    downBtn.type = 'button';
+    downBtn.innerHTML = '&lt;<span class="btn-guide">低</span>';
     downBtn.disabled = track.viewBase <= 1;
     downBtn.addEventListener('click', () => {
         track.viewBase = Math.max(1, track.viewBase - 1);
@@ -48,11 +54,12 @@ export function renderMelodicEditor(track, editorEl) {
 
     const rangeLabel = document.createElement('span');
     rangeLabel.className = 'oct-range-label';
-    rangeLabel.textContent = `表示 Oct ${track.viewBase} – ${Math.min(track.viewBase + 2, 7)}`;
+    rangeLabel.textContent = `表示 Oct ${track.viewBase} - ${Math.min(track.viewBase + 2, 7)}`;
 
     const upBtn = document.createElement('button');
     upBtn.className = 'oct-range-btn';
-    upBtn.innerHTML = '▶<span class="btn-guide">高</span>';
+    upBtn.type = 'button';
+    upBtn.innerHTML = '&gt;<span class="btn-guide">高</span>';
     upBtn.disabled = track.viewBase >= 5;
     upBtn.addEventListener('click', () => {
         track.viewBase = Math.min(5, track.viewBase + 1);
@@ -63,11 +70,14 @@ export function renderMelodicEditor(track, editorEl) {
 
     const octTitle = document.createElement('span');
     octTitle.className = 'ctrl-title';
-    octTitle.textContent = '音程';
+    octTitle.textContent = '音域';
     ctrlEl.append(octTitle, downBtn, rangeLabel, upBtn);
 
-    const header = editorEl.querySelector('.editor-header');
-    header.appendChild(ctrlEl);
+    header.classList.add('melody-editor-header');
+    header.style.removeProperty('justify-content');
+    header.replaceChildren(
+        buildMelodyHeaderActions(ctrlEl, header.querySelector('.measure-actions'), visibleOctaves)
+    );
 
     const wrapEl = document.createElement('div');
     wrapEl.className = 'melodic-editor melody-roll continuous-roll';
@@ -95,7 +105,7 @@ export function renderMelodicEditor(track, editorEl) {
     hdrEl.style.gridTemplateColumns = columns;
     hdrEl.style.setProperty('--timeline-columns', String(cells.length));
     hdrEl.style.setProperty('--timeline-major', String(majorGroup));
-    cells.forEach(cellInfo => {
+    cells.forEach((cellInfo) => {
         const cell = document.createElement('div');
         cell.className = 'melody-grid-header-cell' + (cellInfo.slot === 0 ? ' beat' : '');
         cell.textContent = cellInfo.slot === 0 ? String(cellInfo.beat + 1) : '';
@@ -122,7 +132,7 @@ export function renderMelodicEditor(track, editorEl) {
         dividerRowEl.append(keyDividerEl, gridDividerEl);
         contentEl.appendChild(dividerRowEl);
 
-        [...CHROMATIC].reverse().forEach(noteName => {
+        [...CHROMATIC].reverse().forEach((noteName) => {
             const isBlack = BLACK_KEYS.has(noteName);
             const fullNote = `${noteName}${octave}`;
             const steps = track.stepsMap[fullNote];
@@ -201,6 +211,35 @@ function getVisibleOctaves(viewBase) {
     const octaves = [];
     for (let octave = top; octave >= bottom; octave--) octaves.push(octave);
     return octaves;
+}
+
+function buildMelodyHeaderActions(octCtrlEl, measureActions, visibleOctaves) {
+    const wrap = document.createElement('div');
+    wrap.className = 'melody-header-actions';
+
+    const measureGroup = document.createElement('div');
+    measureGroup.className = 'melody-header-group';
+    measureGroup.appendChild(buildMelodyMetaChip(`小節 ${appState.currentMeasure + 1}/${appState.numMeasures}`));
+    if (measureActions) measureGroup.appendChild(measureActions);
+
+    const divider = document.createElement('span');
+    divider.className = 'melody-header-divider';
+    divider.textContent = '|';
+
+    const octaveGroup = document.createElement('div');
+    octaveGroup.className = 'melody-header-group';
+    octaveGroup.appendChild(buildMelodyMetaChip(`Oct ${visibleOctaves[visibleOctaves.length - 1]}-${visibleOctaves[0]}`));
+    octaveGroup.appendChild(octCtrlEl);
+
+    wrap.append(measureGroup, divider, octaveGroup);
+    return wrap;
+}
+
+function buildMelodyMetaChip(text) {
+    const chip = document.createElement('span');
+    chip.className = 'melody-header-chip';
+    chip.textContent = text;
+    return chip;
 }
 
 function bindMelodyScroll(track, scrollEl) {

@@ -15,8 +15,31 @@ export function renderChordEditor(track, editorEl) {
     const mEnd = offset + STEPS_PER_MEASURE;
     const cells = getEditorCells();
     const majorGroup = getEditorGridLineGroup();
+    const header = editorEl.querySelector('.editor-header');
+    const topbarEl = document.createElement('section');
+    topbarEl.className = 'melody-topbar';
+    editorEl.insertBefore(topbarEl, header);
+    topbarEl.appendChild(header);
 
-    renderDurationToolbar(editorEl, () => callbacks.renderEditor());
+    const toolbarEl = renderDurationToolbar(topbarEl, () => callbacks.renderEditor());
+    toolbarEl.classList.add('melody-duration-toolbar');
+    if (!appState.chordHintDismissed) {
+        topbarEl.appendChild(buildEditorHint(
+            'コードを決める',
+            '上でコードを選び、先に進行、その下で鳴らすタイミングを決めます。',
+            () => {
+                appState.chordHintDismissed = true;
+                callbacks.renderEditor();
+            }
+        ));
+    }
+    header.classList.add('melody-editor-header');
+    header.style.removeProperty('justify-content');
+    header.replaceChildren(buildCompactHeaderActions([
+        `${measureIndex + 1}小節/${appState.numMeasures}小節`,
+        `${track.selectedChordRoot}${track.selectedChordType}`,
+        `Oct ${track.selectedChordOctave}`,
+    ], header.querySelector('.measure-actions')));
     editorEl.appendChild(buildEditorHint('コードを決める', '上でコードを選び、先に進行、その下で鳴らすタイミングを決めます。'));
 
     const bodyEl = document.createElement('div');
@@ -339,11 +362,40 @@ function buildLabel(text) {
     return el;
 }
 
-function buildEditorHint(title, body) {
+function buildEditorHint(title, body, onDismiss) {
     const el = document.createElement('div');
     el.className = 'editor-help';
-    el.innerHTML = `<strong>${title}</strong><span>${body}</span>`;
+    if (typeof onDismiss === 'function') {
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'editor-help-close';
+        closeBtn.type = 'button';
+        closeBtn.setAttribute('aria-label', '案内を閉じる');
+        closeBtn.textContent = '×';
+        closeBtn.addEventListener('click', onDismiss);
+        el.appendChild(closeBtn);
+    }
+
+    const titleEl = document.createElement('strong');
+    titleEl.textContent = title;
+
+    const bodyEl = document.createElement('span');
+    bodyEl.textContent = body;
+
+    el.append(titleEl, bodyEl);
     return el;
+}
+
+function buildCompactHeaderActions(chips, measureActions) {
+    const wrap = document.createElement('div');
+    wrap.className = 'melody-header-actions';
+    chips.forEach((text) => {
+        const chip = document.createElement('span');
+        chip.className = 'melody-header-chip';
+        chip.textContent = text;
+        wrap.appendChild(chip);
+    });
+    if (measureActions) wrap.appendChild(measureActions);
+    return wrap;
 }
 
 function createPlayheadBar(measureStart) {
