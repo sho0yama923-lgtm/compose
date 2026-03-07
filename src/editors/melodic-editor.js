@@ -61,7 +61,7 @@ export function renderMelodicEditor(track, editorEl) {
     header.appendChild(ctrlEl);
 
     const wrapEl = document.createElement('div');
-    wrapEl.className = 'melodic-editor melody-roll';
+    wrapEl.className = 'melodic-editor melody-roll continuous-roll';
 
     const scrollEl = document.createElement('div');
     scrollEl.className = 'melody-roll-scroll';
