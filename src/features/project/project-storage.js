@@ -5,8 +5,9 @@ import { INST_TYPE, OCTAVE_DEFAULT_BASE, DRUM_ROWS } from '../tracks/instrument-
 import { CHROMATIC, DURATION_CELLS } from '../../core/constants.js';
 
 const STORAGE_KEY = 'compose_save';
-const DATA_VERSION = 4;
+const DATA_VERSION = 6;
 const VALID_DURATIONS = new Set(Object.keys(DURATION_CELLS));
+const VALID_SCALE_TYPES = new Set(['major', 'harmonic_minor', 'melodic_minor']);
 
 // -------------------------------------------------------
 // v1 → v2 マイグレーション: boolean → duration string
@@ -186,6 +187,9 @@ export function saveState() {
             drumHintDismissed: appState.drumHintDismissed,
             chordHintDismissed: appState.chordHintDismissed,
             melodicHintDismissed: appState.melodicHintDismissed,
+            previewHintDismissed: appState.previewHintDismissed,
+            songKeyRoot: appState.songKeyRoot,
+            songScaleType: appState.songScaleType,
             editorGridMode: appState.editorGridMode,
             selectedDuration: appState.selectedDuration,
             lastNormalDuration: appState.lastNormalDuration,
@@ -231,6 +235,15 @@ function restoreFromData(data) {
     appState.drumHintDismissed = data.drumHintDismissed === true;
     appState.chordHintDismissed = data.chordHintDismissed === true;
     appState.melodicHintDismissed = data.melodicHintDismissed === true;
+    appState.previewHintDismissed = data.previewHintDismissed === true;
+    appState.songKeyRoot = CHROMATIC.includes(data.songKeyRoot) ? data.songKeyRoot : 'C';
+    if (VALID_SCALE_TYPES.has(data.songScaleType)) {
+        appState.songScaleType = data.songScaleType;
+    } else if (data.songKeyMode === 'minor') {
+        appState.songScaleType = 'harmonic_minor';
+    } else {
+        appState.songScaleType = 'major';
+    }
     appState.editorGridMode = data.editorGridMode === 'triplet' ? 'triplet' : 'normal';
     appState.selectedDuration = VALID_DURATIONS.has(data.selectedDuration)
         ? data.selectedDuration

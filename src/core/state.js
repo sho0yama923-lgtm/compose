@@ -18,6 +18,9 @@ export const appState = {
     drumHintDismissed: false,
     chordHintDismissed: false,
     melodicHintDismissed: false,
+    previewHintDismissed: false,
+    songKeyRoot: 'C',
+    songScaleType: 'major',
     editorGridMode: 'normal',
     // デュレーション
     selectedDuration: '16n',   // ツールバーで選択中の音価

@@ -854,11 +854,45 @@ body {
 /* パレット（ルート/タイプ/オクターブ）*/
 .chord-palette {
     flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 .chord-palette-row {
     display: flex;
     align-items: center;
     gap: 8px;
+}
+.chord-key-row {
+    align-items: center;
+    gap: 8px;
+}
+.chord-key-root-input {
+    width: 74px;
+    flex: 0 0 74px;
+}
+.key-mode-tabs {
+    display: inline-flex;
+    gap: 4px;
+    flex: 1;
+}
+.key-mode-tab {
+    flex: 1;
+    min-width: 0;
+    height: 34px;
+    border: 1.5px solid #d5d5d5;
+    border-radius: 6px;
+    background: #fff;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.key-mode-tab.selected {
+    background: #111;
+    border-color: #111;
+    color: #fff;
 }
 .chord-select-control {
     flex: 1;
@@ -1913,6 +1947,22 @@ body {
     min-width: var(--melody-key-width);
     max-width: var(--melody-key-width);
 }
+.melodic-track-editor .continuous-roll .melody-tone-key {
+    justify-content: center;
+    padding-right: 0;
+    font-size: 10px;
+    font-weight: 700;
+    border-right: 1px solid #d7d7d7;
+    border-bottom: 1px solid #dedede;
+    color: #444;
+}
+.melodic-track-editor .continuous-roll .melody-tone-key.is-scale-tone {
+    background: #fcfcfc;
+}
+.melodic-track-editor .continuous-roll .melody-tone-key.is-non-scale-tone {
+    background: #e3e3e3;
+    color: #555;
+}
 .melodic-track-editor .continuous-roll .melody-key-octave-divider {
     width: var(--melody-key-width);
     min-width: var(--melody-key-width);
@@ -1978,27 +2028,54 @@ body {
             #e1e1e1 calc((100% / var(--timeline-columns)) - 1px),
             #e1e1e1 calc(100% / var(--timeline-columns))
         ),
-        linear-gradient(to bottom, transparent calc(100% - 1px), #ececec calc(100% - 1px)),
-        #f8f8f8;
+        linear-gradient(to bottom, transparent calc(100% - 1px), #d9d9d9 calc(100% - 1px)),
+        #e4e4e4;
 }
-.melodic-track-editor .continuous-roll .melody-grid-row.black-key {
+.melodic-track-editor .continuous-roll .melody-grid-row.is-scale-tone {
     background:
         repeating-linear-gradient(
             to right,
             transparent 0,
             transparent calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
-            #a9a9a9 calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
-            #a9a9a9 calc(100% / (var(--timeline-columns) / var(--timeline-major, 4)))
+            #bbbbbb calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            #bbbbbb calc(100% / (var(--timeline-columns) / var(--timeline-major, 4)))
         ),
         repeating-linear-gradient(
             to right,
             transparent 0,
             transparent calc((100% / var(--timeline-columns)) - 1px),
-            #d7d7d7 calc((100% / var(--timeline-columns)) - 1px),
-            #d7d7d7 calc(100% / var(--timeline-columns))
+            #e5e5e5 calc((100% / var(--timeline-columns)) - 1px),
+            #e5e5e5 calc(100% / var(--timeline-columns))
         ),
-        linear-gradient(to bottom, transparent calc(100% - 1px), #d8d8d8 calc(100% - 1px)),
-        #f0f0f0;
+        linear-gradient(to bottom, transparent calc(100% - 1px), #ececec calc(100% - 1px)),
+        #fbfbfb;
+}
+.melodic-track-editor .continuous-roll .melody-chord-tone-segment {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: rgba(255, 152, 0, 0.14);
+    pointer-events: none;
+    z-index: 1;
+}
+.melodic-track-editor .continuous-roll .melody-grid-row.is-non-scale-tone {
+    background:
+        repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            #b5b5b5 calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            #b5b5b5 calc(100% / (var(--timeline-columns) / var(--timeline-major, 4)))
+        ),
+        repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent calc((100% / var(--timeline-columns)) - 1px),
+            #dddddd calc((100% / var(--timeline-columns)) - 1px),
+            #dddddd calc(100% / var(--timeline-columns))
+        ),
+        linear-gradient(to bottom, transparent calc(100% - 1px), #d9d9d9 calc(100% - 1px)),
+        #e4e4e4;
 }
 .melodic-track-editor .continuous-roll .melody-grid-note {
     display: block;
@@ -2010,7 +2087,7 @@ body {
     background: linear-gradient(90deg, #1d4ed8, #2563eb);
     box-shadow: none;
     cursor: pointer;
-    z-index: 2;
+    z-index: 3;
 }
 .melody-playhead {
     top: 22px;
@@ -2346,9 +2423,23 @@ body {
     flex-direction: column;
     gap: 2px;
     padding: 10px 12px;
+    position: relative;
     background: #fafafa;
     border: 1px solid #e1e1e1;
     border-radius: 8px;
+}
+.preview-help-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    border: 1px solid #d9d9d9;
+    border-radius: 999px;
+    background: #fff;
+    color: #666;
+    font-size: 16px;
+    line-height: 1;
 }
 .preview-help strong {
     font-size: 11px;
@@ -2359,6 +2450,80 @@ body {
     font-size: 11px;
     line-height: 1.45;
     color: #777;
+}
+.preview-song-settings {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    background: #fff;
+    border: 1px solid #dbe2ec;
+    border-radius: 10px;
+}
+.preview-song-settings strong {
+    font-size: 11px;
+    font-weight: 800;
+    color: #333;
+}
+.preview-song-settings-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+.preview-song-settings-row.scale-row {
+    align-items: flex-start;
+}
+.preview-song-settings-label {
+    flex: 0 0 40px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #667085;
+}
+.preview-song-select {
+    min-width: 72px;
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid #cfd8e3;
+    background: #fff;
+    padding: 0 10px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #223047;
+}
+.preview-song-mode-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 34px;
+    padding: 0 10px;
+    border-radius: 10px;
+    border: 1px solid #d7deea;
+    background: #f6f8fb;
+    font-size: 14px;
+    font-weight: 800;
+    color: #223047;
+}
+.preview-scale-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.preview-scale-tab {
+    min-height: 34px;
+    padding: 0 10px;
+    border-radius: 999px;
+    border: 1px solid #d1d8e4;
+    background: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    color: #49566a;
+}
+.preview-scale-tab.selected {
+    background: #111;
+    border-color: #111;
+    color: #fff;
 }
 .preview-card {
     background: #fff;

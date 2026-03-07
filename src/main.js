@@ -70,6 +70,7 @@ try {
     // 起動時はプレビュー画面を表示
     appState.previewMode = true;
     syncViewToggleButton(true);
+    callbacks.renderSidebar();
     callbacks.renderEditor();
     initOnboarding();
 } catch (error) {

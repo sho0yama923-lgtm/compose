@@ -39,6 +39,11 @@ export const OCT_COLOR = {
 
 // コード機能: ルート音とコードタイプ
 export const CHORD_ROOTS = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+export const SCALE_TYPES = [
+    { value: 'major', label: 'メジャー' },
+    { value: 'harmonic_minor', label: 'ハーモニックマイナー' },
+    { value: 'melodic_minor', label: 'メロディックマイナー' },
+];
 
 // ルート音ごとの固有色（コード範囲ステップボタンのON時背景色）
 export const ROOT_COLORS = {

@@ -1,7 +1,8 @@
-﻿import { appState, STEPS_PER_MEASURE, callbacks } from '../core/state.js';
-import { CHROMATIC, BLACK_KEYS, DURATION_CELLS } from '../core/constants.js';
+﻿import { appState, STEPS_PER_BEAT, STEPS_PER_MEASURE, callbacks } from '../core/state.js';
+import { CHROMATIC, DURATION_CELLS } from '../core/constants.js';
 import { toggleStep, isStepHead, isStepTie } from '../core/duration.js';
 import { renderDurationToolbar, getCurrentDuration } from './duration-toolbar.js';
+import { getChordPitchClasses, getEffectiveChordAtStep, getScalePitchClasses } from '../core/music-theory.js';
 import {
     getEditorCells,
     getEditorGridColumns,
@@ -17,6 +18,11 @@ export function renderMelodicEditor(track, editorEl) {
     const columns = getEditorGridColumns();
     const majorGroup = getEditorGridLineGroup();
     const visibleOctaves = getVisibleOctaves(track.viewBase);
+    const scalePitchClasses = getScalePitchClasses(appState.songKeyRoot, appState.songScaleType);
+    const chordPitchClassesByBeat = Array.from({ length: 4 }, (_, beat) => {
+        const chord = getEffectiveChordAtStep(offset + beat * STEPS_PER_BEAT, appState.tracks);
+        return chord ? getChordPitchClasses(chord.root, chord.type) : null;
+    });
     const header = editorEl.querySelector('.editor-header');
     const topbarEl = document.createElement('section');
     topbarEl.className = 'melody-topbar';
@@ -128,22 +134,25 @@ export function renderMelodicEditor(track, editorEl) {
         contentEl.appendChild(dividerRowEl);
 
         [...CHROMATIC].reverse().forEach((noteName) => {
-            const isBlack = BLACK_KEYS.has(noteName);
             const fullNote = `${noteName}${octave}`;
             const steps = track.stepsMap[fullNote];
+            const isScaleTone = scalePitchClasses.has(noteName);
+            const chordToneBeats = chordPitchClassesByBeat.map(set => Boolean(set?.has(noteName)));
 
             const laneEl = document.createElement('div');
             laneEl.className = 'melody-lane';
             applyLaneLayout(laneEl);
 
             const keyEl = document.createElement('div');
-            keyEl.className = 'piano-key ' + (isBlack ? 'black-key' : 'white-key');
+            keyEl.className = 'piano-key melody-tone-key';
+            keyEl.classList.add(isScaleTone ? 'is-scale-tone' : 'is-non-scale-tone');
             keyEl.textContent = noteName;
             keyEl.style.width = '28px';
             keyEl.style.minWidth = '28px';
 
             const rowEl = document.createElement('div');
-            rowEl.className = 'melody-grid-row' + (isBlack ? ' black-key' : '');
+            rowEl.className = 'melody-grid-row';
+            rowEl.classList.add(isScaleTone ? 'is-scale-tone' : 'is-non-scale-tone');
             rowEl.style.setProperty('--timeline-columns', String(cells.length));
             rowEl.style.setProperty('--timeline-major', String(majorGroup));
             rowEl.dataset.octave = String(octave);
@@ -157,6 +166,10 @@ export function renderMelodicEditor(track, editorEl) {
                 track.activeOctave = octave;
                 toggleStep(steps, offset + cellInfo.localStep, getCurrentDuration(), maxIndex);
                 callbacks.renderEditor();
+            });
+
+            chordToneBeats.forEach((matches, beat) => {
+                if (matches) rowEl.appendChild(buildChordToneSegment(beat));
             });
 
             for (let localStep = 0; localStep < STEPS_PER_MEASURE; localStep++) {
@@ -229,6 +242,14 @@ function rebuildMelodyToolbar(toolbarEl, octCtrlEl) {
 
     primaryRow.append(modeRow, divider, octRow);
     toolbarEl.replaceChildren(primaryRow, valueRow);
+}
+
+function buildChordToneSegment(beat) {
+    const el = document.createElement('div');
+    el.className = 'melody-chord-tone-segment';
+    el.style.left = `${(beat * STEPS_PER_BEAT / STEPS_PER_MEASURE) * 100}%`;
+    el.style.width = `${(STEPS_PER_BEAT / STEPS_PER_MEASURE) * 100}%`;
+    return el;
 }
 
 function bindMelodyScroll(track, scrollEl) {
