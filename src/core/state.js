@@ -14,6 +14,7 @@ export const appState = {
     playRangeStartMeasure: null,
     playRangeEndMeasure: null,
     previewMode: false,
+    melodicHintDismissed: false,
     editorGridMode: 'normal',
     // デュレーション
     selectedDuration: '16n',   // ツールバーで選択中の音価

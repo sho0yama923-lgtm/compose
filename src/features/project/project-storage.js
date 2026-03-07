@@ -183,6 +183,7 @@ export function saveState() {
             nextId: appState.nextId,
             currentMeasure: appState.currentMeasure,
             activeTrackId: appState.activeTrackId,
+            melodicHintDismissed: appState.melodicHintDismissed,
             editorGridMode: appState.editorGridMode,
             selectedDuration: appState.selectedDuration,
             lastNormalDuration: appState.lastNormalDuration,
@@ -224,6 +225,7 @@ function restoreFromData(data) {
     appState.isPlaying = false;
     appState.playRangeStartMeasure = null;
     appState.playRangeEndMeasure = null;
+    appState.melodicHintDismissed = data.melodicHintDismissed === true;
     appState.editorGridMode = data.editorGridMode === 'triplet' ? 'triplet' : 'normal';
     appState.selectedDuration = VALID_DURATIONS.has(data.selectedDuration)
         ? data.selectedDuration

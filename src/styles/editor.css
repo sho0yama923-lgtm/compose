@@ -310,12 +310,32 @@ body {
     background: #fafafa;
     border: 1px solid #e4e4e4;
     border-radius: 8px;
+    position: relative;
+}
+.editor-help-close {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 24px;
+    height: 24px;
+    border: 1px solid #d5d5d5;
+    border-radius: 999px;
+    background: #fff;
+    color: #666;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.editor-help-close:active {
+    background: #f0f0f0;
 }
 .editor-help strong {
     font-size: 11px;
     font-weight: 800;
     letter-spacing: 0.04em;
     color: #333;
+    padding-right: 28px;
 }
 .editor-help span {
     font-size: 11px;

@@ -21,7 +21,16 @@ export function renderMelodicEditor(track, editorEl) {
     const visibleOctaves = getVisibleOctaves(track.viewBase);
 
     renderDurationToolbar(editorEl, () => callbacks.renderEditor());
-    editorEl.appendChild(buildEditorHint('メロディを置く', '音程ボタンで表示オクターブを切り替え、グリッドをタップして音符を置きます。'));
+    if (!appState.melodicHintDismissed) {
+        editorEl.appendChild(buildEditorHint(
+            'メロディを置く',
+            '音程ボタンで表示オクターブを切り替え、グリッドをタップして音符を置きます。',
+            () => {
+                appState.melodicHintDismissed = true;
+                callbacks.renderEditor();
+            }
+        ));
+    }
 
     const ctrlEl = document.createElement('div');
     ctrlEl.className = 'oct-range-ctrl';
@@ -219,9 +228,25 @@ function updatePlayheadBar(barEl, measureStart) {
     barEl.style.left = `calc(var(--melody-key-width) + ${(localStep / STEPS_PER_MEASURE).toFixed(6)} * (100% - var(--melody-key-width)))`;
 }
 
-function buildEditorHint(title, body) {
+function buildEditorHint(title, body, onDismiss) {
     const el = document.createElement('div');
     el.className = 'editor-help';
-    el.innerHTML = `<strong>${title}</strong><span>${body}</span>`;
+    if (typeof onDismiss === 'function') {
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'editor-help-close';
+        closeBtn.type = 'button';
+        closeBtn.setAttribute('aria-label', '案内を閉じる');
+        closeBtn.textContent = '×';
+        closeBtn.addEventListener('click', onDismiss);
+        el.appendChild(closeBtn);
+    }
+
+    const titleEl = document.createElement('strong');
+    titleEl.textContent = title;
+
+    const bodyEl = document.createElement('span');
+    bodyEl.textContent = body;
+
+    el.append(titleEl, bodyEl);
     return el;
 }
