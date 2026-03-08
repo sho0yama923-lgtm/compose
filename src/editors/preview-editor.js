@@ -85,37 +85,27 @@ export function renderPreview(containerEl) {
             zoneGrid.className = 'preview-chord-zone-grid';
             zoneGrid.style.gridTemplateColumns = `repeat(${STEPS_PER_MEASURE}, minmax(0, 1fr))`;
 
-            const zoneStarts = cells
-                .map(cell => offset + cell.localStep)
-                .filter(start => track.dividers.includes(start) || start === offset);
-
-            // 継承コード配列を事前計算（0〜mEndまで走査）
-            const inheritedChords = [];
-            let cur = null;
             const chordMap = Array.isArray(track.chordMap) ? track.chordMap : [];
-            for (let i = 0; i < mEnd; i++) {
-                if (chordMap[i]) cur = chordMap[i];
-                if (i >= offset) inheritedChords.push(cur);
+            let inheritedChord = null;
+            for (let step = 0; step <= offset; step++) {
+                if (chordMap[step]) inheritedChord = chordMap[step];
             }
-
-            // ゾーンごとのラベル生成
-            for (let z = 0; z < zoneStarts.length; z++) {
-                const start = zoneStarts[z];
-                const end = zoneStarts[z + 1] ?? mEnd;
-                const chord = inheritedChords[start - offset];
+            for (let beat = 0; beat < 4; beat++) {
+                const start = offset + beat * STEPS_PER_BEAT;
+                const end = Math.min(start + STEPS_PER_BEAT, mEnd);
+                for (let step = Math.max(offset + 1, start - STEPS_PER_BEAT + 1); step <= start; step++) {
+                    if (chordMap[step]) inheritedChord = chordMap[step];
+                }
 
                 const label = document.createElement('span');
                 label.className = 'preview-chord-label';
-                const span = cells.filter(cell => {
-                    const visibleStart = offset + cell.localStep;
-                    return visibleStart >= start && visibleStart < end;
-                }).length;
+                const span = Math.max(1, end - start);
                 label.style.gridColumn = `span ${span || 1}`;
-                if (z > 0) label.style.borderLeft = '1px solid #999';
+                if (beat > 0) label.style.borderLeft = '1px solid #999';
 
-                if (chord) {
-                    label.textContent = chord.root + chord.type;
-                    label.style.background = ROOT_COLORS[chord.root] || '#666';
+                if (inheritedChord) {
+                    label.textContent = inheritedChord.root + inheritedChord.type;
+                    label.style.background = ROOT_COLORS[inheritedChord.root] || '#666';
                 } else {
                     label.textContent = '—';
                     label.style.background = '#999';

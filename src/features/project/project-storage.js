@@ -309,14 +309,39 @@ export function loadState() {
 export function exportJSON() {
     saveState(); // 最新状態を確定
     const json = localStorage.getItem(STORAGE_KEY);
-    if (!json) return;
+    if (!json) return false;
+
+    const defaultFileName = buildDefaultExportFileName();
+    const requestedName = window.prompt('保存ファイル名を入力してください', defaultFileName);
+    if (requestedName === null) return false;
+
+    const normalizedName = normalizeExportFileName(requestedName, defaultFileName);
 
     const blob = new Blob([json], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `compose_${Date.now()}.json`;
+    a.download = normalizedName;
     a.click();
     URL.revokeObjectURL(a.href);
+    return true;
+}
+
+function buildDefaultExportFileName() {
+    const now = new Date();
+    const yyyy = String(now.getFullYear());
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mi = String(now.getMinutes()).padStart(2, '0');
+    return `compose_${yyyy}${mm}${dd}_${hh}${mi}.json`;
+}
+
+function normalizeExportFileName(requestedName, fallbackName) {
+    const trimmed = requestedName.trim();
+    if (!trimmed) return fallbackName;
+    const sanitized = trimmed.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_');
+    if (!sanitized) return fallbackName;
+    return sanitized.toLowerCase().endsWith('.json') ? sanitized : `${sanitized}.json`;
 }
 
 // -------------------------------------------------------
@@ -356,8 +381,9 @@ export function resetState() {
 // -------------------------------------------------------
 export function initSaveLoad() {
     document.getElementById('exportBtn').addEventListener('click', () => {
-        exportJSON();
-        callbacks.closeSidebar();
+        if (exportJSON()) {
+            callbacks.closeSidebar();
+        }
     });
 
     document.getElementById('importBtn').addEventListener('click', () => {
