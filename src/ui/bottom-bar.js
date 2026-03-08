@@ -1,4 +1,8 @@
-import { appState, getNormalizedPlayRangeMeasures } from '../core/state.js';
+import {
+    appState,
+    getNormalizedPlayRangeMeasures,
+    clearPreviewCopyState,
+} from '../core/state.js';
 import { addMeasure, removeMeasure } from '../features/tracks/tracks-controller.js';
 
 export function buildSeekBar(renderEditor) {
@@ -85,6 +89,7 @@ export function buildSeekBar(renderEditor) {
     const seekRange = document.createElement('div');
     seekRange.className = 'measure-range-highlight';
     seekWrap.appendChild(seekRange);
+    appendPreviewRangeHighlights(seekWrap);
     if (appState.playRangeStartMeasure !== null) {
         seekWrap.appendChild(buildRangeMarker('start', appState.playRangeStartMeasure));
     }
@@ -128,9 +133,56 @@ function updateSeekSliderVisual(seekSlider, measure) {
 
 function updateSeekLabel(seekLabel) {
     const parts = [`${appState.currentMeasure + 1} / ${appState.numMeasures}`];
+    if (appState.previewRangeMode === 'copy' && appState.previewRangeStartMeasure !== null && appState.previewRangeEndMeasure !== null) {
+        parts.push(`コピー:${appState.previewRangeStartMeasure + 1}→${appState.previewRangeEndMeasure + 1}`);
+    }
     if (appState.playRangeStartMeasure !== null) parts.push(`開始:${appState.playRangeStartMeasure + 1}`);
     if (appState.playRangeEndMeasure !== null) parts.push(`終了:${appState.playRangeEndMeasure + 1}`);
     seekLabel.textContent = parts.join('  ');
+}
+
+function appendPreviewRangeHighlights(seekWrap) {
+    if (appState.previewRangeMode === 'copy'
+        && appState.previewRangeStartMeasure !== null
+        && appState.previewRangeEndMeasure !== null) {
+        appendMeasureHighlight(
+            seekWrap,
+            'copy',
+            Math.min(appState.previewRangeStartMeasure, appState.previewRangeEndMeasure),
+            Math.min(appState.numMeasures - 1, Math.max(appState.previewRangeStartMeasure, appState.previewRangeEndMeasure))
+        );
+    }
+
+    if (
+        appState.repeatActionTrackId !== null
+        && appState.repeatSourceStartMeasure !== null
+        && appState.repeatSourceEndMeasure !== null
+    ) {
+        const sourceStart = appState.repeatSourceStartMeasure;
+        const sourceEnd = appState.repeatSourceEndMeasure;
+        const targetEnd = Math.max(sourceEnd, appState.repeatTargetEndMeasure ?? sourceEnd);
+        appendMeasureHighlight(
+            seekWrap,
+            'repeat',
+            sourceStart,
+            Math.min(appState.numMeasures - 1, targetEnd)
+        );
+        appendMeasureHighlight(
+            seekWrap,
+            'source',
+            sourceStart,
+            Math.min(appState.numMeasures - 1, sourceEnd)
+        );
+    }
+}
+
+function appendMeasureHighlight(seekWrap, className, startMeasure, endMeasure) {
+    if (startMeasure === null || endMeasure === null || endMeasure < startMeasure) return;
+    const span = document.createElement('div');
+    span.className = `measure-preview-highlight ${className}`;
+    span.style.left = `${(startMeasure / appState.numMeasures) * 100}%`;
+    span.style.width = `${((endMeasure - startMeasure + 1) / appState.numMeasures) * 100}%`;
+    seekWrap.appendChild(span);
 }
 
 function buildRangeMarker(type, measure) {

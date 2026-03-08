@@ -48,11 +48,15 @@ export function addTrack(instrument) {
     if (INST_TYPE[instrument] === 'rhythm') {
         track = {
             id, instrument,
+            muted: false,
+            volume: 1,
             rows: DRUM_ROWS.map(r => ({ label: r.label, note: r.note, steps: Array(ts).fill(null) })),
         };
     } else if (INST_TYPE[instrument] === 'chord') {
         track = {
             id, instrument,
+            muted: false,
+            volume: 1,
             chordMap:        Array(ts).fill(null),
             soundSteps:      Array(ts).fill(null),
             selectedChordRoot:   'C',
@@ -70,6 +74,8 @@ export function addTrack(instrument) {
         const viewBase = OCTAVE_DEFAULT_BASE[instrument] ?? 3;
         track = {
             id, instrument,
+            muted: false,
+            volume: 1,
             viewBase,
             activeOctave: viewBase + 1,
             stepsMap,
@@ -84,6 +90,16 @@ export function addTrack(instrument) {
 // 小節の追加・削除
 // -------------------------------------------------------
 export function addMeasure() {
+    addMeasureInternal(true);
+}
+
+export function ensureMeasureCount(minMeasures) {
+    while (appState.numMeasures < minMeasures) {
+        addMeasureInternal(false);
+    }
+}
+
+function addMeasureInternal(shouldRender) {
     appState.numMeasures++;
     // beatConfig に新しい小節を追加（デフォルト: 全拍4分割）
     if (appState.beatConfig.length < appState.numMeasures) {
@@ -107,7 +123,7 @@ export function addMeasure() {
         }
     });
     clampPlayRangeMeasures();
-    callbacks.renderEditor();
+    if (shouldRender) callbacks.renderEditor();
 }
 
 export function removeMeasure() {
@@ -143,6 +159,156 @@ export function removeMeasure() {
     });
     clampPlayRangeMeasures();
     callbacks.renderEditor();
+}
+
+export function copyTrackMeasureRange(track, startMeasure, endMeasure) {
+    const normalizedStart = Math.max(0, Math.min(startMeasure, endMeasure));
+    const normalizedEnd = Math.max(normalizedStart, Math.max(startMeasure, endMeasure));
+    const startStep = normalizedStart * STEPS_PER_MEASURE;
+    const endStepExclusive = (normalizedEnd + 1) * STEPS_PER_MEASURE;
+    const trackType = INST_TYPE[track.instrument];
+    const measureLength = normalizedEnd - normalizedStart + 1;
+    const metadata = {
+        sourceTrackId: track.id,
+        sourceStartMeasure: normalizedStart,
+        sourceEndMeasure: normalizedEnd,
+    };
+
+    if (trackType === 'rhythm') {
+        return {
+            trackType,
+            measureLength,
+            ...metadata,
+            payload: {
+                rows: track.rows.map((row) => ({
+                    label: row.label,
+                    steps: row.steps.slice(startStep, endStepExclusive),
+                })),
+            },
+        };
+    }
+
+    if (trackType === 'chord') {
+        return {
+            trackType,
+            measureLength,
+            ...metadata,
+            payload: {
+                chordMap: track.chordMap
+                    .slice(startStep, endStepExclusive)
+                    .map(cloneChordEntry),
+                soundSteps: track.soundSteps.slice(startStep, endStepExclusive),
+                dividers: (track.dividers || [])
+                    .filter((divider) => divider >= startStep && divider < endStepExclusive)
+                    .map((divider) => divider - startStep),
+            },
+        };
+    }
+
+    return {
+        trackType,
+        measureLength,
+        ...metadata,
+        payload: {
+            stepsMap: Object.fromEntries(
+                Object.entries(track.stepsMap).map(([note, steps]) => [
+                    note,
+                    steps.slice(startStep, endStepExclusive),
+                ])
+            ),
+        },
+    };
+}
+
+export function pasteTrackMeasureRange(track, startMeasure, clipboard, options = {}) {
+    if (!clipboard) return false;
+    const trackType = INST_TYPE[track.instrument];
+    if (clipboard.trackType !== trackType) return false;
+
+    const startStep = startMeasure * STEPS_PER_MEASURE;
+    const sourceLength = clipboard.measureLength * STEPS_PER_MEASURE;
+    const repeatUntilMeasure = typeof options.repeatUntilMeasure === 'number'
+        ? Math.max(startMeasure, options.repeatUntilMeasure)
+        : null;
+    const targetLength = repeatUntilMeasure === null
+        ? sourceLength
+        : (repeatUntilMeasure - startMeasure + 1) * STEPS_PER_MEASURE;
+    const requiredMeasures = Math.ceil((startStep + targetLength) / STEPS_PER_MEASURE);
+
+    ensureMeasureCount(requiredMeasures);
+
+    if (trackType === 'rhythm') {
+        track.rows.forEach((row, rowIndex) => {
+            const source = clipboard.payload.rows[rowIndex]?.steps || Array(sourceLength).fill(null);
+            overwriteRepeatedSegment(row.steps, startStep, targetLength, source);
+        });
+        return true;
+    }
+
+    if (trackType === 'chord') {
+        overwriteRepeatedSegment(
+            track.chordMap,
+            startStep,
+            targetLength,
+            clipboard.payload.chordMap,
+            cloneChordEntry
+        );
+        overwriteRepeatedSegment(
+            track.soundSteps,
+            startStep,
+            targetLength,
+            clipboard.payload.soundSteps
+        );
+        track.dividers = (track.dividers || []).filter(
+            (divider) => divider < startStep || divider >= startStep + targetLength
+        );
+        const dividerSet = new Set(track.dividers);
+        for (let baseOffset = 0; baseOffset < targetLength; baseOffset += sourceLength) {
+            clipboard.payload.dividers.forEach((dividerOffset) => {
+                const targetDivider = startStep + baseOffset + dividerOffset;
+                if (targetDivider < startStep + targetLength) {
+                    dividerSet.add(targetDivider);
+                }
+            });
+        }
+        track.dividers = [...dividerSet].sort((a, b) => a - b);
+        if (track.selectedDivPos !== null
+            && track.selectedDivPos >= startStep
+            && track.selectedDivPos < startStep + targetLength) {
+            track.selectedDivPos = null;
+        }
+        return true;
+    }
+
+    Object.entries(track.stepsMap).forEach(([note, steps]) => {
+        const source = clipboard.payload.stepsMap[note] || Array(sourceLength).fill(null);
+        overwriteRepeatedSegment(steps, startStep, targetLength, source);
+    });
+    return true;
+}
+
+export function repeatTrackMeasureRange(track, sourceStartMeasure, sourceEndMeasure, repeatUntilMeasure) {
+    const normalizedStart = Math.max(0, Math.min(sourceStartMeasure, sourceEndMeasure));
+    const normalizedEnd = Math.max(normalizedStart, Math.max(sourceStartMeasure, sourceEndMeasure));
+    const normalizedRepeatEnd = Math.max(normalizedEnd, repeatUntilMeasure);
+    const clipboard = copyTrackMeasureRange(track, normalizedStart, normalizedEnd);
+    return pasteTrackMeasureRange(track, normalizedStart, clipboard, {
+        repeatUntilMeasure: normalizedRepeatEnd,
+    });
+}
+
+function overwriteRepeatedSegment(target, startStep, targetLength, source, transform = (value) => value) {
+    const safeSource = Array.isArray(source) && source.length > 0
+        ? source
+        : [null];
+    for (let i = 0; i < targetLength; i++) {
+        const sourceValue = safeSource[i % safeSource.length];
+        target[startStep + i] = transform(sourceValue);
+    }
+}
+
+function cloneChordEntry(entry) {
+    return entry ? { ...entry } : null;
 }
 
 function shiftPlayRangeAfterMeasureRemoval(removedMeasure) {

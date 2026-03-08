@@ -22,12 +22,17 @@ export function initPlayback() {
         const playRange = getNormalizedPlayRangeMeasures();
 
         appState.tracks.forEach(track => {
+            if (track.muted) return;
+            const trackVolume = typeof track.volume === 'number'
+                ? Math.max(0, Math.min(1, track.volume))
+                : 1;
+
             if (INST_TYPE[track.instrument] === 'rhythm') {
                 track.rows.forEach(row => {
                     row.steps.forEach((val, i) => {
                         if (!isStepHead(val)) return;
                         score[i] = score[i] || [];
-                        score[i].push({ instrument: track.instrument, notes: row.note, duration: val });
+                        score[i].push({ instrument: track.instrument, notes: row.note, duration: val, volume: trackVolume });
                     });
                 });
             } else if (INST_TYPE[track.instrument] === 'chord') {
@@ -38,7 +43,7 @@ export function initPlayback() {
                     if (isStepHead(dur) && currentChord) {
                         const notes = getChordNotes(currentChord.root, currentChord.type, currentChord.octave);
                         score[i] = score[i] || [];
-                        score[i].push({ instrument: 'piano', notes: notes.length === 1 ? notes[0] : notes, duration: dur });
+                        score[i].push({ instrument: 'piano', notes: notes.length === 1 ? notes[0] : notes, duration: dur, volume: trackVolume });
                     }
                 }
             } else {
@@ -59,7 +64,8 @@ export function initPlayback() {
                     score[i].push({
                         instrument: track.instrument,
                         notes: notes.length === 1 ? notes[0] : notes,
-                        duration: stepDurations[i] || '16n'
+                        duration: stepDurations[i] || '16n',
+                        volume: trackVolume,
                     });
                 });
             }

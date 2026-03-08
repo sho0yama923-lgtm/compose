@@ -14,6 +14,18 @@ export const appState = {
     playRangeStartMeasure: null,
     playRangeEndMeasure: null,
     previewMode: false,
+    previewActionTrackId: null,
+    previewActionMenuOpen: false,
+    previewRangeMode: null,
+    previewRangeStartMeasure: null,
+    previewRangeEndMeasure: null,
+    clipboard: null,
+    repeatActionTrackId: null,
+    repeatSourceStartMeasure: null,
+    repeatSourceEndMeasure: null,
+    repeatTargetEndMeasure: null,
+    repeatModeStep: null,
+    repeatRestoreMeasures: {},
     chordDrumSheetOpen: false,
     drumHintDismissed: false,
     chordHintDismissed: false,
@@ -56,6 +68,21 @@ export function clampPlayRangeMeasures() {
     if (appState.playRangeEndMeasure !== null) {
         appState.playRangeEndMeasure = Math.max(0, Math.min(appState.playRangeEndMeasure, maxMeasure));
     }
+}
+
+export function clearPreviewCopyState() {
+    appState.previewRangeMode = null;
+    appState.previewRangeStartMeasure = null;
+    appState.previewRangeEndMeasure = null;
+}
+
+export function clearRepeatState() {
+    appState.repeatActionTrackId = null;
+    appState.repeatSourceStartMeasure = null;
+    appState.repeatSourceEndMeasure = null;
+    appState.repeatTargetEndMeasure = null;
+    appState.repeatModeStep = null;
+    appState.repeatRestoreMeasures = {};
 }
 
 // 循環依存を回避するためのコールバック登録

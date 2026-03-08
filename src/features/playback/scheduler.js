@@ -70,12 +70,12 @@ export async function play(score, {
         const step = score[idx];
         if (!step) return;
 
-        step.forEach(({ instrument, notes, duration }) => {
+        step.forEach(({ instrument, notes, duration, volume }) => {
             const inst = instruments[instrument];
             if (!inst || !inst.loaded) return;
 
             const noteArray = Array.isArray(notes) ? notes : [notes];
-            inst.triggerAttackRelease(noteArray, duration || '16n', time);
+            inst.triggerAttackRelease(noteArray, duration || '16n', time, volume ?? 1);
         });
     }, events);
 

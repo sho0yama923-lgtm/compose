@@ -30,7 +30,7 @@ export function renderEditor() {
         setTopbarTitle(getCurrentTrackTitle());
         syncViewToggleButton(true);
         renderPreview(editorEl);
-        editorEl.appendChild(buildSeekBar(renderEditor));
+        editorEl.appendChild(buildSeekBar(callbacks.renderEditor || renderEditor));
         return;
     }
 
@@ -59,7 +59,7 @@ export function renderEditor() {
         renderMelodicEditor(track, editorEl);
     }
 
-    editorEl.appendChild(buildSeekBar(renderEditor));
+    editorEl.appendChild(buildSeekBar(callbacks.renderEditor || renderEditor));
 }
 
 function getCurrentTrackTitle() {

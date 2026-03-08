@@ -1,6 +1,6 @@
 // save-load.js — 自動保存(localStorage) + JSONエクスポート/インポート
 
-import { appState, callbacks, totalSteps, STEPS_PER_MEASURE } from '../../core/state.js';
+import { appState, callbacks, totalSteps, STEPS_PER_MEASURE, clearPreviewCopyState, clearRepeatState } from '../../core/state.js';
 import { INST_TYPE, OCTAVE_DEFAULT_BASE, DRUM_ROWS } from '../tracks/instrument-map.js';
 import { CHROMATIC, DURATION_CELLS } from '../../core/constants.js';
 
@@ -122,6 +122,10 @@ function convertLegacyDivider(divider, numMeasures, beatConfig) {
 
 function normalizeTrack(track, length) {
     const type = INST_TYPE[track.instrument];
+    track.muted = track.muted === true;
+    track.volume = typeof track.volume === 'number'
+        ? Math.max(0, Math.min(1, track.volume))
+        : 1;
 
     if (type === 'rhythm') {
         const rows = Array.isArray(track.rows) ? track.rows : DRUM_ROWS.map(r => ({ label: r.label, note: r.note, steps: [] }));
@@ -231,6 +235,11 @@ function restoreFromData(data) {
     appState.isPlaying = false;
     appState.playRangeStartMeasure = null;
     appState.playRangeEndMeasure = null;
+    appState.previewActionTrackId = null;
+    appState.previewActionMenuOpen = false;
+    clearPreviewCopyState();
+    appState.clipboard = null;
+    clearRepeatState();
     appState.chordDrumSheetOpen = false;
     appState.drumHintDismissed = data.drumHintDismissed === true;
     appState.chordHintDismissed = data.chordHintDismissed === true;
