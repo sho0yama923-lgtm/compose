@@ -88,9 +88,45 @@
 
 ## 今やるべきこと
 
+- ブルース/ジャズ向けスケールを追加する
+  - `major / harmonic_minor / melodic_minor` に加えて `blues / dorian / mixolydian / minor_pentatonic` を追加
+  - 全体エディタの `Scale` UI はタブからドロップダウンへ変更
+  - メロディエディタのスケール音強調が新スケールでも効くようにする
+  - 保存/読込で追加スケールを保持する
+- トラックEQを追加する
+  - 各トラックに `Low / Mid / High` の3バンドEQを追加
+  - UI は全体エディタの各カード内に置く
+  - `track.eq = { low: 0, mid: 0, high: 0 }` を保存対象にする
+  - 再生イベントに `trackId` を流し、トラック単位で独立したEQが効くよう再生チェーンを再構成する
 - メロディ連続ロールのスクロール初期位置をさらに自然にするか検討する
 - コード進行UIを拍単位からさらに初心者向けに簡略化するか検討する
 - CSSをセクション分割するか検討する
+
+## 次回実装メモ
+
+- スケール定義の追加先
+  - `src/core/constants.js`
+  - `src/core/music-theory.js`
+  - `src/features/project/project-storage.js`
+- Scale UI の変更先
+  - `src/editors/preview-editor.js`
+  - `src/styles/editor.css`
+- EQ データ/UI の変更先
+  - `src/features/tracks/tracks-controller.js`
+  - `src/features/project/project-storage.js`
+  - `src/editors/preview-editor.js`
+  - `src/styles/editor.css`
+- 再生系の変更先
+  - `src/features/playback/playback-controller.js`
+  - `src/features/playback/scheduler.js`
+  - `src/features/tracks/instrument-map.js`
+- 受け入れ条件
+  - `Scale` に 7 種が表示される
+  - 新スケール選択時にメロディエディタの強調色が正しく変わる
+  - 各カードに `Low / Mid / High` が表示される
+  - EQ 値は保存/読込後も維持される
+  - 同じ楽器を複数トラックで使っても、トラックごとにEQが独立して効く
+  - Chord トラックと Piano トラックのEQが干渉しない
 
 ## 確認メモ
 

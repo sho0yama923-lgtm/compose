@@ -24,9 +24,13 @@
 - `src/core/state.js`
   - 共有状態
   - 何かを「選択状態として覚える」時はここを見る
+  - 全体エディタの繰り返し参照トラックは `lastTouchedTrackId` を使う
 - `src/core/constants.js`
   - 音価、音名、コード定義、色定義
   - 音価や理論定義を増やす時はここ
+- `src/core/music-theory.js`
+  - スケール音、コード構成音の計算
+  - スケール追加や音階ハイライトの基準変更はここ
 - `src/core/duration.js`
   - ノート配置、削除、tie 処理
   - 音符の置き方や上書きルールを変える時はここ
@@ -51,22 +55,27 @@
   - コード進行と発音タイミングのUI
 - `src/editors/preview-editor.js`
   - 全体プレビュー
+  - `Key / Scale`、カード内の `発音 / 音量`、繰り返しUIはここ
 
 ### features
 
 - `src/features/playback/playback-controller.js`
   - 各トラックを再生用スコアへ変換
   - 再生ボタン、再生範囲、playhead 更新を変える時はここ
+  - 将来のトラックEQ追加では event に `trackId` を流す入口になる
 - `src/features/playback/scheduler.js`
   - Tone.js への実送出
   - タイミングや Tone.js 側の鳴らし方を変える時はここ
+  - EQ やエフェクトを実際に挿すならここ
 - `src/features/project/project-storage.js`
   - localStorage、JSON保存、読込、データ移行
   - 保存項目を増やす時はここ
 - `src/features/tracks/tracks-controller.js`
   - トラック追加削除、小節数変更、初期データ生成
+  - 繰り返しの実データ反映と source→target 同期もここ
 - `src/features/tracks/instrument-map.js`
   - 楽器定義、サンプル、Sampler 生成
+  - 将来トラック単位の再生チェーンを持たせるならここを読む
 
 ### ui
 
@@ -110,13 +119,30 @@
 - `src/core/state.js`
 - 既存データ互換が必要なら移行処理も同時に更新
 
-### 5. 再生タイミングを変えたい
+### 5. スケールを増やしたい
+
+- `src/core/constants.js`
+- `src/core/music-theory.js`
+- `src/editors/preview-editor.js`
+- `src/editors/melodic-editor.js`
+- `src/features/project/project-storage.js`
+
+### 6. 再生タイミングや音の出し方を変えたい
 
 - `src/features/playback/playback-controller.js`
 - `src/features/playback/scheduler.js`
 - `src/core/rhythm-grid.js`
+- エフェクト追加なら `src/features/tracks/instrument-map.js` も読む
 
-### 6. トラックの追加・初期値を変えたい
+### 7. 繰り返しUIや繰り返し反映ルールを変えたい
+
+- `src/editors/preview-editor.js`
+- `src/ui/bottom-bar.js`
+- `src/core/state.js`
+- `src/features/tracks/tracks-controller.js`
+- `src/features/project/project-storage.js`
+
+### 8. トラックの追加・初期値を変えたい
 
 - `src/features/tracks/tracks-controller.js`
 - `src/features/tracks/instrument-map.js`
@@ -127,6 +153,7 @@
 - まず `src/main.js` で起動順を確認する
 - 次に対象機能の state と描画ファイルを読む
 - 最後に `src/features/project/project-storage.js` を見て、保存互換を壊していないか確認する
+- 全体エディタ起点の変更は `src/editors/preview-editor.js` と `src/ui/bottom-bar.js` をセットで読むと早い
 
 ## 更新ルール
 
