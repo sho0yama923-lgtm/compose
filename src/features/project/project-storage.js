@@ -233,6 +233,7 @@ export function saveState() {
             nextId: appState.nextId,
             currentMeasure: appState.currentMeasure,
             activeTrackId: appState.activeTrackId,
+            lastTouchedTrackId: appState.lastTouchedTrackId,
             drumHintDismissed: appState.drumHintDismissed,
             chordHintDismissed: appState.chordHintDismissed,
             melodicHintDismissed: appState.melodicHintDismissed,
@@ -277,6 +278,7 @@ function restoreFromData(data) {
     appState.nextId         = data.nextId         ?? 0;
     appState.currentMeasure = data.currentMeasure ?? 0;
     appState.activeTrackId  = data.activeTrackId  ?? null;
+    appState.lastTouchedTrackId = data.lastTouchedTrackId ?? data.activeTrackId ?? null;
     appState.playheadStep = null;
     appState.isPlaying = false;
     appState.playRangeStartMeasure = null;
@@ -328,6 +330,9 @@ function restoreFromData(data) {
     );
     if (!appState.tracks.some(t => t.id === appState.activeTrackId)) {
         appState.activeTrackId = appState.tracks[0]?.id ?? null;
+    }
+    if (!appState.tracks.some(t => t.id === appState.lastTouchedTrackId)) {
+        appState.lastTouchedTrackId = appState.activeTrackId;
     }
 
     if (data.bpm) {

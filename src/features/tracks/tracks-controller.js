@@ -10,6 +10,7 @@ import { setTopbarTitle } from '../../ui/topbar.js';
 // -------------------------------------------------------
 export function selectTrack(id) {
     appState.activeTrackId = id;
+    appState.lastTouchedTrackId = id;
     appState.previewMode = false;
     callbacks.renderEditor();
     callbacks.renderSidebar();
@@ -32,6 +33,9 @@ export function deleteTrack(id) {
             ? INST_LABEL[appState.tracks.find(t => t.id === appState.activeTrackId).instrument]
             : '作曲ツール';
         setTopbarTitle(title);
+    }
+    if (appState.lastTouchedTrackId === id) {
+        appState.lastTouchedTrackId = appState.activeTrackId ?? appState.tracks[appState.tracks.length - 1]?.id ?? null;
     }
     callbacks.renderSidebar();
     callbacks.renderEditor();

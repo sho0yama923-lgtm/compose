@@ -7,6 +7,7 @@ export const appState = {
     tracks: [],
     nextId: 0,
     activeTrackId: null,
+    lastTouchedTrackId: null,
     numMeasures: 4,
     currentMeasure: 0,
     playheadStep: null,

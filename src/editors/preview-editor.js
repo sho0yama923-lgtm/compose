@@ -416,6 +416,7 @@ function startRepeatFlow(trackId) {
 }
 
 function handleRepeatStartRail(trackId) {
+    appState.lastTouchedTrackId = trackId;
     const repeatState = getRepeatState(trackId);
     if (repeatState && repeatState.sourceStartMeasure !== null) {
         const track = appState.tracks.find((item) => item.id === trackId);
@@ -433,6 +434,7 @@ function handleRepeatStartRail(trackId) {
 }
 
 function handleRepeatEndRail(trackId) {
+    appState.lastTouchedTrackId = trackId;
     const repeatState = getRepeatState(trackId);
     if (!repeatState || repeatState.sourceStartMeasure === null) return;
     if (repeatState.sourceEndMeasure === null) {
@@ -541,6 +543,7 @@ function shouldShowRepeatButton(trackId) {
 }
 
 function handleRepeatButton(track) {
+    appState.lastTouchedTrackId = track.id;
     const repeatState = getRepeatState(track.id);
     if (!repeatState) return;
     if (isRepeatAppendReady(track.id)) {

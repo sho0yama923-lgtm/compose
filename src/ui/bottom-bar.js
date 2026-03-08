@@ -153,29 +153,45 @@ function appendPreviewRangeHighlights(seekWrap) {
         );
     }
 
-    Object.values(appState.repeatStates || {}).forEach((repeatState) => {
-        if (
-            repeatState.sourceStartMeasure === null
-            || repeatState.sourceEndMeasure === null
-        ) {
-            return;
-        }
-        const sourceStart = repeatState.sourceStartMeasure;
-        const sourceEnd = repeatState.sourceEndMeasure;
-        const targetEnd = Math.max(sourceEnd, repeatState.targetEndMeasure ?? sourceEnd);
-        appendMeasureHighlight(
-            seekWrap,
-            'repeat',
-            sourceStart,
-            Math.min(appState.numMeasures - 1, targetEnd)
-        );
-        appendMeasureHighlight(
-            seekWrap,
-            'source',
-            sourceStart,
-            Math.min(appState.numMeasures - 1, sourceEnd)
-        );
-    });
+    const repeatTrackId = getSeekRepeatTrackId();
+    if (repeatTrackId === null) return;
+
+    const repeatState = appState.repeatStates?.[repeatTrackId];
+    if (
+        !repeatState
+        || repeatState.sourceStartMeasure === null
+        || repeatState.sourceEndMeasure === null
+    ) {
+        return;
+    }
+
+    const sourceStart = repeatState.sourceStartMeasure;
+    const sourceEnd = repeatState.sourceEndMeasure;
+    const targetEnd = Math.max(sourceEnd, repeatState.targetEndMeasure ?? sourceEnd);
+    appendMeasureHighlight(
+        seekWrap,
+        'repeat',
+        sourceStart,
+        Math.min(appState.numMeasures - 1, targetEnd)
+    );
+    appendMeasureHighlight(
+        seekWrap,
+        'source',
+        sourceStart,
+        Math.min(appState.numMeasures - 1, sourceEnd)
+    );
+}
+
+function getSeekRepeatTrackId() {
+    if (!appState.previewMode && appState.activeTrackId !== null) {
+        return appState.activeTrackId;
+    }
+
+    if (appState.lastTouchedTrackId !== null) {
+        return appState.lastTouchedTrackId;
+    }
+
+    return appState.activeTrackId;
 }
 
 function appendMeasureHighlight(seekWrap, className, startMeasure, endMeasure) {
