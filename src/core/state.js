@@ -20,12 +20,7 @@ export const appState = {
     previewRangeStartMeasure: null,
     previewRangeEndMeasure: null,
     clipboard: null,
-    repeatActionTrackId: null,
-    repeatSourceStartMeasure: null,
-    repeatSourceEndMeasure: null,
-    repeatTargetEndMeasure: null,
-    repeatModeStep: null,
-    repeatRestoreMeasures: {},
+    repeatStates: {},
     chordDrumSheetOpen: false,
     drumHintDismissed: false,
     chordHintDismissed: false,
@@ -76,13 +71,13 @@ export function clearPreviewCopyState() {
     appState.previewRangeEndMeasure = null;
 }
 
-export function clearRepeatState() {
-    appState.repeatActionTrackId = null;
-    appState.repeatSourceStartMeasure = null;
-    appState.repeatSourceEndMeasure = null;
-    appState.repeatTargetEndMeasure = null;
-    appState.repeatModeStep = null;
-    appState.repeatRestoreMeasures = {};
+export function clearRepeatState(trackId = null) {
+    if (trackId === null || trackId === undefined) {
+        appState.repeatStates = {};
+        return;
+    }
+    if (!appState.repeatStates) return;
+    delete appState.repeatStates[trackId];
 }
 
 // 循環依存を回避するためのコールバック登録

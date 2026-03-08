@@ -10,7 +10,7 @@ import {
 } from '../core/state.js';
 import { INST_TYPE, INST_LABEL } from '../features/tracks/instrument-map.js';
 import { CHORD_ROOTS, CHROMATIC, ROOT_COLORS, DURATION_CELLS, SCALE_TYPES } from '../core/constants.js';
-import { addMeasure, copyTrackMeasureRange, pasteTrackMeasureRange, repeatTrackMeasureRange, selectTrack } from '../features/tracks/tracks-controller.js';
+import { copyTrackMeasureRange, pasteTrackMeasureRange, repeatTrackMeasureRange, selectTrack } from '../features/tracks/tracks-controller.js';
 import { isStepOn, isStepHead } from '../core/duration.js';
 import { getMeasureStart } from '../core/rhythm-grid.js';
 
@@ -54,7 +54,6 @@ export function renderPreview(containerEl) {
                 closePreviewActions(true);
                 return;
             }
-            clearRepeatState();
             selectTrack(track.id);
         });
 
@@ -308,7 +307,6 @@ function attachPreviewCardLongPress(cardEl, trackId) {
             appState.previewActionTrackId = trackId;
             appState.previewActionMenuOpen = true;
             clearPreviewCopyState();
-            clearRepeatState();
             callbacks.renderEditor?.();
         }, LONG_PRESS_MS);
     });
@@ -408,109 +406,134 @@ function startRepeatFlow(trackId) {
     appState.previewActionTrackId = null;
     appState.previewActionMenuOpen = false;
     clearPreviewCopyState();
-    appState.repeatActionTrackId = trackId;
-    appState.repeatSourceStartMeasure = appState.currentMeasure;
-    appState.repeatSourceEndMeasure = null;
-    appState.repeatTargetEndMeasure = null;
-    appState.repeatModeStep = 'source-end';
-    appState.repeatRestoreMeasures = {};
+    const repeatState = ensureRepeatState(trackId);
+    repeatState.sourceStartMeasure = appState.currentMeasure;
+    repeatState.sourceEndMeasure = null;
+    repeatState.targetEndMeasure = null;
+    repeatState.modeStep = 'source-end';
+    repeatState.restoreMeasures = {};
+    repeatState.sourceSnapshot = null;
 }
 
 function handleRepeatStartRail(trackId) {
-    if (appState.repeatActionTrackId === trackId && appState.repeatSourceStartMeasure !== null) {
+    const repeatState = getRepeatState(trackId);
+    if (repeatState && repeatState.sourceStartMeasure !== null) {
         const track = appState.tracks.find((item) => item.id === trackId);
         if (track) {
-            restoreRepeatedMeasuresFrom(track, (appState.repeatSourceEndMeasure ?? appState.currentMeasure) + 1);
+            restoreRepeatedMeasuresFrom(
+                track,
+                repeatState,
+                (repeatState.sourceEndMeasure ?? appState.currentMeasure) + 1
+            );
         }
-        clearRepeatState();
+        clearRepeatState(trackId);
         return;
     }
     startRepeatFlow(trackId);
 }
 
 function handleRepeatEndRail(trackId) {
-    if (appState.repeatActionTrackId !== trackId || appState.repeatSourceStartMeasure === null) return;
-    if (appState.repeatSourceEndMeasure === null) {
+    const repeatState = getRepeatState(trackId);
+    if (!repeatState || repeatState.sourceStartMeasure === null) return;
+    if (repeatState.sourceEndMeasure === null) {
         finalizeRepeatSource(trackId);
         return;
     }
     const track = appState.tracks.find((item) => item.id === trackId);
     if (track) {
-        restoreRepeatedMeasuresFrom(track, appState.repeatSourceEndMeasure + 1);
+        restoreRepeatedMeasuresFrom(track, repeatState, repeatState.sourceEndMeasure + 1);
     }
-    appState.repeatSourceEndMeasure = null;
-    appState.repeatTargetEndMeasure = null;
-    appState.repeatModeStep = 'source-end';
+    repeatState.sourceEndMeasure = null;
+    repeatState.targetEndMeasure = null;
+    repeatState.modeStep = 'source-end';
+    repeatState.sourceSnapshot = null;
 }
 
 function finalizeRepeatSource(trackId) {
-    if (appState.repeatActionTrackId !== trackId || appState.repeatSourceStartMeasure === null) return;
-    const sourceStart = appState.repeatSourceStartMeasure;
+    const repeatState = getRepeatState(trackId);
+    if (!repeatState || repeatState.sourceStartMeasure === null) return;
+    const track = appState.tracks.find((item) => item.id === trackId);
+    const sourceStart = repeatState.sourceStartMeasure;
     const sourceEnd = Math.max(sourceStart, appState.currentMeasure);
-    appState.repeatSourceEndMeasure = sourceEnd;
-    appState.repeatTargetEndMeasure = sourceEnd;
-    appState.repeatModeStep = 'ready';
+    repeatState.sourceEndMeasure = sourceEnd;
+    repeatState.targetEndMeasure = sourceEnd;
+    repeatState.modeStep = 'ready';
+    repeatState.sourceSnapshot = track
+        ? copyTrackMeasureRange(track, sourceStart, sourceEnd)
+        : null;
 }
 
 function extendRepeatByOneMeasure(track) {
     if (!isRepeatAppendReady(track.id)) return;
-    const nextEnd = getRepeatPendingMeasure();
+    const repeatState = getRepeatState(track.id);
+    if (!repeatState) return;
+    const nextEnd = getRepeatPendingMeasure(repeatState);
     if (nextEnd === null) return;
-    saveRepeatMeasureSnapshot(track, nextEnd);
+    saveRepeatMeasureSnapshot(track, repeatState, nextEnd);
     repeatTrackMeasureRange(
         track,
-        appState.repeatSourceStartMeasure,
-        appState.repeatSourceEndMeasure,
+        repeatState.sourceStartMeasure,
+        repeatState.sourceEndMeasure,
         nextEnd
     );
-    appState.repeatTargetEndMeasure = nextEnd;
+    repeatState.targetEndMeasure = nextEnd;
+    repeatState.sourceSnapshot = copyTrackMeasureRange(
+        track,
+        repeatState.sourceStartMeasure,
+        repeatState.sourceEndMeasure
+    );
 }
 
 function shouldShowRepeatEndRail(trackId) {
-    if (appState.repeatActionTrackId !== trackId || appState.repeatSourceStartMeasure === null) return false;
-    if (appState.repeatSourceEndMeasure !== null && appState.currentMeasure !== appState.repeatSourceEndMeasure) return false;
-    const endMeasure = appState.repeatSourceEndMeasure === null
-        ? Math.max(appState.repeatSourceStartMeasure, appState.currentMeasure)
-        : appState.repeatSourceEndMeasure;
+    const repeatState = getRepeatState(trackId);
+    if (!repeatState || repeatState.sourceStartMeasure === null) return false;
+    if (repeatState.sourceEndMeasure !== null && appState.currentMeasure !== repeatState.sourceEndMeasure) return false;
+    const endMeasure = repeatState.sourceEndMeasure === null
+        ? Math.max(repeatState.sourceStartMeasure, appState.currentMeasure)
+        : repeatState.sourceEndMeasure;
     return appState.currentMeasure === endMeasure;
 }
 
 function shouldShowRepeatStartRail(trackId) {
-    if (appState.repeatActionTrackId === null) return true;
-    return appState.repeatActionTrackId === trackId
-        && appState.repeatSourceStartMeasure !== null
-        && appState.currentMeasure === appState.repeatSourceStartMeasure;
+    const repeatState = getRepeatState(trackId);
+    if (!repeatState || repeatState.sourceStartMeasure === null) return true;
+    return appState.currentMeasure === repeatState.sourceStartMeasure;
 }
 
 function isRepeatReady(trackId) {
-    return appState.repeatActionTrackId === trackId
-        && appState.repeatSourceStartMeasure !== null
-        && appState.repeatSourceEndMeasure !== null
-        && appState.repeatModeStep === 'ready';
+    const repeatState = getRepeatState(trackId);
+    return Boolean(
+        repeatState
+        && repeatState.sourceStartMeasure !== null
+        && repeatState.sourceEndMeasure !== null
+        && repeatState.modeStep === 'ready'
+    );
 }
 
 function isRepeatAppendReady(trackId) {
-    const pendingMeasure = getRepeatPendingMeasure();
+    const repeatState = getRepeatState(trackId);
+    const pendingMeasure = getRepeatPendingMeasure(repeatState);
     return isRepeatReady(trackId)
         && pendingMeasure !== null
-        && appState.repeatActionTrackId === trackId
         && appState.currentMeasure === pendingMeasure;
 }
 
 function isRepeatClearReady(trackId) {
-    if (!isRepeatReady(trackId) || appState.repeatActionTrackId !== trackId) return false;
-    const sourceEnd = appState.repeatSourceEndMeasure;
-    const targetEnd = appState.repeatTargetEndMeasure;
+    const repeatState = getRepeatState(trackId);
+    if (!isRepeatReady(trackId) || !repeatState) return false;
+    const sourceEnd = repeatState.sourceEndMeasure;
+    const targetEnd = repeatState.targetEndMeasure;
     if (sourceEnd === null || targetEnd === null || targetEnd <= sourceEnd) return false;
     return appState.currentMeasure > sourceEnd && appState.currentMeasure <= targetEnd;
 }
 
 function isRepeatRailActive(trackId, side) {
-    if (appState.repeatActionTrackId !== trackId || appState.repeatSourceStartMeasure === null) return false;
+    const repeatState = getRepeatState(trackId);
+    if (!repeatState || repeatState.sourceStartMeasure === null) return false;
     if (side === 'start') {
-        return appState.currentMeasure === appState.repeatSourceStartMeasure;
+        return appState.currentMeasure === repeatState.sourceStartMeasure;
     }
-    return appState.repeatSourceEndMeasure !== null && shouldShowRepeatEndRail(trackId);
+    return repeatState.sourceEndMeasure !== null && shouldShowRepeatEndRail(trackId);
 }
 
 function shouldShowRepeatButton(trackId) {
@@ -518,38 +541,40 @@ function shouldShowRepeatButton(trackId) {
 }
 
 function handleRepeatButton(track) {
+    const repeatState = getRepeatState(track.id);
+    if (!repeatState) return;
     if (isRepeatAppendReady(track.id)) {
         extendRepeatByOneMeasure(track);
         return;
     }
     if (isRepeatClearReady(track.id)) {
-        restoreRepeatedMeasuresFrom(track, appState.currentMeasure);
+        restoreRepeatedMeasuresFrom(track, repeatState, appState.currentMeasure);
     }
 }
 
-function saveRepeatMeasureSnapshot(track, measure) {
+function saveRepeatMeasureSnapshot(track, repeatState, measure) {
     if (measure === null) return;
-    if (!appState.repeatRestoreMeasures) {
-        appState.repeatRestoreMeasures = {};
+    if (!repeatState.restoreMeasures) {
+        repeatState.restoreMeasures = {};
     }
-    if (appState.repeatRestoreMeasures[measure]) return;
-    appState.repeatRestoreMeasures[measure] = copyTrackMeasureRange(track, measure, measure);
+    if (repeatState.restoreMeasures[measure]) return;
+    repeatState.restoreMeasures[measure] = copyTrackMeasureRange(track, measure, measure);
 }
 
-function restoreRepeatedMeasuresFrom(track, startMeasure) {
-    const sourceEnd = appState.repeatSourceEndMeasure;
-    const targetEnd = appState.repeatTargetEndMeasure;
+function restoreRepeatedMeasuresFrom(track, repeatState, startMeasure) {
+    const sourceEnd = repeatState.sourceEndMeasure;
+    const targetEnd = repeatState.targetEndMeasure;
     if (sourceEnd === null || targetEnd === null) return;
     const restoreStart = Math.max(sourceEnd + 1, startMeasure);
     if (restoreStart > targetEnd) return;
     for (let measure = restoreStart; measure <= targetEnd; measure++) {
-        const clipboard = appState.repeatRestoreMeasures?.[measure];
+        const clipboard = repeatState.restoreMeasures?.[measure];
         if (clipboard) {
             pasteTrackMeasureRange(track, measure, clipboard);
-            delete appState.repeatRestoreMeasures[measure];
+            delete repeatState.restoreMeasures[measure];
         }
     }
-    appState.repeatTargetEndMeasure = restoreStart - 1;
+    repeatState.targetEndMeasure = restoreStart - 1;
 }
 
 function getRepeatCardStateClass(trackId) {
@@ -563,30 +588,42 @@ function getRepeatGridStateClass(trackId) {
 }
 
 function getRepeatCardTone(trackId) {
-    if (appState.repeatActionTrackId !== trackId || appState.repeatSourceStartMeasure === null) return '';
-    if (appState.repeatSourceEndMeasure === null) return '';
+    const repeatState = getRepeatState(trackId);
+    if (!repeatState || repeatState.sourceStartMeasure === null || repeatState.sourceEndMeasure === null) return '';
     const measure = appState.currentMeasure;
-    const sourceStart = appState.repeatSourceStartMeasure;
-    const sourceEnd = appState.repeatSourceEndMeasure;
-    const targetEnd = Math.max(sourceEnd, appState.repeatTargetEndMeasure ?? sourceEnd);
+    const sourceStart = repeatState.sourceStartMeasure;
+    const sourceEnd = repeatState.sourceEndMeasure;
+    const targetEnd = Math.max(sourceEnd, repeatState.targetEndMeasure ?? sourceEnd);
 
     if (measure >= sourceStart && measure <= sourceEnd) return 'repeat-source';
     if (measure > sourceEnd && measure <= targetEnd) return 'repeat-target';
     return '';
 }
 
-function getRepeatPendingMeasure() {
-    if (appState.repeatSourceEndMeasure === null) return null;
-    return Math.max(appState.repeatSourceEndMeasure, appState.repeatTargetEndMeasure ?? appState.repeatSourceEndMeasure) + 1;
+function getRepeatPendingMeasure(repeatState) {
+    if (!repeatState || repeatState.sourceEndMeasure === null) return null;
+    return Math.max(repeatState.sourceEndMeasure, repeatState.targetEndMeasure ?? repeatState.sourceEndMeasure) + 1;
 }
 
-function moveToRepeatPendingMeasure() {
-    const pendingMeasure = getRepeatPendingMeasure();
-    if (pendingMeasure === null) return;
-    while (appState.numMeasures <= pendingMeasure) {
-        addMeasure();
+function getRepeatState(trackId) {
+    return appState.repeatStates?.[trackId] ?? null;
+}
+
+function ensureRepeatState(trackId) {
+    if (!appState.repeatStates) {
+        appState.repeatStates = {};
     }
-    appState.currentMeasure = pendingMeasure;
+    if (!appState.repeatStates[trackId]) {
+        appState.repeatStates[trackId] = {
+            sourceStartMeasure: null,
+            sourceEndMeasure: null,
+            targetEndMeasure: null,
+            modeStep: null,
+            restoreMeasures: {},
+            sourceSnapshot: null,
+        };
+    }
+    return appState.repeatStates[trackId];
 }
 
 function buildSongSettingsCard() {

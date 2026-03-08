@@ -297,6 +297,61 @@ export function repeatTrackMeasureRange(track, sourceStartMeasure, sourceEndMeas
     });
 }
 
+export function syncTrackRepeats() {
+    if (!appState.repeatStates) return false;
+    let changed = false;
+
+    Object.keys(appState.repeatStates).forEach((trackIdKey) => {
+        const trackId = Number(trackIdKey);
+        const track = appState.tracks.find((item) => item.id === trackId);
+        const repeatState = appState.repeatStates[trackIdKey];
+
+        if (!track) {
+            delete appState.repeatStates[trackIdKey];
+            return;
+        }
+
+        if (syncTrackRepeatState(track, repeatState)) {
+            changed = true;
+        }
+    });
+
+    return changed;
+}
+
+function syncTrackRepeatState(track, repeatState) {
+    if (!repeatState
+        || repeatState.sourceStartMeasure === null
+        || repeatState.sourceEndMeasure === null) {
+        return false;
+    }
+
+    const sourceStart = repeatState.sourceStartMeasure;
+    const sourceEnd = repeatState.sourceEndMeasure;
+    const targetEnd = repeatState.targetEndMeasure;
+    const sourceSnapshot = copyTrackMeasureRange(track, sourceStart, sourceEnd);
+
+    if (targetEnd === null || targetEnd <= sourceEnd) {
+        repeatState.sourceSnapshot = sourceSnapshot;
+        return false;
+    }
+
+    if (isSameClipboardSnapshot(sourceSnapshot, repeatState.sourceSnapshot)) {
+        return false;
+    }
+
+    repeatTrackMeasureRange(track, sourceStart, sourceEnd, targetEnd);
+    repeatState.sourceSnapshot = sourceSnapshot;
+    return true;
+}
+
+function isSameClipboardSnapshot(a, b) {
+    if (!a || !b) return false;
+    return a.measureLength === b.measureLength
+        && a.trackType === b.trackType
+        && JSON.stringify(a.payload) === JSON.stringify(b.payload);
+}
+
 function overwriteRepeatedSegment(target, startStep, targetLength, source, transform = (value) => value) {
     const safeSource = Array.isArray(source) && source.length > 0
         ? source

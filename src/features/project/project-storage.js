@@ -5,7 +5,7 @@ import { INST_TYPE, OCTAVE_DEFAULT_BASE, DRUM_ROWS } from '../tracks/instrument-
 import { CHROMATIC, DURATION_CELLS } from '../../core/constants.js';
 
 const STORAGE_KEY = 'compose_save';
-const DATA_VERSION = 6;
+const DATA_VERSION = 7;
 const VALID_DURATIONS = new Set(Object.keys(DURATION_CELLS));
 const VALID_SCALE_TYPES = new Set(['major', 'harmonic_minor', 'melodic_minor']);
 
@@ -176,6 +176,51 @@ function normalizeTrack(track, length) {
     return track;
 }
 
+function serializeRepeatStates() {
+    return Object.fromEntries(
+        Object.entries(appState.repeatStates || {}).map(([trackId, repeatState]) => [
+            trackId,
+            {
+                sourceStartMeasure: repeatState.sourceStartMeasure,
+                sourceEndMeasure: repeatState.sourceEndMeasure,
+                targetEndMeasure: repeatState.targetEndMeasure,
+                modeStep: repeatState.modeStep ?? null,
+                restoreMeasures: repeatState.restoreMeasures || {},
+                sourceSnapshot: repeatState.sourceSnapshot || null,
+            },
+        ])
+    );
+}
+
+function normalizeRepeatStates(repeatStates, validTrackIds) {
+    const trackIdSet = new Set(validTrackIds);
+    if (!repeatStates || typeof repeatStates !== 'object') return {};
+
+    return Object.fromEntries(
+        Object.entries(repeatStates)
+            .filter(([trackId]) => trackIdSet.has(Number(trackId)))
+            .map(([trackId, repeatState]) => [
+                trackId,
+                {
+                    sourceStartMeasure: typeof repeatState?.sourceStartMeasure === 'number'
+                        ? repeatState.sourceStartMeasure
+                        : null,
+                    sourceEndMeasure: typeof repeatState?.sourceEndMeasure === 'number'
+                        ? repeatState.sourceEndMeasure
+                        : null,
+                    targetEndMeasure: typeof repeatState?.targetEndMeasure === 'number'
+                        ? repeatState.targetEndMeasure
+                        : null,
+                    modeStep: repeatState?.modeStep ?? null,
+                    restoreMeasures: repeatState?.restoreMeasures && typeof repeatState.restoreMeasures === 'object'
+                        ? repeatState.restoreMeasures
+                        : {},
+                    sourceSnapshot: repeatState?.sourceSnapshot ?? null,
+                },
+            ])
+    );
+}
+
 // -------------------------------------------------------
 // 保存
 // -------------------------------------------------------
@@ -200,6 +245,7 @@ export function saveState() {
             lastTripletDuration: appState.lastTripletDuration,
             dottedMode: appState.dottedMode,
             beatConfig: appState.beatConfig,
+            repeatStates: serializeRepeatStates(),
             tracks: appState.tracks.map(t => {
                 const clone = { ...t };
                 // Set → Array 変換
@@ -276,6 +322,10 @@ function restoreFromData(data) {
 
     const length = totalSteps();
     appState.tracks = data.tracks.map(t => normalizeTrack({ ...t }, length));
+    appState.repeatStates = normalizeRepeatStates(
+        data.repeatStates,
+        appState.tracks.map((track) => track.id)
+    );
     if (!appState.tracks.some(t => t.id === appState.activeTrackId)) {
         appState.activeTrackId = appState.tracks[0]?.id ?? null;
     }

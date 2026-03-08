@@ -2,6 +2,7 @@
 
 import { appState, callbacks } from '../core/state.js';
 import { INST_LABEL, INST_TYPE } from '../features/tracks/instrument-map.js';
+import { syncTrackRepeats } from '../features/tracks/tracks-controller.js';
 import { renderDrumEditor } from './drum-editor.js';
 import { renderMelodicEditor } from './melodic-editor.js';
 import { renderChordEditor } from './chord-editor.js';
@@ -13,6 +14,7 @@ export function renderEditor() {
     const emptyState = document.getElementById('emptyState');
     const editorEl = document.getElementById('trackEditor');
     editorEl.classList.remove('melodic-track-editor', 'drum-track-editor', 'chord-track-editor', 'preview-editor');
+    syncTrackRepeats();
 
     if (appState.tracks.length === 0) {
         emptyState.style.display = '';

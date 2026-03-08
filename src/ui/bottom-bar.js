@@ -153,14 +153,16 @@ function appendPreviewRangeHighlights(seekWrap) {
         );
     }
 
-    if (
-        appState.repeatActionTrackId !== null
-        && appState.repeatSourceStartMeasure !== null
-        && appState.repeatSourceEndMeasure !== null
-    ) {
-        const sourceStart = appState.repeatSourceStartMeasure;
-        const sourceEnd = appState.repeatSourceEndMeasure;
-        const targetEnd = Math.max(sourceEnd, appState.repeatTargetEndMeasure ?? sourceEnd);
+    Object.values(appState.repeatStates || {}).forEach((repeatState) => {
+        if (
+            repeatState.sourceStartMeasure === null
+            || repeatState.sourceEndMeasure === null
+        ) {
+            return;
+        }
+        const sourceStart = repeatState.sourceStartMeasure;
+        const sourceEnd = repeatState.sourceEndMeasure;
+        const targetEnd = Math.max(sourceEnd, repeatState.targetEndMeasure ?? sourceEnd);
         appendMeasureHighlight(
             seekWrap,
             'repeat',
@@ -173,7 +175,7 @@ function appendPreviewRangeHighlights(seekWrap) {
             sourceStart,
             Math.min(appState.numMeasures - 1, sourceEnd)
         );
-    }
+    });
 }
 
 function appendMeasureHighlight(seekWrap, className, startMeasure, endMeasure) {
