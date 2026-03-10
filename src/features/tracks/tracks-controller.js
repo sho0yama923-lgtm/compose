@@ -1,7 +1,7 @@
 // track-manager.js — トラック管理（追加・削除・選択）+ 小節管理
 
 import { appState, STEPS_PER_MEASURE, totalSteps, callbacks, clampPlayRangeMeasures } from '../../core/state.js';
-import { INST_TYPE, OCTAVE_DEFAULT_BASE, DRUM_ROWS, INST_LABEL } from './instrument-map.js';
+import { INST_TYPE, OCTAVE_DEFAULT_BASE, DRUM_ROWS, INST_LABEL, createDefaultTrackEq, createDefaultTrackTone } from './instrument-map.js';
 import { CHROMATIC } from '../../core/constants.js';
 import { setTopbarTitle } from '../../ui/topbar.js';
 
@@ -54,6 +54,8 @@ export function addTrack(instrument) {
             id, instrument,
             muted: false,
             volume: 1,
+            eq: createDefaultTrackEq(instrument),
+            tone: createDefaultTrackTone(),
             rows: DRUM_ROWS.map(r => ({ label: r.label, note: r.note, steps: Array(ts).fill(null) })),
         };
     } else if (INST_TYPE[instrument] === 'chord') {
@@ -61,6 +63,8 @@ export function addTrack(instrument) {
             id, instrument,
             muted: false,
             volume: 1,
+            eq: createDefaultTrackEq(instrument),
+            tone: createDefaultTrackTone(),
             chordMap:        Array(ts).fill(null),
             soundSteps:      Array(ts).fill(null),
             selectedChordRoot:   'C',
@@ -80,6 +84,8 @@ export function addTrack(instrument) {
             id, instrument,
             muted: false,
             volume: 1,
+            eq: createDefaultTrackEq(instrument),
+            tone: createDefaultTrackTone(),
             viewBase,
             activeOctave: viewBase + 1,
             stepsMap,

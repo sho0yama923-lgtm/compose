@@ -1,11 +1,10 @@
 ﻿import { appState, STEPS_PER_BEAT, STEPS_PER_MEASURE, callbacks } from '../core/state.js';
-import { CHROMATIC, BLACK_KEYS, DURATION_CELLS } from '../core/constants.js';
+import { CHROMATIC, BLACK_KEYS, DURATION_CELLS, ROOT_COLORS } from '../core/constants.js';
 import { toggleStep, isStepHead, isStepTie } from '../core/duration.js';
 import { renderDurationToolbar, getCurrentDuration } from './duration-toolbar.js';
 import { getChordPitchClasses, getEffectiveChordAtStep, getScalePitchClasses } from '../core/music-theory.js';
 import {
     getEditorCells,
-    getEditorGridColumns,
     getEditorGridLineGroup,
     getMeasureStart,
 } from '../core/rhythm-grid.js';
@@ -15,14 +14,19 @@ export function renderMelodicEditor(track, editorEl) {
     const offset = getMeasureStart(measureIndex);
     const maxIndex = offset + STEPS_PER_MEASURE;
     const cells = getEditorCells();
-    const columns = getEditorGridColumns();
     const majorGroup = getEditorGridLineGroup();
     const visibleOctaves = getVisibleOctaves(track.viewBase);
-    const scalePitchClasses = getScalePitchClasses(appState.songKeyRoot, appState.songScaleType);
-    const chordPitchClassesByBeat = Array.from({ length: 4 }, (_, beat) => {
-        const chord = getEffectiveChordAtStep(offset + beat * STEPS_PER_BEAT, appState.tracks);
-        return chord ? getChordPitchClasses(chord.root, chord.type) : null;
-    });
+    const scalePitchClasses = getScalePitchClasses(
+        appState.songRoot,
+        appState.songHarmony,
+        appState.songScaleFamily
+    );
+    const chordsByBeat = Array.from({ length: 4 }, (_, beat) => (
+        getEffectiveChordAtStep(offset + beat * STEPS_PER_BEAT, appState.tracks)
+    ));
+    const chordPitchClassesByBeat = chordsByBeat.map((chord) => (
+        chord ? getChordPitchClasses(chord.root, chord.type) : null
+    ));
     const header = editorEl.querySelector('.editor-header');
     const topbarEl = document.createElement('section');
     topbarEl.className = 'melody-topbar';
@@ -91,30 +95,6 @@ export function renderMelodicEditor(track, editorEl) {
     contentEl.style.setProperty('--timeline-columns', String(cells.length));
     contentEl.style.setProperty('--timeline-major', String(majorGroup));
 
-    const headerRowEl = document.createElement('div');
-    headerRowEl.className = 'melody-roll-header';
-    applyLaneLayout(headerRowEl);
-
-    const keySpacerEl = document.createElement('div');
-    keySpacerEl.className = 'melody-key-header-spacer';
-    keySpacerEl.style.width = '28px';
-    keySpacerEl.style.minWidth = '28px';
-
-    const hdrEl = document.createElement('div');
-    hdrEl.className = 'melody-grid-header';
-    hdrEl.style.display = 'grid';
-    hdrEl.style.gridTemplateColumns = columns;
-    hdrEl.style.setProperty('--timeline-columns', String(cells.length));
-    hdrEl.style.setProperty('--timeline-major', String(majorGroup));
-    cells.forEach((cellInfo) => {
-        const cell = document.createElement('div');
-        cell.className = 'melody-grid-header-cell' + (cellInfo.slot === 0 ? ' beat' : '');
-        cell.textContent = cellInfo.slot === 0 ? String(cellInfo.beat + 1) : '';
-        hdrEl.appendChild(cell);
-    });
-    headerRowEl.append(keySpacerEl, hdrEl);
-    contentEl.appendChild(headerRowEl);
-
     visibleOctaves.forEach((octave) => {
         const dividerRowEl = document.createElement('div');
         dividerRowEl.className = 'melody-lane-divider';
@@ -126,9 +106,8 @@ export function renderMelodicEditor(track, editorEl) {
         keyDividerEl.style.width = '28px';
         keyDividerEl.style.minWidth = '28px';
 
-        const gridDividerEl = document.createElement('div');
-        gridDividerEl.className = 'melody-grid-octave-divider';
-        gridDividerEl.textContent = `Oct ${octave}`;
+        const gridDividerEl = buildChordHeaderStrip(chordsByBeat);
+        gridDividerEl.classList.add('melody-grid-octave-divider');
 
         dividerRowEl.append(keyDividerEl, gridDividerEl);
         contentEl.appendChild(dividerRowEl);
@@ -155,6 +134,7 @@ export function renderMelodicEditor(track, editorEl) {
             rowEl.classList.add(isScaleTone ? 'is-scale-tone' : 'is-non-scale-tone');
             rowEl.style.setProperty('--timeline-columns', String(cells.length));
             rowEl.style.setProperty('--timeline-major', String(majorGroup));
+            rowEl.dataset.noteName = noteName;
             rowEl.dataset.octave = String(octave);
             rowEl.addEventListener('click', (event) => {
                 const target = event.target;
@@ -250,6 +230,36 @@ function buildChordToneSegment(beat) {
     el.style.left = `${(beat * STEPS_PER_BEAT / STEPS_PER_MEASURE) * 100}%`;
     el.style.width = `${(STEPS_PER_BEAT / STEPS_PER_MEASURE) * 100}%`;
     return el;
+}
+
+function buildChordHeaderStrip(chordsByBeat) {
+    const headerEl = document.createElement('div');
+    headerEl.className = 'melody-chord-header';
+    headerEl.style.gridTemplateColumns = 'repeat(4, minmax(0, 1fr))';
+
+    chordsByBeat.forEach((chord, beat) => {
+        headerEl.appendChild(buildChordHeaderCell(chord, beat));
+    });
+
+    return headerEl;
+}
+
+function buildChordHeaderCell(chord, beat) {
+    const cellEl = document.createElement('div');
+    cellEl.className = 'melody-chord-header-cell' + (chord ? ' has-chord' : ' is-empty');
+    cellEl.dataset.beat = String(beat + 1);
+    const beatEl = document.createElement('span');
+    beatEl.className = 'melody-chord-header-beat';
+    beatEl.textContent = String(beat + 1);
+
+    const nameEl = document.createElement('span');
+    nameEl.className = 'melody-chord-header-name';
+    nameEl.textContent = chord ? `${chord.root}${chord.type}` : '—';
+    cellEl.append(beatEl, nameEl);
+    if (chord) {
+        cellEl.style.setProperty('--chord-accent', ROOT_COLORS[chord.root] ?? '#333');
+    }
+    return cellEl;
 }
 
 function bindMelodyScroll(track, scrollEl) {

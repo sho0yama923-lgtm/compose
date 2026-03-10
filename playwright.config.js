@@ -17,7 +17,7 @@ module.exports = defineConfig({
     video: 'retain-on-failure',
   },
   webServer: {
-    command: `PORT=${WEBKIT_DEV_PORT} python3 ./dev-server.py`,
+    command: `npm run dev -- --host 127.0.0.1 --port ${WEBKIT_DEV_PORT}`,
     url: `http://127.0.0.1:${WEBKIT_DEV_PORT}`,
     reuseExistingServer: !process.env.CI,
     stdout: 'pipe',

@@ -1,6 +1,6 @@
 # PROGRESS.md
 
-最終更新: 2026-03-10
+最終更新: 2026-03-11
 
 ## 進捗ルール
 
@@ -10,8 +10,24 @@
 
 ## 今回の整理内容
 
-- 曲全体の `Key / Scale` 設定を全体エディタへ移し、メロディ強調を `スケール音 / 非スケール音` 基準へ切り替えた
+- 曲全体の `Root / Harmony / Scale Family` 設定を全体エディタへ持ち、メロディ強調を `スケール音 / 非スケール音` 基準へ切り替えた
 - 全体エディタで各トラックの `発音ON/OFF` と `音量` を調整できるようにした
+- 全体エディタの各カードでは EQ を要約表示にし、編集は `音作り` シートへ集約した
+- `track.eq = { low, mid, high }` を保存/読込対象に追加した
+- EQ の初期値と `初期化` の戻り先を、`drums / bass / chord / melody` のカテゴリ別に分けた
+- 再生イベントへ `trackId` を流し、同じ楽器を複数トラックで使ってもトラックごとにEQが独立する再生チェーンへ変更した
+- トラックバスを `EQ3` から `low shelf / mid peaking / high shelf + compressor + limiter` へ変更し、EQ の効き方を自然寄りにした
+- `音作り` シートに `横軸=周波数 / 縦軸=dB` の EQ グラフを追加し、3 バンドの周波数と dB をドラッグで編集できるようにした
+- 全体エディタの各カードに `音作り` ボタンを追加し、`Gain / Mid Q` を含む詳細シートを開けるようにした
+- `音作り` シートに `Comp` コントロールを追加し、トラックバスのコンプレッサ量を1本のスライダーで調整できるようにした
+- `track.tone` を保存/読込対象に追加し、音作りシートの変更を再生チェーンへ即時反映するようにした
+- `songRoot / songHarmony / songScaleFamily` の3軸モデルへ移行し、旧 `songScaleType` 保存データは自動移行するようにした
+- `major/minor` と `pentatonic/blues/dorian/mixolydian` を組み合わせて解決する形へ整理し、`C M ペンタ` と `C m ペンタ` を別スケールとして扱えるようにした
+- `Scale Family` の候補は現在の `Harmony` に合うものだけを表示し、合わない組み合わせへ切り替わった時は `diatonic` へ戻すようにした
+- `diatonic / pentatonic / blues` の表示名は Harmony に応じて `メジャー / ナチュラルマイナー / メジャーペンタ / マイナーペンタ / メジャーブルース / マイナーブルース` へ出し分けるようにした
+- メロディエディタのスケール音強調は新しい 3 軸モデルに追従するようにした
+- メロディエディタの octave 区切り行の右側に、拍番号付きのコード帯を表示し、上部の拍ヘッダは廃止した
+- UI を増やさず音質を底上げするため、楽器別の hidden `trim / high-pass` と共有マスターバスの整音を追加した
 - `src/` ベース構成へ移行
   - `src/main.js`
   - `src/core/`
@@ -98,11 +114,6 @@
   - 全体エディタの `Scale` UI はタブからドロップダウンへ変更
   - メロディエディタのスケール音強調が新スケールでも効くようにする
   - 保存/読込で追加スケールを保持する
-- トラックEQを追加する
-  - 各トラックに `Low / Mid / High` の3バンドEQを追加
-  - UI は全体エディタの各カード内に置く
-  - `track.eq = { low: 0, mid: 0, high: 0 }` を保存対象にする
-  - 再生イベントに `trackId` を流し、トラック単位で独立したEQが効くよう再生チェーンを再構成する
 - メロディ連続ロールのスクロール初期位置をさらに自然にするか検討する
 - コード進行UIを拍単位からさらに初心者向けに簡略化するか検討する
 - CSSをセクション分割するか検討する
@@ -116,22 +127,9 @@
 - Scale UI の変更先
   - `src/editors/preview-editor.js`
   - `src/styles/editor.css`
-- EQ データ/UI の変更先
-  - `src/features/tracks/tracks-controller.js`
-  - `src/features/project/project-storage.js`
-  - `src/editors/preview-editor.js`
-  - `src/styles/editor.css`
-- 再生系の変更先
-  - `src/features/playback/playback-controller.js`
-  - `src/features/playback/scheduler.js`
-  - `src/features/tracks/instrument-map.js`
 - 受け入れ条件
   - `Scale` に 7 種が表示される
   - 新スケール選択時にメロディエディタの強調色が正しく変わる
-  - 各カードに `Low / Mid / High` が表示される
-  - EQ 値は保存/読込後も維持される
-  - 同じ楽器を複数トラックで使っても、トラックごとにEQが独立して効く
-  - Chord トラックと Piano トラックのEQが干渉しない
 
 ## 確認メモ
 

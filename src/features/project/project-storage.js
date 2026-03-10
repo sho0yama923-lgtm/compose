@@ -1,13 +1,19 @@
 // save-load.js — 自動保存(localStorage) + JSONエクスポート/インポート
 
 import { appState, callbacks, totalSteps, STEPS_PER_MEASURE, clearPreviewCopyState, clearRepeatState } from '../../core/state.js';
-import { INST_TYPE, OCTAVE_DEFAULT_BASE, DRUM_ROWS } from '../tracks/instrument-map.js';
-import { CHROMATIC, DURATION_CELLS } from '../../core/constants.js';
+import { INST_TYPE, OCTAVE_DEFAULT_BASE, DRUM_ROWS, normalizeTrackEq, normalizeTrackTone } from '../tracks/instrument-map.js';
+import {
+    CHROMATIC,
+    DURATION_CELLS,
+    DEFAULT_SONG_SETTINGS,
+    HARMONY_TYPE_MAP,
+    SCALE_FAMILY_MAP,
+    normalizeSongSettings,
+} from '../../core/constants.js';
 
 const STORAGE_KEY = 'compose_save';
-const DATA_VERSION = 7;
+const DATA_VERSION = 9;
 const VALID_DURATIONS = new Set(Object.keys(DURATION_CELLS));
-const VALID_SCALE_TYPES = new Set(['major', 'harmonic_minor', 'melodic_minor']);
 
 // -------------------------------------------------------
 // v1 → v2 マイグレーション: boolean → duration string
@@ -126,6 +132,8 @@ function normalizeTrack(track, length) {
     track.volume = typeof track.volume === 'number'
         ? Math.max(0, Math.min(1, track.volume))
         : 1;
+    track.eq = normalizeTrackEq(track.eq, track.instrument);
+    track.tone = normalizeTrackTone(track.tone);
 
     if (type === 'rhythm') {
         const rows = Array.isArray(track.rows) ? track.rows : DRUM_ROWS.map(r => ({ label: r.label, note: r.note, steps: [] }));
@@ -174,6 +182,35 @@ function normalizeTrack(track, length) {
     }
     track.stepsMap = stepsMap;
     return track;
+}
+
+function migrateLegacyScaleSelection(data) {
+    const root = data.songRoot ?? data.songKeyRoot ?? DEFAULT_SONG_SETTINGS.root;
+    const legacyScaleType = data.songScaleType;
+    if (SCALE_FAMILY_MAP[data.songScaleFamily] && HARMONY_TYPE_MAP[data.songHarmony]) {
+        return normalizeSongSettings(root, data.songHarmony, data.songScaleFamily);
+    }
+    switch (legacyScaleType) {
+        case 'major':
+            return normalizeSongSettings(root, 'major', 'diatonic');
+        case 'harmonic_minor':
+            return normalizeSongSettings(root, 'minor', 'harmonic');
+        case 'melodic_minor':
+            return normalizeSongSettings(root, 'minor', 'melodic');
+        case 'blues':
+            return normalizeSongSettings(root, 'minor', 'blues');
+        case 'dorian':
+            return normalizeSongSettings(root, 'minor', 'dorian');
+        case 'mixolydian':
+            return normalizeSongSettings(root, 'major', 'mixolydian');
+        case 'minor_pentatonic':
+            return normalizeSongSettings(root, 'minor', 'pentatonic');
+        default:
+            if (data.songKeyMode === 'minor') {
+                return normalizeSongSettings(root, 'minor', 'harmonic');
+            }
+            return normalizeSongSettings(root, DEFAULT_SONG_SETTINGS.harmony, DEFAULT_SONG_SETTINGS.scaleFamily);
+    }
 }
 
 function serializeRepeatStates() {
@@ -238,8 +275,9 @@ export function saveState() {
             chordHintDismissed: appState.chordHintDismissed,
             melodicHintDismissed: appState.melodicHintDismissed,
             previewHintDismissed: appState.previewHintDismissed,
-            songKeyRoot: appState.songKeyRoot,
-            songScaleType: appState.songScaleType,
+            songRoot: appState.songRoot,
+            songHarmony: appState.songHarmony,
+            songScaleFamily: appState.songScaleFamily,
             editorGridMode: appState.editorGridMode,
             selectedDuration: appState.selectedDuration,
             lastNormalDuration: appState.lastNormalDuration,
@@ -285,6 +323,7 @@ function restoreFromData(data) {
     appState.playRangeEndMeasure = null;
     appState.previewActionTrackId = null;
     appState.previewActionMenuOpen = false;
+    appState.previewToneTrackId = null;
     clearPreviewCopyState();
     appState.clipboard = null;
     clearRepeatState();
@@ -293,14 +332,10 @@ function restoreFromData(data) {
     appState.chordHintDismissed = data.chordHintDismissed === true;
     appState.melodicHintDismissed = data.melodicHintDismissed === true;
     appState.previewHintDismissed = data.previewHintDismissed === true;
-    appState.songKeyRoot = CHROMATIC.includes(data.songKeyRoot) ? data.songKeyRoot : 'C';
-    if (VALID_SCALE_TYPES.has(data.songScaleType)) {
-        appState.songScaleType = data.songScaleType;
-    } else if (data.songKeyMode === 'minor') {
-        appState.songScaleType = 'harmonic_minor';
-    } else {
-        appState.songScaleType = 'major';
-    }
+    const songSettings = migrateLegacyScaleSelection(data);
+    appState.songRoot = songSettings.root;
+    appState.songHarmony = songSettings.harmony;
+    appState.songScaleFamily = songSettings.scaleFamily;
     appState.editorGridMode = data.editorGridMode === 'triplet' ? 'triplet' : 'normal';
     appState.selectedDuration = VALID_DURATIONS.has(data.selectedDuration)
         ? data.selectedDuration

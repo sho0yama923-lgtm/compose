@@ -32,7 +32,13 @@ export function initPlayback() {
                     row.steps.forEach((val, i) => {
                         if (!isStepHead(val)) return;
                         score[i] = score[i] || [];
-                        score[i].push({ instrument: track.instrument, notes: row.note, duration: val, volume: trackVolume });
+                        score[i].push({
+                            trackId: track.id,
+                            instrument: track.instrument,
+                            notes: row.note,
+                            duration: val,
+                            volume: trackVolume,
+                        });
                     });
                 });
             } else if (INST_TYPE[track.instrument] === 'chord') {
@@ -43,7 +49,13 @@ export function initPlayback() {
                     if (isStepHead(dur) && currentChord) {
                         const notes = getChordNotes(currentChord.root, currentChord.type, currentChord.octave);
                         score[i] = score[i] || [];
-                        score[i].push({ instrument: 'piano', notes: notes.length === 1 ? notes[0] : notes, duration: dur, volume: trackVolume });
+                        score[i].push({
+                            trackId: track.id,
+                            instrument: 'piano',
+                            notes: notes.length === 1 ? notes[0] : notes,
+                            duration: dur,
+                            volume: trackVolume,
+                        });
                     }
                 }
             } else {
@@ -62,6 +74,7 @@ export function initPlayback() {
                     if (notes.length === 0) return;
                     score[i] = score[i] || [];
                     score[i].push({
+                        trackId: track.id,
                         instrument: track.instrument,
                         notes: notes.length === 1 ? notes[0] : notes,
                         duration: stepDurations[i] || '16n',
@@ -89,6 +102,7 @@ export function initPlayback() {
         setPlaybackButtonState();
         const started = await play(score, {
             bpm,
+            tracks: appState.tracks,
             beatConfig: appState.beatConfig,
             numMeasures: appState.numMeasures,
             startStep,

@@ -1,6 +1,6 @@
 // player.js
 // Tone.js はグローバル変数として使用（HTMLでCDN読み込み済み）
-import instruments from '../tracks/instrument-map.js';
+import { getTrackPlaybackInstrument, syncTrackPlaybackChains } from '../tracks/instrument-map.js';
 import { STEPS_PER_BEAT, STEPS_PER_MEASURE } from '../../core/state.js';
 
 // ==========================================================
@@ -27,6 +27,7 @@ let _part = null;
  *   @param {number}  options.bpm  - テンポ（デフォルト: 120）
  *   @param {boolean} options.loop - ループ再生（デフォルト: true）
  *   @param {Function} options.onStep - 再生位置コールバック
+ *   @param {Array}   options.tracks - 現在のトラック一覧
  *   @param {number}  options.numMeasures - 小節数
  *   @param {number}  options.startStep - 再生開始ステップ
  *   @param {number}  options.endStepExclusive - 再生終了ステップ（exclusive）
@@ -35,6 +36,7 @@ export async function play(score, {
     bpm = 120,
     loop = true,
     onStep,
+    tracks = [],
     numMeasures = 1,
     startStep = 0,
     endStepExclusive = score.length,
@@ -50,6 +52,7 @@ export async function play(score, {
     stop();
 
     Tone.Transport.bpm.value = bpm;
+    syncTrackPlaybackChains(tracks);
 
     const beatDur = Tone.Time('4n').toSeconds();
     const events = [];
@@ -70,8 +73,8 @@ export async function play(score, {
         const step = score[idx];
         if (!step) return;
 
-        step.forEach(({ instrument, notes, duration, volume }) => {
-            const inst = instruments[instrument];
+        step.forEach(({ trackId, instrument, notes, duration, volume }) => {
+            const inst = getTrackPlaybackInstrument(trackId, instrument);
             if (!inst || !inst.loaded) return;
 
             const noteArray = Array.isArray(notes) ? notes : [notes];

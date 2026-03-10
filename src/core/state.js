@@ -17,6 +17,7 @@ export const appState = {
     previewMode: false,
     previewActionTrackId: null,
     previewActionMenuOpen: false,
+    previewToneTrackId: null,
     previewScrollTop: 0,
     previewRangeMode: null,
     previewRangeStartMeasure: null,
@@ -28,8 +29,9 @@ export const appState = {
     chordHintDismissed: false,
     melodicHintDismissed: false,
     previewHintDismissed: false,
-    songKeyRoot: 'C',
-    songScaleType: 'major',
+    songRoot: 'C',
+    songHarmony: 'major',
+    songScaleFamily: 'diatonic',
     editorGridMode: 'normal',
     // デュレーション
     selectedDuration: '16n',   // ツールバーで選択中の音価
