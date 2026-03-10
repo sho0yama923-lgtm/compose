@@ -78,6 +78,7 @@ export function initPlayback() {
             endStepExclusive = (playRange.endMeasure + 1) * STEPS_PER_MEASURE;
             if (appState.currentMeasure !== playRange.startMeasure) {
                 appState.isPlaying = true;
+                syncPreviewScrollTop();
                 appState.currentMeasure = playRange.startMeasure;
                 callbacks.renderEditor();
                 appState.isPlaying = false;
@@ -98,6 +99,7 @@ export function initPlayback() {
 
                 // 小節が変わったら自動ページ送り
                 if (measure !== appState.currentMeasure) {
+                    syncPreviewScrollTop();
                     appState.currentMeasure = measure;
                     callbacks.renderEditor();
                 }
@@ -126,6 +128,12 @@ function updatePlayheadIndicators(globalStep) {
         barEl.style.display = 'block';
         barEl.style.left = `${(localStep / STEPS_PER_MEASURE) * 100}%`;
     });
+}
+
+function syncPreviewScrollTop() {
+    const previewWrap = document.querySelector('.preview-wrap');
+    if (!previewWrap) return;
+    appState.previewScrollTop = previewWrap.scrollTop;
 }
 
 function stopPlayback() {

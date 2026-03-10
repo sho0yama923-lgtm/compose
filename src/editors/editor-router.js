@@ -6,13 +6,14 @@ import { syncTrackRepeats } from '../features/tracks/tracks-controller.js';
 import { renderDrumEditor } from './drum-editor.js';
 import { renderMelodicEditor } from './melodic-editor.js';
 import { renderChordEditor } from './chord-editor.js';
-import { renderPreview } from './preview-editor.js';
+import { renderPreview, restorePreviewScroll } from './preview-editor.js';
 import { buildSeekBar } from '../ui/bottom-bar.js';
 import { setTopbarTitle, syncViewToggleButton } from '../ui/topbar.js';
 
 export function renderEditor() {
     const emptyState = document.getElementById('emptyState');
     const editorEl = document.getElementById('trackEditor');
+    syncPreviewScrollSnapshot(editorEl);
     editorEl.classList.remove('melodic-track-editor', 'drum-track-editor', 'chord-track-editor', 'preview-editor');
     syncTrackRepeats();
 
@@ -33,6 +34,7 @@ export function renderEditor() {
         syncViewToggleButton(true);
         renderPreview(editorEl);
         editorEl.appendChild(buildSeekBar(callbacks.renderEditor || renderEditor));
+        restorePreviewScrollSnapshot(editorEl);
         return;
     }
 
@@ -67,4 +69,23 @@ export function renderEditor() {
 function getCurrentTrackTitle() {
     const track = appState.tracks.find((t) => t.id === appState.activeTrackId);
     return track ? INST_LABEL[track.instrument] : '作曲ツール';
+}
+
+function syncPreviewScrollSnapshot(editorEl) {
+    if (!editorEl) return;
+    const previewWrap = editorEl.querySelector('.preview-wrap');
+    if (!previewWrap) return;
+    appState.previewScrollTop = previewWrap.scrollTop;
+}
+
+function restorePreviewScrollSnapshot(editorEl) {
+    if (!editorEl) return;
+    const previewWrap = editorEl.querySelector('.preview-wrap');
+    if (!previewWrap) return;
+
+    restorePreviewScroll(previewWrap);
+    requestAnimationFrame(() => {
+        restorePreviewScroll(previewWrap);
+        requestAnimationFrame(() => restorePreviewScroll(previewWrap));
+    });
 }

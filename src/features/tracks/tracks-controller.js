@@ -165,6 +165,39 @@ export function removeMeasure() {
     callbacks.renderEditor();
 }
 
+export function clearTrackMeasure(track, measure = appState.currentMeasure) {
+    if (!track) return;
+
+    const startStep = measure * STEPS_PER_MEASURE;
+    const endStepExclusive = startStep + STEPS_PER_MEASURE;
+    const trackType = INST_TYPE[track.instrument];
+
+    if (trackType === 'rhythm') {
+        track.rows.forEach((row) => {
+            row.steps.fill(null, startStep, endStepExclusive);
+        });
+        callbacks.renderEditor();
+        return;
+    }
+
+    if (trackType === 'chord') {
+        track.chordMap.fill(null, startStep, endStepExclusive);
+        track.soundSteps.fill(null, startStep, endStepExclusive);
+        if (track.selectedDivPos !== null
+            && track.selectedDivPos >= startStep
+            && track.selectedDivPos < endStepExclusive) {
+            track.selectedDivPos = null;
+        }
+        callbacks.renderEditor();
+        return;
+    }
+
+    Object.values(track.stepsMap).forEach((steps) => {
+        steps.fill(null, startStep, endStepExclusive);
+    });
+    callbacks.renderEditor();
+}
+
 export function copyTrackMeasureRange(track, startMeasure, endMeasure) {
     const normalizedStart = Math.max(0, Math.min(startMeasure, endMeasure));
     const normalizedEnd = Math.max(normalizedStart, Math.max(startMeasure, endMeasure));

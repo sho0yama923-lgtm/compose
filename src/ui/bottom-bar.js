@@ -3,7 +3,7 @@ import {
     getNormalizedPlayRangeMeasures,
     clearPreviewCopyState,
 } from '../core/state.js';
-import { addMeasure, removeMeasure } from '../features/tracks/tracks-controller.js';
+import { addMeasure, clearTrackMeasure, removeMeasure } from '../features/tracks/tracks-controller.js';
 
 export function buildSeekBar(renderEditor) {
     const seekShell = document.createElement('div');
@@ -230,10 +230,23 @@ function buildMeasureActions(renderEditor) {
     removeBtn.className = 'measure-action-btn remove';
     removeBtn.type = 'button';
     removeBtn.textContent = '削除';
-    removeBtn.title = '今見ている小節を削除';
-    removeBtn.disabled = appState.numMeasures <= 1;
+    const activeTrack = !appState.previewMode && appState.activeTrackId !== null
+        ? appState.tracks.find((track) => track.id === appState.activeTrackId)
+        : null;
+    const clearsTrackOnly = Boolean(activeTrack);
+    removeBtn.title = clearsTrackOnly
+        ? '今見ている小節のこのトラック内容を削除'
+        : '今見ている小節を削除';
+    removeBtn.disabled = clearsTrackOnly ? false : appState.numMeasures <= 1;
     removeBtn.addEventListener('click', () => {
-        if (!confirm(`今見ている ${appState.currentMeasure + 1} 小節目を削除しますか？`)) return;
+        const message = clearsTrackOnly
+            ? `今見ている ${appState.currentMeasure + 1} 小節目のこのトラック内容を削除しますか？`
+            : `今見ている ${appState.currentMeasure + 1} 小節目を削除しますか？`;
+        if (!confirm(message)) return;
+        if (clearsTrackOnly) {
+            clearTrackMeasure(activeTrack, appState.currentMeasure);
+            return;
+        }
         removeMeasure();
     });
 

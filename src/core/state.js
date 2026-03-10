@@ -17,6 +17,7 @@ export const appState = {
     previewMode: false,
     previewActionTrackId: null,
     previewActionMenuOpen: false,
+    previewScrollTop: 0,
     previewRangeMode: null,
     previewRangeStartMeasure: null,
     previewRangeEndMeasure: null,

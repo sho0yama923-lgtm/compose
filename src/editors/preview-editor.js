@@ -26,6 +26,7 @@ export function renderPreview(containerEl) {
     }));
     const wrapEl = document.createElement('div');
     wrapEl.className = 'preview-wrap';
+    bindPreviewScroll(wrapEl);
 
     wrapEl.appendChild(buildSongSettingsCard());
 
@@ -128,6 +129,22 @@ export function renderPreview(containerEl) {
     });
 
     containerEl.appendChild(wrapEl);
+}
+
+function bindPreviewScroll(wrapEl) {
+    wrapEl.addEventListener('scroll', () => {
+        appState.previewScrollTop = wrapEl.scrollTop;
+    });
+}
+
+function clampPreviewScrollTop(wrapEl) {
+    const maxScroll = Math.max(0, wrapEl.scrollHeight - wrapEl.clientHeight);
+    return Math.max(0, Math.min(appState.previewScrollTop || 0, maxScroll));
+}
+
+export function restorePreviewScroll(wrapEl) {
+    if (!wrapEl) return;
+    wrapEl.scrollTop = clampPreviewScrollTop(wrapEl);
 }
 
 function buildPreviewActionMenu(track) {
