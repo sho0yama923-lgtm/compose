@@ -117,7 +117,9 @@ export function renderMelodicEditor(track, editorEl) {
             const fullNote = `${noteName}${octave}`;
             const steps = track.stepsMap[fullNote];
             const isScaleTone = scalePitchClasses.has(noteName);
-            const chordToneBeats = chordPitchClassesByBeat.map(set => Boolean(set?.has(noteName)));
+            const chordToneBeats = chordsByBeat.map((chord, beat) => (
+                chordPitchClassesByBeat[beat]?.has(noteName) ? chord : null
+            ));
 
             const laneEl = document.createElement('div');
             laneEl.className = 'melody-lane';
@@ -148,8 +150,8 @@ export function renderMelodicEditor(track, editorEl) {
                 callbacks.renderEditor();
             });
 
-            chordToneBeats.forEach((matches, beat) => {
-                if (matches) rowEl.appendChild(buildChordToneSegment(beat));
+            chordToneBeats.forEach((chord, beat) => {
+                if (chord) rowEl.appendChild(buildChordToneSegment(beat, chord));
             });
 
             for (let localStep = 0; localStep < STEPS_PER_MEASURE; localStep++) {
@@ -224,12 +226,25 @@ function rebuildMelodyToolbar(toolbarEl, octCtrlEl) {
     toolbarEl.replaceChildren(primaryRow, valueRow);
 }
 
-function buildChordToneSegment(beat) {
+function buildChordToneSegment(beat, chord) {
     const el = document.createElement('div');
     el.className = 'melody-chord-tone-segment';
+    el.dataset.beat = String(beat + 1);
     el.style.left = `${(beat * STEPS_PER_BEAT / STEPS_PER_MEASURE) * 100}%`;
     el.style.width = `${(STEPS_PER_BEAT / STEPS_PER_MEASURE) * 100}%`;
+    el.style.backgroundColor = withAlpha(ROOT_COLORS[chord.root] ?? '#ff9800', 0.14);
     return el;
+}
+
+function withAlpha(hex, alpha) {
+    const normalized = String(hex).replace('#', '');
+    if (!/^[0-9a-fA-F]{6}$/.test(normalized)) {
+        return `rgba(255, 152, 0, ${alpha})`;
+    }
+    const red = parseInt(normalized.slice(0, 2), 16);
+    const green = parseInt(normalized.slice(2, 4), 16);
+    const blue = parseInt(normalized.slice(4, 6), 16);
+    return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 }
 
 function buildChordHeaderStrip(chordsByBeat) {

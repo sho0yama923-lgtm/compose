@@ -93,6 +93,17 @@ test('webkit mobile smoke check', async ({ page }) => {
   await expect(page.locator('.melody-chord-header-cell[data-beat="1"] .melody-chord-header-name').first()).toHaveText('CM');
   await expect(page.locator('.melody-chord-header-cell[data-beat="2"] .melody-chord-header-name').first()).toHaveText('G7');
   await expect(page.locator('.melody-chord-header-cell[data-beat="3"] .melody-chord-header-name').first()).toHaveText('Am');
+  const chordGuideColors = await page.locator('.melody-grid-row[data-note-name="G"]').first().evaluate((row) => {
+    const beat1 = row.querySelector('.melody-chord-tone-segment[data-beat="1"]');
+    const beat2 = row.querySelector('.melody-chord-tone-segment[data-beat="2"]');
+    return {
+      beat1: beat1 ? getComputedStyle(beat1).backgroundColor : '',
+      beat2: beat2 ? getComputedStyle(beat2).backgroundColor : '',
+    };
+  });
+  await expect(chordGuideColors.beat1).not.toBe('');
+  await expect(chordGuideColors.beat2).not.toBe('');
+  await expect(chordGuideColors.beat1).not.toBe(chordGuideColors.beat2);
   await page.locator('#viewToggleBtn').click();
 
   const pianoCard = page.locator('.preview-card[data-instrument="piano"]');
