@@ -1,0 +1,14 @@
+{
+  "name": "compose",
+  "private": true,
+  "scripts": {
+    "dev": "python3 ./dev-server.py",
+    "test:e2e": "playwright test",
+    "test:e2e:webkit": "playwright test --project=webkit",
+    "test:e2e:webkit:headed": "playwright test --project=webkit --headed",
+    "playwright:install": "playwright install webkit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.2"
+  }
+}

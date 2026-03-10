@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 
+import os
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 
-HOST = "127.0.0.1"
-START_PORT = 8080
-END_PORT = 8090
+HOST = os.environ.get("HOST", "127.0.0.1")
+REQUESTED_PORT = os.environ.get("PORT")
+if REQUESTED_PORT:
+    START_PORT = int(REQUESTED_PORT)
+    END_PORT = START_PORT
+else:
+    START_PORT = 8080
+    END_PORT = 8090
 ROOT = Path(__file__).resolve().parent
 
 

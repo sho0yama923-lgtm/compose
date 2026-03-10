@@ -1,6 +1,6 @@
 # PROGRESS.md
 
-最終更新: 2026-03-09
+最終更新: 2026-03-10
 
 ## 進捗ルール
 
@@ -65,6 +65,11 @@
   - 黄色の型編集が緑へ反映される
   - 緑の編集は黄色へ反映されない
   - シークバーの黄/緑は表示対象トラックに追従する
+- WebKit 開発用に Playwright の土台を追加
+  - `package.json` を追加
+  - `playwright.config.js` で `webkit + iPhone 13` を既定化
+  - `tests/webkit-smoke.spec.js` を追加
+  - `dev-server.py` は `PORT` 環境変数で固定ポート起動できるよう変更
 
 ## 現在の主要ディレクトリ
 
@@ -132,3 +137,4 @@
 
 - import の静的確認は通過
 - 構成変更後はブラウザのハードリロードが前提
+- WebKit 確認は `npm install` → `npm run playwright:install` → `npm run test:e2e:webkit`

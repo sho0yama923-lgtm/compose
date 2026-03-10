@@ -16,6 +16,9 @@
   - 画面の土台
 - `src/main.js`
   - 起動順序、初期化、保存フック、初回トラック生成
+- `playwright.config.js`
+  - WebKit の E2E 起動設定
+  - `PORT=41234 python3 ./dev-server.py` で静的サーバーを固定ポート起動する
 - `src/styles/editor.css`
   - いまの表示ルールを集約した CSS
 
@@ -88,6 +91,11 @@
 - `src/ui/instrument-modal.js`
   - 楽器選択モーダル
 
+### tests
+
+- `tests/webkit-smoke.spec.js`
+  - iPhone 幅の WebKit で起動確認する最小スモークテスト
+
 ## 変更内容ごとの入口
 
 ### 1. 音価を増やしたい
@@ -147,6 +155,12 @@
 - `src/features/tracks/tracks-controller.js`
 - `src/features/tracks/instrument-map.js`
 - `src/core/state.js`
+
+### 9. Safari / WebKit で画面確認したい
+
+- `playwright.config.js`
+- `tests/webkit-smoke.spec.js`
+- `dev-server.py`
 
 ## 読み方のコツ
 
