@@ -110,27 +110,41 @@
 
 ## 今やるべきこと
 
-- ブルース/ジャズ向けスケールを追加する
-  - `major / harmonic_minor / melodic_minor` に加えて `blues / dorian / mixolydian / minor_pentatonic` を追加
-  - 全体エディタの `Scale` UI はタブからドロップダウンへ変更
-  - メロディエディタのスケール音強調が新スケールでも効くようにする
-  - 保存/読込で追加スケールを保持する
+- コードエディタでコードを長押しした時に、コードの詳細設定を開けるようにする
+  - オクターブ変更
+  - コードトーン変更
+  - 将来的にテンションやボイシング変更も入れられる構造にする
+- コードトラックの楽器を、ピアノ以外のメロディ楽器からも選択できるようにする
+  - piano 固定ではなく `aco_guitar / ele_guitar / violin / trumpet` なども候補にする
+  - chord 再生チェーンとUIの対応を整理する
 - メロディ連続ロールのスクロール初期位置をさらに自然にするか検討する
 - コード進行UIを拍単位からさらに初心者向けに簡略化するか検討する
 - CSSをセクション分割するか検討する
 
+## 長期目標
+
+- App Store 公開を目指して、iOS アプリとして整える
+  - モバイル Safari での操作性と音声まわりの安定化
+  - 保存、読込、共有導線の整理
+  - PWA かラッパーアプリかを含めた配布形態の検討
+  - iPhone 実機前提の UI、権限、審査要件への対応
+
 ## 次回実装メモ
 
-- スケール定義の追加先
-  - `src/core/constants.js`
-  - `src/core/music-theory.js`
-  - `src/features/project/project-storage.js`
-- Scale UI の変更先
-  - `src/editors/preview-editor.js`
+- コード長押し詳細UIの変更先
+  - `src/editors/chord-editor.js`
   - `src/styles/editor.css`
+  - 必要なら `src/core/state.js`
+- コード楽器選択の変更先
+  - `src/features/tracks/instrument-map.js`
+  - `src/features/tracks/tracks-controller.js`
+  - `src/features/playback/`
+  - `src/editors/preview-editor.js`
 - 受け入れ条件
-  - `Scale` に 7 種が表示される
-  - 新スケール選択時にメロディエディタの強調色が正しく変わる
+  - コードを長押しすると詳細設定へ入れる
+  - オクターブとコードトーン変更が保存される
+  - コードトラックで piano 以外の楽器を選べる
+  - 選択楽器でコード再生が破綻しない
 
 ## 確認メモ
 
