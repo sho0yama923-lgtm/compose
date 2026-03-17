@@ -116,6 +116,18 @@ const drumsConfig = INSTRUMENT_LIST.find((config) => config.id === 'drums');
 export const DRUM_ROWS = drumsConfig ? drumsConfig.drumRows : [];
 export const INSTRUMENT_CONFIG_MAP = Object.fromEntries(INSTRUMENT_LIST.map((config) => [config.id, config]));
 
+export function getInstrumentBaseUrl(config) {
+    const folder = config?.folder || '';
+    if (!folder) return '';
+    return folder.startsWith('/') ? folder : `/${folder}`;
+}
+
+export function getInstrumentBufferBaseUrl(config) {
+    const folder = config?.folder || '';
+    if (!folder) return '';
+    return `/audio-buffers/${folder}`;
+}
+
 export function getInstrumentUrls(config) {
     if (config.sampleType === 'range') {
         return buildUrlsFromFiles(config.files || []);
@@ -124,4 +136,10 @@ export function getInstrumentUrls(config) {
         return config.mapping || {};
     }
     return {};
+}
+
+export function getInstrumentBufferUrls(config) {
+    return Object.fromEntries(
+        Object.entries(getInstrumentUrls(config)).map(([note, fileName]) => [note, `${fileName}.bin`])
+    );
 }

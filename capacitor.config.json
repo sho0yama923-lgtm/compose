@@ -1,0 +1,9 @@
+{
+  "appId": "com.yamaoxiogo.compose",
+  "appName": "Compose",
+  "webDir": "dist",
+  "server": {
+    "hostname": "localhost",
+    "iosScheme": "http"
+  }
+}

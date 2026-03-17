@@ -1,5 +1,10 @@
 *, *::before, *::after { box-sizing: border-box; }
 
+:root {
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
     background: #f0f0f0;
@@ -17,9 +22,9 @@ body {
     align-items: center;
     gap: 8px;
     background: #0a0a0a;
-    padding: 0 12px;
+    padding: var(--safe-top) 12px 0;
     flex-shrink: 0;
-    height: 56px;
+    min-height: calc(56px + var(--safe-top));
 }
 .topbar-main {
     flex: 1;
@@ -125,7 +130,8 @@ body {
     flex-direction: column;
     transform: translateX(-100%);
     transition: transform 0.26s cubic-bezier(0.4,0,0.2,1);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-top: var(--safe-top);
+    padding-bottom: var(--safe-bottom);
     border-right: 1px solid #e0e0e0;
 }
 .sidebar.open { transform: translateX(0); }
@@ -392,4 +398,3 @@ body {
     line-height: 1.45;
     color: #777;
 }
-

@@ -16,6 +16,14 @@
   - 画面の土台
 - `src/main.js`
   - 起動順序、初期化、保存フック、初回トラック生成
+- `capacitor.config.json`
+  - iOS ラッパーの基本設定
+  - `webDir` は `dist` を参照する
+- `ios/`
+  - Capacitor が生成する Xcode プロジェクト
+  - `npm run ios:buildprep` 後に Xcode で開いてビルドする
+- `docs/ios-build.md`
+  - iPhone アプリ向けのセットアップ手順と日常フロー
 - `playwright.config.js`
   - WebKit の E2E 起動設定
   - `npm run dev -- --host 127.0.0.1 --port 41234` で固定ポート起動する
@@ -212,6 +220,15 @@
 - `playwright.config.js`
 - `tests/webkit-smoke.spec.js`
 - `start.command`
+
+### 10. iPhone アプリとしてビルドしたい
+
+- `capacitor.config.json`
+- `package.json`
+- `ios/`
+- `npm run build:ios-web`
+- `npm run ios:sync`
+- `npm run ios:open`
 
 ## 読み方のコツ
 

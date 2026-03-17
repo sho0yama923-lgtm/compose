@@ -124,6 +124,10 @@ async function getChordDetailKeyboardMetrics(page) {
 
 test('webkit mobile smoke check', async ({ page }) => {
   await page.goto('/');
+  await expect(page.locator('meta[name="viewport"]')).toHaveAttribute(
+    'content',
+    /viewport-fit=cover/
+  );
   await page.evaluate(() => {
     localStorage.clear();
   });

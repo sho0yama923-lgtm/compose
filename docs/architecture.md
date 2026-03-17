@@ -2,6 +2,10 @@
 
 ## 現在の構成方針
 
+- `capacitor.config.json`
+  - Web ビルド成果物 `dist/` を iOS ラッパーへ渡す設定
+- `ios/`
+  - Capacitor が管理するネイティブ側プロジェクト
 - `src/main.js`
   - アプリ初期化だけを担当する
 - `src/core/`

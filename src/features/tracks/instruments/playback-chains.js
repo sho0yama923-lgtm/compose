@@ -1,4 +1,10 @@
-import { INSTRUMENT_CONFIG_MAP, getInstrumentUrls } from './instrument-config.js';
+import {
+    INSTRUMENT_CONFIG_MAP,
+    getInstrumentBaseUrl,
+    getInstrumentBufferBaseUrl,
+    getInstrumentBufferUrls,
+    getInstrumentUrls,
+} from './instrument-config.js';
 import { TRACK_TONE_DEFAULTS, normalizeEqValue, normalizeTrackTone } from './track-tone.js';
 
 const ToneLib = globalThis.Tone;
@@ -179,10 +185,17 @@ function createPlaybackChain(track) {
     if (!config?.sampleType) return null;
     const mixPreset = getTrackMixPreset(track.instrument);
 
-    const urls = getInstrumentUrls(config);
+    const urls = getInstrumentBufferUrls(config);
     if (Object.keys(urls).length === 0) {
         console.warn(`[Warning] ${playbackInstrumentId} の音源ファイルが見つかりませんでした。スキップします。`);
         return null;
+    }
+    const baseUrl = getInstrumentBufferBaseUrl(config);
+    const sampleEntries = Object.entries(urls);
+    const firstSampleEntry = sampleEntries[0] || null;
+    if (firstSampleEntry) {
+        console.info(`[Audio] ${playbackInstrumentId} sample bufferUrl: ${baseUrl}${firstSampleEntry[1]}`);
+        console.info(`[Audio] ${playbackInstrumentId} original asset path: ${getInstrumentBaseUrl(config)}${Object.values(getInstrumentUrls(config))[0] || ''}`);
     }
 
     const lowFilter = new ToneLib.Filter(TRACK_BUS_CONFIG.low.frequency, TRACK_BUS_CONFIG.low.type);
@@ -205,7 +218,13 @@ function createPlaybackChain(track) {
     const inputGain = new ToneLib.Gain(dbToLinearGain(TRACK_TONE_DEFAULTS.gainDb));
     const sampler = new ToneLib.Sampler({
         urls,
-        baseUrl: config.folder,
+        baseUrl,
+        onload: () => {
+            console.info(`[Audio] ${playbackInstrumentId} の音源ロードが完了しました。`);
+        },
+        onerror: (error) => {
+            console.error(`[Audio] ${playbackInstrumentId} の音源ロードに失敗しました。`, error);
+        },
     });
     sampler.connect(sourceTrim);
     sourceTrim.connect(preHighpass);

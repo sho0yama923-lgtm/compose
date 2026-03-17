@@ -168,3 +168,12 @@
 - 音価ボタンの `全 / 2分 / 4分 / 8分 / 16分 / 付点` ラベルを削除し、記号のみを中央表示へ変更。`3連` バッジは維持
 - WebKit の一時 Playwright spec で `.duration-value-row` を撮影して見た目確認済み
 - build 成功を確認済み
+- `Capacitor` を導入し、`capacitor.config.json` と `ios/` ネイティブプロジェクトを追加する iPhone アプリ向けビルド導線を整備
+- `package.json` に `build:ios-web / ios:sync / ios:open / ios:buildprep` を追加し、基本フローを `vite build -> cap sync ios -> Xcode build` に寄せる
+- iPhone 実機で topbar がステータスバーと重ならないよう、`viewport-fit=cover` と `--safe-top = env(safe-area-inset-top)` を追加し、`topbar` と `sidebar` の上端余白を safe area 基準に変更
+- iPhone 実機で音が出ないケースに備え、`ios/App/App/AppDelegate.swift` で `AVAudioSession` を `.playback` で有効化し、WebAudio 再生がサイレントスイッチに消されにくいよう調整
+- iPhone 実機でサンプル音源が無音になる問題に対応するため、`vite.config.js` に `sounds/ -> dist/sounds/` コピー処理を追加し、Capacitor 配布物にも mp3 群が入るようにした
+- 実機の初回再生で Sampler 読み込みが間に合わず無音になるケースに備え、`scheduler.js` で `syncTrackPlaybackChains()` 後に `Tone.loaded()` を待ってから Transport を開始するよう変更
+- iOS WebView の音源読み込み安定化のため、`capacitor.config.json` に `server.hostname = localhost` と `server.iosScheme = http` を追加し、`http://localhost/...` でサンプルを読ませる構成へ変更
+- 音源 URL 解決の曖昧さを減らすため、`playback-chains.js` で Sampler の `baseUrl` を `'/sounds/.../'` 形式の絶対パスへ統一し、ロード成功/失敗のログも追加
+- iOS WKWebView で `.mp3` 拡張子のカスタムスキーム応答と `Tone.Sampler` が噛み合わない可能性に対応するため、`vite.config.js` で `dist/audio-buffers/sounds/**/*.mp3.bin` を生成し、Sampler には `.bin` 側を読ませる構成へ変更

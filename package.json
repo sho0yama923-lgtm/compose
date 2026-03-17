@@ -4,6 +4,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:ios-web": "vite build",
+    "ios:sync": "npx cap sync ios",
+    "ios:open": "npx cap open ios",
+    "ios:buildprep": "npm run build:ios-web && npm run ios:sync",
     "preview": "vite preview",
     "test:e2e": "playwright test",
     "test:e2e:webkit": "playwright test --project=webkit",
@@ -11,6 +15,9 @@
     "playwright:install": "playwright install webkit"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.2.0",
+    "@capacitor/core": "^8.2.0",
+    "@capacitor/ios": "^8.2.0",
     "@playwright/test": "^1.54.2",
     "vite": "^7.1.5"
   }

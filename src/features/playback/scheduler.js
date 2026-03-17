@@ -53,11 +53,22 @@ export async function play(score, {
 
     Tone.Transport.bpm.value = bpm;
     syncTrackPlaybackChains(tracks);
+    if (typeof Tone.loaded === 'function') {
+        try {
+            await Tone.loaded();
+        } catch (error) {
+            console.error('[Audio] 音源の読み込みに失敗しました。', error);
+            alert('音源の読み込みに失敗したため、再生できませんでした。アプリを再起動してもう一度お試しください。');
+            return false;
+        }
+    }
 
     const beatDur = Tone.Time('4n').toSeconds();
     const events = [];
     const normalizedStart = Math.max(0, Math.min(startStep, score.length));
     const normalizedEnd = Math.max(normalizedStart + 1, Math.min(endStepExclusive, score.length));
+    const missingSamplerWarnings = new Set();
+    const unloadedSamplerWarnings = new Set();
 
     for (let idx = normalizedStart; idx < normalizedEnd; idx++) {
         const relativeStep = idx - normalizedStart;
@@ -75,7 +86,20 @@ export async function play(score, {
 
         step.forEach(({ trackId, instrument, notes, duration, volume }) => {
             const inst = getTrackPlaybackInstrument(trackId, instrument);
-            if (!inst || !inst.loaded) return;
+            if (!inst) {
+                if (!missingSamplerWarnings.has(trackId)) {
+                    console.warn(`[Audio] トラック ${trackId} (${instrument}) の音源を取得できませんでした。`);
+                    missingSamplerWarnings.add(trackId);
+                }
+                return;
+            }
+            if (!inst.loaded) {
+                if (!unloadedSamplerWarnings.has(trackId)) {
+                    console.warn(`[Audio] トラック ${trackId} (${instrument}) の音源ロードが未完了です。`);
+                    unloadedSamplerWarnings.add(trackId);
+                }
+                return;
+            }
 
             const noteArray = Array.isArray(notes) ? notes : [notes];
             inst.triggerAttackRelease(noteArray, duration || '16n', time, volume ?? 1);
