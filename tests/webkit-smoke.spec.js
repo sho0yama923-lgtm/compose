@@ -12,6 +12,116 @@ async function getSelectedOptionText(page, selector) {
   );
 }
 
+async function longPressSelector(page, selector, duration = 520) {
+  await page.locator(selector).evaluate(async (element, holdMs) => {
+    const rect = element.getBoundingClientRect();
+    const clientX = rect.left + rect.width / 2;
+    const clientY = rect.top + rect.height / 2;
+    const pointerId = 91;
+    element.dispatchEvent(new PointerEvent('pointerdown', {
+      pointerId,
+      bubbles: true,
+      clientX,
+      clientY,
+      pointerType: 'touch',
+      isPrimary: true,
+    }));
+    await new Promise((resolve) => window.setTimeout(resolve, holdMs));
+    element.dispatchEvent(new PointerEvent('pointerup', {
+      pointerId,
+      bubbles: true,
+      clientX,
+      clientY,
+      pointerType: 'touch',
+      isPrimary: true,
+    }));
+  }, duration);
+}
+
+async function swipeChordDetailKeyboard(page, deltaX = 140) {
+  await page.locator('[data-chord-detail-keyboard="true"]').evaluate((element, dragDistance) => {
+    element.scrollLeft += dragDistance;
+  }, deltaX);
+}
+
+async function clickChordDetailKey(page, note) {
+  await page.locator(`.chord-detail-key[data-note="${note}"]`).evaluate((element) => {
+    element.click();
+  });
+}
+
+async function storeChordDetailSheetReference(page) {
+  await page.evaluate(() => {
+    window.__chordDetailSheetRef = document.querySelector('.chord-detail-sheet');
+  });
+}
+
+async function chordDetailSheetWasReplaced(page) {
+  return page.evaluate(() => document.querySelector('.chord-detail-sheet') !== window.__chordDetailSheetRef);
+}
+
+async function getChordDetailKeyboardMetrics(page) {
+  return page.locator('.chord-detail-piano-stage').evaluate((stage) => {
+    const stageRect = stage.getBoundingClientRect();
+    const getRelativeBox = (selector) => {
+      const element = stage.querySelector(selector);
+      if (!element) return null;
+      const rect = element.getBoundingClientRect();
+      return {
+        left: rect.left - stageRect.left,
+        right: rect.right - stageRect.left,
+        top: rect.top - stageRect.top,
+        bottom: rect.bottom - stageRect.top,
+        width: rect.width,
+        height: rect.height,
+      };
+    };
+    const getKeyAndLabelBox = (selector) => {
+      const key = stage.querySelector(selector);
+      if (!key) return null;
+      const keyRect = key.getBoundingClientRect();
+      const label = key.querySelector('.chord-detail-key-label');
+      const labelRect = label?.getBoundingClientRect();
+      return {
+        key: {
+          top: keyRect.top - stageRect.top,
+          bottom: keyRect.bottom - stageRect.top,
+          height: keyRect.height,
+        },
+        label: labelRect ? {
+          top: labelRect.top - stageRect.top,
+          bottom: labelRect.bottom - stageRect.top,
+          height: labelRect.height,
+        } : null,
+      };
+    };
+    return {
+      blackCount: stage.querySelectorAll('.chord-detail-key.black-key').length,
+      whiteCount: stage.querySelectorAll('.chord-detail-key.white-key').length,
+      white: {
+        C4: getRelativeBox('.chord-detail-key.white-key[data-note="C4"]'),
+        D4: getRelativeBox('.chord-detail-key.white-key[data-note="D4"]'),
+        E4: getRelativeBox('.chord-detail-key.white-key[data-note="E4"]'),
+        F4: getRelativeBox('.chord-detail-key.white-key[data-note="F4"]'),
+        G4: getRelativeBox('.chord-detail-key.white-key[data-note="G4"]'),
+        A4: getRelativeBox('.chord-detail-key.white-key[data-note="A4"]'),
+        B4: getRelativeBox('.chord-detail-key.white-key[data-note="B4"]'),
+      },
+      black: {
+        'C#4': getRelativeBox('.chord-detail-key.black-key[data-note="C#4"]'),
+        'D#4': getRelativeBox('.chord-detail-key.black-key[data-note="D#4"]'),
+        'F#4': getRelativeBox('.chord-detail-key.black-key[data-note="F#4"]'),
+        'G#4': getRelativeBox('.chord-detail-key.black-key[data-note="G#4"]'),
+        'A#4': getRelativeBox('.chord-detail-key.black-key[data-note="A#4"]'),
+      },
+      labels: {
+        whiteC4: getKeyAndLabelBox('.chord-detail-key.white-key[data-note="C4"]'),
+        blackCs4: getKeyAndLabelBox('.chord-detail-key.black-key[data-note="C#4"]'),
+      },
+    };
+  });
+}
+
 test('webkit mobile smoke check', async ({ page }) => {
   await page.goto('/');
   await page.evaluate(() => {
@@ -84,16 +194,70 @@ test('webkit mobile smoke check', async ({ page }) => {
   await page.locator('.chord-select-input').nth(0).selectOption('A');
   await page.locator('.chord-select-input').nth(1).selectOption('m');
   await page.locator('.chord-progress-cell').nth(2).click();
+  await page.locator('.chord-instrument-select .chord-select-input').selectOption('violin');
+  await expect(page.locator('#trackModeBtn')).toContainText('Violin');
+
+  await longPressSelector(page, '.chord-progress-cell[data-beat="1"]');
+  await expect(page.locator('.chord-detail-select[aria-label="コードのルート"]')).toHaveValue('C');
+  await expect(page.locator('.chord-detail-select[aria-label="コードのタイプ"]')).toHaveValue('M');
+  await expect(page.locator('[data-chord-detail-octave="true"]')).toHaveText('4');
+  await expect(page.locator('[data-chord-detail-keyboard="true"]')).toBeVisible();
+  await page.selectOption('.chord-detail-select[aria-label="コードのルート"]', 'D');
+  await expect(page.locator('.chord-detail-select[aria-label="コードのルート"]')).toHaveValue('D');
+  await page.selectOption('.chord-detail-select[aria-label="コードのタイプ"]', 'm7');
+  await expect(page.locator('.chord-detail-select[aria-label="コードのタイプ"]')).toHaveValue('m7');
+  await expect(page.locator('.chord-progress-cell[data-beat="1"] .chord-progress-name')).toHaveText('Dm7');
+  await storeChordDetailSheetReference(page);
+  await clickChordDetailKey(page, 'E4');
+  expect(await chordDetailSheetWasReplaced(page)).toBe(false);
+  await expect(page.locator('.chord-detail-key[data-note="E4"]')).toHaveClass(/is-active/);
+  await expect(page.locator('.chord-detail-note-summary-value')).toContainText('E4');
+  await expect(page.locator('.chord-progress-cell[data-beat="1"] .chord-progress-badge')).toContainText('編集');
+  const keyboardMetrics = await getChordDetailKeyboardMetrics(page);
+  expect(keyboardMetrics.blackCount).toBe(35);
+  expect(keyboardMetrics.whiteCount).toBe(49);
+  expect(keyboardMetrics.white.C4.height).toBeCloseTo(168, 0);
+  expect(keyboardMetrics.black['C#4'].top).toBeCloseTo(keyboardMetrics.white.C4.top, 0);
+  expect(keyboardMetrics.black['C#4'].height / keyboardMetrics.white.C4.height).toBeGreaterThan(0.62);
+  expect(keyboardMetrics.black['C#4'].height / keyboardMetrics.white.C4.height).toBeLessThan(0.66);
+  expect(keyboardMetrics.black['C#4'].left).toBeGreaterThan(keyboardMetrics.white.C4.left);
+  expect(keyboardMetrics.black['C#4'].right).toBeLessThan(keyboardMetrics.white.D4.right);
+  expect(keyboardMetrics.black['D#4'].left).toBeGreaterThan(keyboardMetrics.white.D4.left);
+  expect(keyboardMetrics.black['D#4'].right).toBeLessThan(keyboardMetrics.white.E4.right);
+  expect(keyboardMetrics.black['F#4'].left).toBeGreaterThan(keyboardMetrics.white.F4.left);
+  expect(keyboardMetrics.black['F#4'].right).toBeLessThan(keyboardMetrics.white.G4.right);
+  expect(keyboardMetrics.black['G#4'].left).toBeGreaterThan(keyboardMetrics.white.G4.left);
+  expect(keyboardMetrics.black['G#4'].right).toBeLessThan(keyboardMetrics.white.A4.right);
+  expect(keyboardMetrics.black['A#4'].left).toBeGreaterThan(keyboardMetrics.white.A4.left);
+  expect(keyboardMetrics.black['A#4'].right).toBeLessThan(keyboardMetrics.white.B4.right);
+  expect(keyboardMetrics.labels.whiteC4.label.top).toBeGreaterThan(
+    keyboardMetrics.labels.whiteC4.key.top + keyboardMetrics.labels.whiteC4.key.height * 0.55
+  );
+  expect(keyboardMetrics.labels.blackCs4.label.top).toBeGreaterThan(
+    keyboardMetrics.labels.blackCs4.key.top + keyboardMetrics.labels.blackCs4.key.height * 0.45
+  );
+  const initialScrollLeft = await page.locator('[data-chord-detail-keyboard="true"]').evaluate((element) => element.scrollLeft);
+  await swipeChordDetailKeyboard(page);
+  const movedScrollLeft = await page.locator('[data-chord-detail-keyboard="true"]').evaluate((element) => element.scrollLeft);
+  expect(movedScrollLeft).toBeGreaterThan(initialScrollLeft);
+  await page.getByRole('button', { name: 'コードのオクターブを上げる' }).click();
+  await expect(page.locator('[data-chord-detail-octave="true"]')).toHaveText('5');
+  await expect(page.locator('.chord-detail-key[data-note="D5"]')).toHaveClass(/is-active/);
+  await expect(page.locator('.chord-progress-cell[data-beat="1"] .chord-progress-badge')).toContainText('編集');
+  await page.getByRole('button', { name: '閉じる', exact: true }).click();
+  await expect(page.locator('.chord-detail-select[aria-label="コードのルート"]')).toHaveCount(0);
 
   await page.locator('#viewToggleBtn').click();
+  const chordCard = page.locator('.preview-card[data-instrument="chord"]');
+  await expect(chordCard.locator('.preview-card-title')).toContainText('Violin');
   await page.evaluate(() => {
     document.querySelectorAll('#trackList li')[2]?.click();
   });
   await page.locator('#trackModeBtn').click();
-  await expect(page.locator('.melody-chord-header-cell[data-beat="1"] .melody-chord-header-name').first()).toHaveText('CM');
+  await expect(page.locator('.melody-chord-header-cell[data-beat="1"] .melody-chord-header-name').first()).toHaveText('Dm7');
   await expect(page.locator('.melody-chord-header-cell[data-beat="2"] .melody-chord-header-name').first()).toHaveText('G7');
   await expect(page.locator('.melody-chord-header-cell[data-beat="3"] .melody-chord-header-name').first()).toHaveText('Am');
-  const chordGuideColors = await page.locator('.melody-grid-row[data-note-name="G"]').first().evaluate((row) => {
+  const chordGuideColors = await page.locator('.melody-grid-row[data-note-name="D"]').first().evaluate((row) => {
     const beat1 = row.querySelector('.melody-chord-tone-segment[data-beat="1"]');
     const beat2 = row.querySelector('.melody-chord-tone-segment[data-beat="2"]');
     return {
@@ -169,11 +333,11 @@ test('webkit mobile smoke check', async ({ page }) => {
   }, 1.4);
 
   await expect(page.locator('.preview-tone-control-value[data-tone-key="midQ"]')).toContainText('1.40');
-  await page.getByRole('button', { name: '閉じる' }).click();
+  await page.getByRole('button', { name: '閉じる', exact: true }).click();
 
   await page.locator('#playToggleBtn').click();
   await expect(page.locator('#playToggleBtn')).toContainText('||');
-  await page.locator('#playToggleBtn').click();
+  await page.locator('#playToggleBtn').click({ force: true });
   await expect(page.locator('#playToggleBtn')).toContainText('▶');
 
   await page.reload();
@@ -184,7 +348,9 @@ test('webkit mobile smoke check', async ({ page }) => {
   }
 
   const reloadedPianoCard = page.locator('.preview-card[data-instrument="piano"]');
+  const reloadedChordCard = page.locator('.preview-card[data-instrument="chord"]');
   await expect(reloadedPianoCard.locator('.preview-track-eq-summary')).toHaveCount(0);
+  await expect(reloadedChordCard.locator('.preview-card-title')).toContainText('Violin');
   await expect(page.locator('.preview-song-root-select')).toHaveValue('C');
   await expect(page.locator('.preview-song-family-select')).toHaveValue('pentatonic');
   await expect(page.locator('.preview-harmony-btn.selected')).toContainText('m');
@@ -195,6 +361,21 @@ test('webkit mobile smoke check', async ({ page }) => {
   await expect(page.locator('.preview-tone-band-chip.low .preview-tone-band-chip-value')).not.toContainText('180 / +0 dB');
   await expect(page.locator('.preview-tone-band-chip.mid .preview-tone-band-chip-value')).not.toContainText('1.4k / +0 dB');
 
+  await page.getByRole('button', { name: '閉じる', exact: true }).click();
+  await page.evaluate(() => {
+    document.querySelectorAll('#trackList li')[1]?.click();
+  });
+  await expect(page.locator('#trackModeBtn')).toContainText('Violin');
+  await longPressSelector(page, '.chord-progress-cell[data-beat="1"]');
+  await expect(page.locator('.chord-detail-select[aria-label="コードのルート"]')).toHaveValue('D');
+  await expect(page.locator('.chord-detail-select[aria-label="コードのタイプ"]')).toHaveValue('m7');
+  await expect(page.locator('[data-chord-detail-octave="true"]')).toHaveText('5');
+  await expect(page.locator('.chord-detail-key[data-note="E5"]')).toHaveClass(/is-active/);
+  await expect(page.locator('.chord-detail-key[data-note="D5"]')).toHaveClass(/is-active/);
+  await page.getByRole('button', { name: '閉じる', exact: true }).click();
+
+  await page.locator('#viewToggleBtn').click();
+  await reloadedPianoCard.getByRole('button', { name: '音作り' }).click();
   await page.getByRole('button', { name: '初期化' }).click();
   await expect(page.locator('.preview-tone-control-value[data-tone-key="gainDb"]')).toContainText('0 dB');
   await expect(page.locator('.preview-tone-control-value[data-tone-key="compAmount"]')).toContainText('40 %');

@@ -7,8 +7,17 @@
 - 進捗はこのファイルに追記する
 - 大きい構成変更をしたら「今回の整理内容」を更新する
 - 次に触る人は作業前にこのファイルと `CODEBASE_GUIDE.md` を読む
+- UI変更時は主要な高さ・幅を `px` で明示し、あとで詰めやすいように CSS 変数や定数へ寄せる
 
 ## 今回の整理内容
+
+- `preview-editor.js` をファサード化し、`preview-row / preview-actions / preview-repeat / preview-tone-sheet / preview-song-settings / preview-shared` へ分割
+- `chord-editor.js` をファサード化し、`progress / timing / detail-sheet / drum-reference / shared` へ分割
+- `editor.css` を入口のまま維持しつつ、`src/styles/base/` `src/styles/components/` `src/styles/editors/` に物理分割
+- `project-storage.js` を `storage-core / storage-helpers` へ分割し、保存I/O と normalize/migration を分離
+- `instrument-map.js` を `instrument-config / track-tone / playback-chains` へ分割し、楽器定義と Tone.js 再生管理を分離
+- `tracks-controller.js` を `track-selection / track-measures / track-repeat` へ分割し、トラックCRUD、小節操作、繰り返し同期を分離
+- 再生開始直後に停止した場合でも `play` 完了で `||` 表示へ戻らないよう、`playback-controller.js` に requestId ガードを追加
 
 - 曲全体の `Root / Harmony / Scale Family` 設定を全体エディタへ持ち、メロディ強調を `スケール音 / 非スケール音` 基準へ切り替えた
 - 全体エディタで各トラックの `発音ON/OFF` と `音量` を調整できるようにした
@@ -110,16 +119,10 @@
 
 ## 今やるべきこと
 
-- コードエディタでコードを長押しした時に、コードの詳細設定を開けるようにする
-  - オクターブ変更
-  - コードトーン変更
-  - 将来的にテンションやボイシング変更も入れられる構造にする
-- コードトラックの楽器を、ピアノ以外のメロディ楽器からも選択できるようにする
-  - piano 固定ではなく `aco_guitar / ele_guitar / violin / trumpet` なども候補にする
-  - chord 再生チェーンとUIの対応を整理する
-- メロディ連続ロールのスクロール初期位置をさらに自然にするか検討する
-- コード進行UIを拍単位からさらに初心者向けに簡略化するか検討する
-- CSSをセクション分割するか検討する
+- `src/styles/editors/chord.css` がまだ大きいので、必要になったら `detail / palette / mobile` などへ追加分割する
+- `tests/webkit-smoke.spec.js` は主要フロー確認用として維持しつつ、必要なら repeat / import-export も個別 spec に逃がす
+- `docs/architecture.md` の CSS 分割予定記述を現状に合わせて追記する
+- 細かい余白や視認性の最終確認は実機またはブラウザで継続する
 
 ## 長期目標
 
@@ -131,20 +134,22 @@
 
 ## 次回実装メモ
 
-- コード長押し詳細UIの変更先
-  - `src/editors/chord-editor.js`
-  - `src/styles/editor.css`
-  - 必要なら `src/core/state.js`
-- コード楽器選択の変更先
-  - `src/features/tracks/instrument-map.js`
-  - `src/features/tracks/tracks-controller.js`
-  - `src/features/playback/`
-  - `src/editors/preview-editor.js`
+- コード画面のUI変更先
+  - `src/editors/chord/render-chord-editor.js`
+  - `src/editors/chord/chord-detail-sheet.js`
+  - `src/styles/editors/chord.css`
+- 全体プレビューのUI変更先
+  - `src/editors/preview/render-preview.js`
+  - `src/editors/preview/preview-row.js`
+  - `src/editors/preview/preview-tone-sheet.js`
+- 保存や repeat の変更先
+  - `src/features/project/storage/storage-helpers.js`
+  - `src/features/project/storage/storage-core.js`
+  - `src/features/tracks/controller/track-repeat.js`
 - 受け入れ条件
-  - コードを長押しすると詳細設定へ入れる
-  - オクターブとコードトーン変更が保存される
-  - コードトラックで piano 以外の楽器を選べる
-  - 選択楽器でコード再生が破綻しない
+  - 公開 import のパスを変えずに内部責務だけを追加分割できる
+  - build と webkit smoke が通る
+  - 主要 editor の見た目と操作が大きく後退しない
 
 ## 確認メモ
 

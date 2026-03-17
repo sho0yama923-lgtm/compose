@@ -20,7 +20,8 @@
   - WebKit の E2E 起動設定
   - `PORT=41234 python3 ./dev-server.py` で静的サーバーを固定ポート起動する
 - `src/styles/editor.css`
-  - いまの表示ルールを集約した CSS
+  - CSS の入口ファイル
+  - 実体は `@import` で `src/styles/base/` `src/styles/components/` `src/styles/editors/` へ分割済み
 
 ### core
 
@@ -55,10 +56,38 @@
   - ピアノロール描画
   - 音程、オクターブ、ノート配置のUIを変える時はここ
 - `src/editors/chord-editor.js`
-  - コード進行と発音タイミングのUI
+  - コードエディタの公開入口ファサード
+  - 実体は `src/editors/chord/` に分割
 - `src/editors/preview-editor.js`
-  - 全体プレビュー
-  - `Key / Scale`、カード内の `発音 / 音量`、繰り返しUIはここ
+  - 全体プレビューの公開入口ファサード
+  - 実体は `src/editors/preview/` に分割
+
+### editors の分割先
+
+- `src/editors/chord/render-chord-editor.js`
+  - コード画面の組み立て入口
+- `src/editors/chord/chord-progress-section.js`
+  - コード進行グリッド
+- `src/editors/chord/chord-timing-section.js`
+  - 発音タイミンググリッド
+- `src/editors/chord/chord-detail-sheet.js`
+  - コード詳細シート
+- `src/editors/chord/chord-drum-reference-sheet.js`
+  - ドラム参照シート
+- `src/editors/preview/render-preview.js`
+  - 全体プレビューの組み立て入口
+- `src/editors/preview/preview-row.js`
+  - 各トラックカード描画
+- `src/editors/preview/preview-actions.js`
+  - アクションメニュー、長押し制御
+- `src/editors/preview/preview-repeat.js`
+  - 繰り返し範囲UI
+- `src/editors/preview/preview-tone-sheet.js`
+  - 音作りシート / EQ UI
+- `src/editors/preview/preview-song-settings.js`
+  - 楽曲設定カード
+- `src/editors/preview/preview-shared.js`
+  - スクロール復元や共通ヘルパ
 
 ### features
 
@@ -71,14 +100,33 @@
   - タイミングや Tone.js 側の鳴らし方を変える時はここ
   - EQ やエフェクトを実際に挿すならここ
 - `src/features/project/project-storage.js`
-  - localStorage、JSON保存、読込、データ移行
-  - 保存項目を増やす時はここ
+  - 保存機能の公開入口ファサード
+  - 実体は `src/features/project/storage/` に分割
 - `src/features/tracks/tracks-controller.js`
-  - トラック追加削除、小節数変更、初期データ生成
-  - 繰り返しの実データ反映と source→target 同期もここ
+  - トラック管理の公開入口ファサード
+  - 実体は `src/features/tracks/controller/` に分割
 - `src/features/tracks/instrument-map.js`
-  - 楽器定義、サンプル、Sampler 生成
-  - 将来トラック単位の再生チェーンを持たせるならここを読む
+  - 楽器/再生定義の公開入口ファサード
+  - 実体は `src/features/tracks/instruments/` に分割
+
+### features の分割先
+
+- `src/features/project/storage/storage-helpers.js`
+  - migrate / normalize / restore の純粋寄りロジック
+- `src/features/project/storage/storage-core.js`
+  - save/load/import/export/reset と UI フック
+- `src/features/tracks/controller/track-selection.js`
+  - トラック選択、追加、削除
+- `src/features/tracks/controller/track-measures.js`
+  - 小節追加、削除、クリア
+- `src/features/tracks/controller/track-repeat.js`
+  - copy / paste / repeat / repeat 同期
+- `src/features/tracks/instruments/instrument-config.js`
+  - 楽器カタログ、表示名、URL解決
+- `src/features/tracks/instruments/track-tone.js`
+  - EQ / tone の正規化と既定値
+- `src/features/tracks/instruments/playback-chains.js`
+  - Tone.js 再生チェーン管理
 
 ### ui
 
@@ -109,9 +157,12 @@
 
 - `src/core/rhythm-grid.js`
 - `src/styles/editor.css`
+- `src/styles/editors/melodic.css`
+- `src/styles/editors/drum.css`
+- `src/styles/editors/chord.css`
 - 必要なら `src/editors/melodic-editor.js`
 - 必要なら `src/editors/drum-editor.js`
-- 必要なら `src/editors/chord-editor.js`
+- 必要なら `src/editors/chord/`
 
 ### 3. ノートのクリック判定や配置方法を変えたい
 
@@ -131,7 +182,7 @@
 
 - `src/core/constants.js`
 - `src/core/music-theory.js`
-- `src/editors/preview-editor.js`
+- `src/editors/preview/preview-song-settings.js`
 - `src/editors/melodic-editor.js`
 - `src/features/project/project-storage.js`
 
@@ -144,10 +195,10 @@
 
 ### 7. 繰り返しUIや繰り返し反映ルールを変えたい
 
-- `src/editors/preview-editor.js`
+- `src/editors/preview/preview-repeat.js`
 - `src/ui/bottom-bar.js`
 - `src/core/state.js`
-- `src/features/tracks/tracks-controller.js`
+- `src/features/tracks/controller/track-repeat.js`
 - `src/features/project/project-storage.js`
 
 ### 8. トラックの追加・初期値を変えたい
@@ -167,7 +218,8 @@
 - まず `src/main.js` で起動順を確認する
 - 次に対象機能の state と描画ファイルを読む
 - 最後に `src/features/project/project-storage.js` を見て、保存互換を壊していないか確認する
-- 全体エディタ起点の変更は `src/editors/preview-editor.js` と `src/ui/bottom-bar.js` をセットで読むと早い
+- 全体エディタ起点の変更は `src/editors/preview/render-preview.js` と `src/ui/bottom-bar.js` をセットで読むと早い
+- コード画面の変更は `src/editors/chord/render-chord-editor.js` から辿ると責務を見失いにくい
 
 ## 更新ルール
 

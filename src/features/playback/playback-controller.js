@@ -3,8 +3,10 @@
 import { appState, STEPS_PER_MEASURE, totalSteps, callbacks, getNormalizedPlayRangeMeasures } from '../../core/state.js';
 import { play, stop } from './scheduler.js';
 import { INST_TYPE } from '../tracks/instrument-map.js';
-import { getChordNotes } from '../../core/constants.js';
+import { getResolvedChordNotes } from '../../core/constants.js';
 import { isStepHead } from '../../core/duration.js';
+
+let playbackRequestId = 0;
 
 export function initPlayback() {
     const playToggleBtn = document.getElementById('playToggleBtn');
@@ -47,11 +49,11 @@ export function initPlayback() {
                     if (track.chordMap[i]) currentChord = track.chordMap[i];
                     const dur = track.soundSteps[i];
                     if (isStepHead(dur) && currentChord) {
-                        const notes = getChordNotes(currentChord.root, currentChord.type, currentChord.octave);
+                        const notes = getResolvedChordNotes(currentChord);
                         score[i] = score[i] || [];
                         score[i].push({
                             trackId: track.id,
-                            instrument: 'piano',
+                            instrument: track.playbackInstrument || 'piano',
                             notes: notes.length === 1 ? notes[0] : notes,
                             duration: dur,
                             volume: trackVolume,
@@ -100,6 +102,7 @@ export function initPlayback() {
 
         appState.isPlaying = true;
         setPlaybackButtonState();
+        const requestId = ++playbackRequestId;
         const started = await play(score, {
             bpm,
             tracks: appState.tracks,
@@ -126,6 +129,9 @@ export function initPlayback() {
                 updatePlayheadIndicators(globalStep);
             }
         });
+        if (requestId !== playbackRequestId) {
+            return;
+        }
         appState.isPlaying = started;
         setPlaybackButtonState();
     });
@@ -151,6 +157,7 @@ function syncPreviewScrollTop() {
 }
 
 function stopPlayback() {
+    playbackRequestId += 1;
     stop();
     appState.isPlaying = false;
     appState.playheadStep = null;

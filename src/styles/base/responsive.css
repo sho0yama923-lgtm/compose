@@ -1,0 +1,500 @@
+/* ======= スマホ向けUI改善 上書き ======= */
+.drum-track-editor .drum-editor {
+    flex: 1;
+    min-height: 0;
+}
+.drum-track-editor .drum-editor .timeline-grid {
+    flex: 1;
+    min-height: 0;
+}
+.drum-track-editor .drum-editor .piano-key-spacer {
+    height: 18px;
+}
+.drum-track-editor .drum-editor .piano-key,
+.drum-track-editor .drum-editor .timeline-row {
+    flex: none;
+    height: 52px;
+}
+.drum-track-editor .drum-editor .timeline-row {
+    background:
+        repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            #cdcdcd calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            #cdcdcd calc(100% / (var(--timeline-columns) / var(--timeline-major, 4)))
+        ),
+        repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent calc((100% / var(--timeline-columns)) - 1px),
+            #e9e9e9 calc((100% / var(--timeline-columns)) - 1px),
+            #e9e9e9 calc(100% / var(--timeline-columns))
+        ),
+        linear-gradient(to bottom, transparent calc(100% - 1px), #ececec calc(100% - 1px)),
+        #fafafa;
+}
+.drum-track-editor .drum-editor .playhead-bar {
+    background: rgba(239, 68, 68, 0.55);
+    box-shadow: none;
+}
+
+.melodic-track-editor .continuous-roll {
+    --melody-key-width: 28px;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+.melodic-track-editor .melody-topbar .duration-toolbar,
+.drum-track-editor .melody-topbar .duration-toolbar,
+.chord-track-editor .melody-topbar .duration-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 0;
+    align-items: stretch;
+}
+.melodic-track-editor .melody-topbar .duration-mode-row,
+.melodic-track-editor .melody-topbar .duration-value-row,
+.drum-track-editor .melody-topbar .duration-mode-row,
+.drum-track-editor .melody-topbar .duration-value-row,
+.chord-track-editor .melody-topbar .duration-mode-row,
+.chord-track-editor .melody-topbar .duration-value-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    margin: 0;
+    padding: 4px 6px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid #dce3ef;
+}
+.melodic-track-editor .melody-topbar .duration-mode-row,
+.drum-track-editor .melody-topbar .duration-mode-row,
+.chord-track-editor .melody-topbar .duration-mode-row {
+    flex: 0 0 auto;
+}
+.melodic-track-editor .melody-topbar .duration-value-row,
+.drum-track-editor .melody-topbar .duration-value-row,
+.chord-track-editor .melody-topbar .duration-value-row {
+    flex: 1 1 240px;
+}
+.melodic-track-editor .melody-topbar .duration-toolbar {
+    gap: 6px;
+}
+.melodic-track-editor .melody-topbar .melody-toolbar-primary {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    width: 100%;
+    min-width: 0;
+    flex-wrap: nowrap;
+}
+.melodic-track-editor .melody-topbar .melody-toolbar-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 700;
+    flex: 0 0 auto;
+}
+.melodic-track-editor .melody-topbar .melody-oct-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    margin: 0;
+    padding: 4px 6px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid #dce3ef;
+    flex: 1 1 auto;
+}
+.melodic-track-editor .melody-topbar .melody-oct-row .duration-row-label {
+    min-width: auto;
+}
+.melodic-track-editor .melody-topbar .duration-mode-row {
+    flex: 0 0 auto;
+    margin: 0;
+}
+.melodic-track-editor .melody-topbar .duration-value-row {
+    flex: 0 0 auto;
+    width: 100%;
+}
+.melodic-track-editor .melody-topbar .duration-value-buttons,
+.drum-track-editor .melody-topbar .duration-value-buttons,
+.chord-track-editor .melody-topbar .duration-value-buttons {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 4px;
+    width: 100%;
+    overflow: visible;
+}
+.melodic-track-editor .melody-topbar .dur-btn,
+.drum-track-editor .melody-topbar .dur-btn,
+.chord-track-editor .melody-topbar .dur-btn {
+    min-width: 0;
+    width: 100%;
+    height: 38px;
+    padding: 1px 2px;
+}
+.melodic-track-editor .melody-topbar .oct-range-ctrl {
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: space-between;
+}
+.melodic-track-editor .melody-topbar .ctrl-title {
+    display: inline-flex;
+    color: #64748b;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+.melodic-track-editor .melody-topbar .duration-row-label,
+.drum-track-editor .melody-topbar .duration-row-label,
+.chord-track-editor .melody-topbar .duration-row-label {
+    min-width: auto;
+    color: #64748b;
+    font-size: 9px;
+}
+.melodic-track-editor .melody-topbar .grid-mode-tab,
+.drum-track-editor .melody-topbar .grid-mode-tab,
+.chord-track-editor .melody-topbar .grid-mode-tab {
+    min-width: 42px;
+    height: 28px;
+    border-radius: 7px;
+    font-size: 10px;
+}
+.melodic-track-editor .melody-topbar .dur-btn,
+.drum-track-editor .melody-topbar .dur-btn,
+.chord-track-editor .melody-topbar .dur-btn {
+    min-width: 36px;
+    height: 30px;
+    border-radius: 7px;
+    padding: 1px 3px;
+}
+.melodic-track-editor .melody-topbar .dur-icon,
+.drum-track-editor .melody-topbar .dur-icon,
+.chord-track-editor .melody-topbar .dur-icon {
+    font-size: 16px;
+    min-width: 16px;
+    min-height: 16px;
+}
+.melodic-track-editor .melody-topbar .dur-label,
+.drum-track-editor .melody-topbar .dur-label,
+.chord-track-editor .melody-topbar .dur-label {
+    font-size: 8px;
+}
+.melodic-track-editor .melody-topbar .dur-icon-wrap,
+.drum-track-editor .melody-topbar .dur-icon-wrap,
+.chord-track-editor .melody-topbar .dur-icon-wrap {
+    min-height: 16px;
+}
+.melodic-track-editor .melody-topbar .editor-help,
+.drum-track-editor .melody-topbar .editor-help,
+.chord-track-editor .melody-topbar .editor-help {
+    margin: 0;
+    background: rgba(255, 255, 255, 0.82);
+    border-color: #dce3ef;
+    padding: 4px 6px;
+}
+.chord-track-editor .melody-topbar {
+    gap: 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+.chord-track-editor .melody-topbar::-webkit-scrollbar {
+    display: none;
+}
+.chord-track-editor .melody-topbar .duration-mode-row,
+.chord-track-editor .melody-topbar .duration-value-row {
+    padding: 3px 5px;
+    gap: 4px;
+    flex: 0 0 auto;
+}
+.chord-track-editor .melody-topbar .duration-mode-row {
+    width: 132px;
+}
+.chord-track-editor .melody-topbar .duration-value-row {
+    width: 332px;
+}
+.chord-track-editor .melody-topbar .duration-row-label {
+    font-size: 8px;
+}
+.chord-track-editor .melody-topbar .grid-mode-tab {
+    min-width: 40px;
+    height: 26px;
+}
+.chord-track-editor .melody-topbar .dur-btn {
+    min-width: 34px;
+    height: 28px;
+}
+.chord-track-editor .melody-topbar .editor-help {
+    padding: 3px 6px;
+}
+.chord-track-editor .melody-topbar .editor-help strong {
+    font-size: 11px;
+}
+.chord-track-editor .melody-topbar .editor-help span {
+    font-size: 9px;
+    line-height: 1.25;
+}
+.drum-track-editor > .editor-help,
+.chord-track-editor > .editor-help {
+    display: none;
+}
+.melodic-track-editor .continuous-roll .melody-roll-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+.melodic-track-editor .continuous-roll .melody-roll-scroll::-webkit-scrollbar {
+    display: none;
+}
+.melodic-track-editor .continuous-roll .melody-roll-content {
+    position: relative;
+    min-height: max-content;
+    width: 100%;
+    min-width: 100%;
+}
+.melodic-track-editor .continuous-roll .melody-roll-header,
+.melodic-track-editor .continuous-roll .melody-lane,
+.melodic-track-editor .continuous-roll .melody-lane-divider {
+    display: grid;
+    grid-template-columns: var(--melody-key-width) minmax(0, 1fr);
+    align-items: stretch;
+    width: 100%;
+}
+.melodic-track-editor .continuous-roll .melody-chord-header {
+    display: grid;
+    min-width: 0;
+    width: 100%;
+    height: 22px;
+    background: #faf7ef;
+    border-bottom: 1px solid #e8dfd0;
+}
+.melodic-track-editor .continuous-roll .melody-chord-header-cell {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    padding: 0 4px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: #7b5321;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-right: 1px solid #eadbc5;
+}
+.melodic-track-editor .continuous-roll .melody-chord-header-beat {
+    flex: 0 0 auto;
+    min-width: 10px;
+    color: #aa7b43;
+    font-size: 8px;
+    font-weight: 800;
+    text-align: left;
+}
+.melodic-track-editor .continuous-roll .melody-chord-header-name {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.melodic-track-editor .continuous-roll .melody-chord-header-cell:last-child {
+    border-right: 0;
+}
+.melodic-track-editor .continuous-roll .melody-chord-header-cell.has-chord {
+    background: color-mix(in srgb, var(--chord-accent, #d97706) 14%, white);
+}
+.melodic-track-editor .continuous-roll .melody-chord-header-cell.is-empty {
+    color: #b79f86;
+}
+.melodic-track-editor .continuous-roll .piano-key,
+.melodic-track-editor .continuous-roll .melody-grid-row {
+    height: 34px;
+}
+.melodic-track-editor .continuous-roll .piano-key {
+    width: var(--melody-key-width);
+    min-width: var(--melody-key-width);
+    max-width: var(--melody-key-width);
+}
+.melodic-track-editor .continuous-roll .melody-tone-key {
+    justify-content: flex-end;
+    padding-right: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    border-right: 1px solid #d7d7d7;
+}
+.melodic-track-editor .continuous-roll .melody-key-octave-divider {
+    width: var(--melody-key-width);
+    min-width: var(--melody-key-width);
+    max-width: var(--melody-key-width);
+}
+.melodic-track-editor .continuous-roll .melody-grid-row,
+.melodic-track-editor .continuous-roll .melody-grid-octave-divider {
+    min-width: 0;
+    width: auto;
+    max-width: none;
+}
+.melody-key-octave-divider,
+.melody-grid-octave-divider {
+    height: 22px;
+    display: flex;
+    align-items: center;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+.melody-key-octave-divider {
+    justify-content: flex-end;
+    padding-right: 4px;
+    color: #777;
+    background: #efefef;
+    border-bottom: 1px solid #dbdbdb;
+    border-right: 1px solid #d7d7d7;
+}
+.melody-grid-octave-divider {
+    padding-left: 0;
+    color: #666;
+    background: linear-gradient(90deg, #f3f3f3, #f8f8f8);
+    border-bottom: 1px solid #dbdbdb;
+}
+.melodic-track-editor .continuous-roll .melody-grid-row {
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid #f0f0f0;
+    background:
+        repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            #b5b5b5 calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            #b5b5b5 calc(100% / (var(--timeline-columns) / var(--timeline-major, 4)))
+        ),
+        repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent calc((100% / var(--timeline-columns)) - 1px),
+            #e1e1e1 calc((100% / var(--timeline-columns)) - 1px),
+            #e1e1e1 calc(100% / var(--timeline-columns))
+        ),
+        linear-gradient(to bottom, transparent calc(100% - 1px), #d9d9d9 calc(100% - 1px)),
+        #e4e4e4;
+}
+.melodic-track-editor .continuous-roll .melody-grid-row.is-scale-tone {
+    background:
+        repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            #bbbbbb calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            #bbbbbb calc(100% / (var(--timeline-columns) / var(--timeline-major, 4)))
+        ),
+        repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent calc((100% / var(--timeline-columns)) - 1px),
+            #e5e5e5 calc((100% / var(--timeline-columns)) - 1px),
+            #e5e5e5 calc(100% / var(--timeline-columns))
+        ),
+        linear-gradient(to bottom, transparent calc(100% - 1px), #ececec calc(100% - 1px)),
+        #fbfbfb;
+}
+.melodic-track-editor .continuous-roll .melody-chord-tone-segment {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: rgba(255, 152, 0, 0.14);
+    pointer-events: none;
+    z-index: 1;
+}
+.melodic-track-editor .continuous-roll .melody-grid-row.is-non-scale-tone {
+    background:
+        repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            #b5b5b5 calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            #b5b5b5 calc(100% / (var(--timeline-columns) / var(--timeline-major, 4)))
+        ),
+        repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent calc((100% / var(--timeline-columns)) - 1px),
+            #dddddd calc((100% / var(--timeline-columns)) - 1px),
+            #dddddd calc(100% / var(--timeline-columns))
+        ),
+        linear-gradient(to bottom, transparent calc(100% - 1px), #d9d9d9 calc(100% - 1px)),
+        #e4e4e4;
+}
+.melodic-track-editor .continuous-roll .melody-grid-note {
+    display: block;
+    position: absolute;
+    top: 2px;
+    height: calc(100% - 4px);
+    border: 1px solid #1d4ed8;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #1d4ed8, #2563eb);
+    box-shadow: none;
+    cursor: pointer;
+    z-index: 3;
+}
+.melody-playhead {
+    top: 22px;
+    bottom: 0;
+}
+
+@media (max-width: 720px) {
+    .melody-header-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    .melodic-track-editor .melody-topbar .duration-mode-row,
+    .melodic-track-editor .melody-topbar .duration-value-row,
+    .drum-track-editor .melody-topbar .duration-mode-row,
+    .drum-track-editor .melody-topbar .duration-value-row,
+    .chord-track-editor .melody-topbar .duration-mode-row,
+    .chord-track-editor .melody-topbar .duration-value-row {
+        flex: 0 0 auto;
+    }
+    .melodic-track-editor .melody-topbar .duration-value-buttons,
+    .drum-track-editor .melody-topbar .duration-value-buttons,
+    .chord-track-editor .melody-topbar .duration-value-buttons {
+        gap: 4px;
+    }
+    .melodic-track-editor .melody-topbar .dur-btn,
+    .drum-track-editor .melody-topbar .dur-btn,
+    .chord-track-editor .melody-topbar .dur-btn {
+        min-width: 36px;
+    }
+}
+
+.chord-section-desc {
+    font-size: 9px;
+    color: #7c7c7c;
+    line-height: 1.25;
+}
+.chord-progress-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+.chord-progress-head .chord-section-desc {
+    flex: 1 1 auto;
+}
+.chord-progress-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+}

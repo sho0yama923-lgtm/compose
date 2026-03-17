@@ -25,6 +25,8 @@ export const appState = {
     clipboard: null,
     repeatStates: {},
     chordDrumSheetOpen: false,
+    chordDetailTrackId: null,
+    chordDetailStep: null,
     drumHintDismissed: false,
     chordHintDismissed: false,
     melodicHintDismissed: false,
@@ -90,4 +92,5 @@ export const callbacks = {
     renderEditor: null,
     renderSidebar: null,
     closeSidebar: null,
+    saveState: null,
 };

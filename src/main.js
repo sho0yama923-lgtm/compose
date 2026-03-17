@@ -20,6 +20,9 @@ callbacks.renderSidebar = (...args) => {
     if (!appState.isPlaying) saveState();
 };
 callbacks.closeSidebar = closeSidebar;
+callbacks.saveState = () => {
+    if (!appState.isPlaying) saveState();
+};
 
 function showBootError(error) {
     console.error('boot failed:', error);

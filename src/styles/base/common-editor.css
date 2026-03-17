@@ -1,0 +1,131 @@
+/* ======= オクターブ範囲シフトコントロール ======= */
+.oct-range-ctrl {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    border: 1.5px solid #ddd;
+    border-radius: 6px;
+    padding: 4px 6px;
+    background: #fafafa;
+}
+.melody-topbar .oct-range-ctrl {
+    padding: 1px;
+    gap: 4px;
+    border: 0;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.82);
+    box-shadow: inset 0 0 0 1px #dce3ef;
+}
+.melody-topbar .ctrl-title {
+    display: none;
+}
+.melody-topbar .oct-range-btn {
+    width: 24px;
+    min-height: 24px;
+    border-radius: 7px;
+    border-color: #d5ddea;
+}
+.melody-topbar .oct-range-label {
+    color: #334155;
+    font-size: 10px;
+    padding-inline: 1px;
+}
+.melody-topbar .measure-actions {
+    padding: 1px;
+    gap: 2px;
+    border: 0;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.82);
+    box-shadow: inset 0 0 0 1px #dce3ef;
+}
+.melody-topbar .measure-actions-label {
+    display: none;
+}
+.melody-topbar .measure-action-btn {
+    width: auto;
+    min-width: 42px;
+    height: 24px;
+    border-radius: 7px;
+    border-color: #d5ddea;
+    font-size: 10px;
+    padding: 0 8px;
+}
+.oct-range-btn {
+    width: 30px;
+    height: auto;
+    min-height: 26px;
+    border: 1px solid #ccc;
+    background: #fff;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    touch-action: manipulation;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: 2px 0;
+}
+.oct-range-btn:disabled { opacity: 0.25; cursor: default; }
+.oct-range-btn:not(:disabled):active { background: #f0f0f0; }
+.oct-range-label {
+    font-size: 11px;
+    color: #888;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+/* ======= オクターブ アコーディオン ======= */
+.oct-accordion {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+.oct-section {
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1.5px solid #ddd;
+}
+.oct-section-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    background: #111;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    touch-action: manipulation;
+    letter-spacing: 0.05em;
+    text-align: left;
+}
+.oct-section-header:active { opacity: 0.75; }
+.oct-section-arrow { font-size: 10px; opacity: 0.5; flex-shrink: 0; }
+.oct-section-body { display: none; }
+.oct-section.open .oct-section-body { display: block; }
+/* 展開中: ミニプレビュー非表示 & ヘッダー細く */
+.oct-section.open .oct-section-mini { display: none; }
+.oct-section.open .oct-section-header { padding: 4px 10px; }
+
+/* ミニプレビュー: 12音×16ステップ グリッド */
+.oct-section-mini {
+    flex: 1;
+    margin: 0 12px;
+    display: grid;
+    grid-auto-rows: 2px;
+    gap: 1px;
+}
+.oct-mini-cell {
+    background: rgba(255,255,255,0.12);
+}
+.oct-mini-cell.on {
+    background: #fff;
+}
+

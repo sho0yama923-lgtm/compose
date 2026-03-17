@@ -1,7 +1,7 @@
 ﻿// editor-router.js - editor renderer/router
 
 import { appState, callbacks } from '../core/state.js';
-import { INST_LABEL, INST_TYPE } from '../features/tracks/instrument-map.js';
+import { INST_TYPE, getTrackDisplayLabel } from '../features/tracks/instrument-map.js';
 import { syncTrackRepeats } from '../features/tracks/tracks-controller.js';
 import { renderDrumEditor } from './drum-editor.js';
 import { renderMelodicEditor } from './melodic-editor.js';
@@ -41,7 +41,7 @@ export function renderEditor() {
     const track = appState.tracks.find((t) => t.id === appState.activeTrackId);
     if (!track) return;
 
-    setTopbarTitle(INST_LABEL[track.instrument]);
+    setTopbarTitle(getTrackDisplayLabel(track, { showChordPlaybackInstrument: true }));
     syncViewToggleButton(false);
 
     emptyState.style.display = 'none';
@@ -68,7 +68,7 @@ export function renderEditor() {
 
 function getCurrentTrackTitle() {
     const track = appState.tracks.find((t) => t.id === appState.activeTrackId);
-    return track ? INST_LABEL[track.instrument] : '作曲ツール';
+    return track ? getTrackDisplayLabel(track, { showChordPlaybackInstrument: true }) : '作曲ツール';
 }
 
 function syncPreviewScrollSnapshot(editorEl) {

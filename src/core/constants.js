@@ -184,3 +184,39 @@ export function getChordNotes(root, type, octave) {
         return CHROMATIC[noteIdx] + oct;
     });
 }
+
+export function noteToMidi(note) {
+    if (typeof note !== 'string') return null;
+    const match = note.match(/^([A-G]#?)(-?\d+)$/);
+    if (!match) return null;
+    const noteIndex = CHROMATIC.indexOf(match[1]);
+    if (noteIndex < 0) return null;
+    return (Number(match[2]) + 1) * 12 + noteIndex;
+}
+
+export function midiToNote(midi) {
+    if (typeof midi !== 'number' || Number.isNaN(midi)) return null;
+    const rounded = Math.round(midi);
+    const noteIndex = ((rounded % 12) + 12) % 12;
+    const octave = Math.floor(rounded / 12) - 1;
+    return `${CHROMATIC[noteIndex]}${octave}`;
+}
+
+export function normalizeChordCustomNotes(notes) {
+    if (!Array.isArray(notes)) return null;
+    const normalized = Array.from(
+        new Set(
+            notes
+                .map((note) => typeof note === 'string' ? note : null)
+                .filter((note) => noteToMidi(note) !== null)
+        )
+    ).sort((left, right) => noteToMidi(left) - noteToMidi(right));
+    return normalized.length > 0 ? normalized : null;
+}
+
+export function getResolvedChordNotes(chord) {
+    if (!chord) return [];
+    const customNotes = normalizeChordCustomNotes(chord.customNotes);
+    if (customNotes) return customNotes;
+    return getChordNotes(chord.root, chord.type, chord.octave);
+}
