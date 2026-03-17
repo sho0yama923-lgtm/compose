@@ -1,6 +1,6 @@
 // app.js — エントリポイント: コールバック登録 + 各モジュール初期化
 
-import { appState, callbacks } from './core/state.js';
+import { appState, callbacks, clearPendingDeleteNote } from './core/state.js';
 import { renderEditor } from './editors/editor-router.js';
 import { renderSidebar, closeSidebar, initSidebar } from './ui/track-drawer.js';
 import { addTrack } from './features/tracks/tracks-controller.js';
@@ -51,6 +51,15 @@ try {
     });
     document.getElementById('viewToggleBtn').addEventListener('click', () => {
         appState.previewMode = true;
+        callbacks.renderEditor();
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!appState.pendingDeleteNoteId) return;
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+        if (target.closest('.timeline-note, .melody-grid-note')) return;
+        clearPendingDeleteNote();
         callbacks.renderEditor();
     });
 

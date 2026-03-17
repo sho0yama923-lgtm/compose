@@ -1,8 +1,23 @@
-import { totalSteps, callbacks, STEPS_PER_MEASURE } from '../../core/state.js';
+import {
+    appState,
+    totalSteps,
+    callbacks,
+    STEPS_PER_MEASURE,
+    clearPendingDeleteNote,
+    clearNoteDrag,
+    consumeSuppressedNoteClick,
+    isPendingDeleteNote,
+    isNoteDragActive,
+    setNoteDrag,
+    setPendingDeleteNote,
+    suppressNextNoteClick,
+} from '../../core/state.js';
 import { DURATION_CELLS, ROOT_COLORS } from '../../core/constants.js';
-import { toggleStep, isStepHead, isStepTie } from '../../core/duration.js';
+import { clearNote, placeNote, toggleStep, isStepHead, isStepTie } from '../../core/duration.js';
 import { getCurrentDuration } from '../duration-toolbar.js';
 import { createPlayheadBar } from './chord-shared.js';
+
+const NOTE_DRAG_HOLD_MS = 380;
 
 export function buildTimingSection(track, offset, mEnd, cells, majorGroup) {
     const sectionEl = document.createElement('section');
@@ -26,6 +41,8 @@ export function buildTimingSection(track, offset, mEnd, cells, majorGroup) {
     soundCells.addEventListener('click', (event) => {
         const target = event.target;
         if (target.classList.contains('timeline-note')) return;
+        if (isNoteDragActive()) return;
+        clearPendingDeleteNote();
         const rect = soundCells.getBoundingClientRect();
         const x = Math.max(0, Math.min(rect.width - 1, event.clientX - rect.left));
         const column = Math.floor((x / rect.width) * cells.length);
@@ -47,6 +64,7 @@ export function buildTimingSection(track, offset, mEnd, cells, majorGroup) {
         if (isStepTie(val) || !isStepHead(val)) continue;
         const btn = document.createElement('div');
         btn.className = 'timeline-note chord-note';
+        const pendingDeleteId = `chord:${track.id}:${si}`;
         btn.style.left = `${(localStep / STEPS_PER_MEASURE) * 100}%`;
         btn.style.width = `${((DURATION_CELLS[val] || 1) / STEPS_PER_MEASURE) * 100}%`;
         if (inheritedChords[si]) {
@@ -54,15 +72,152 @@ export function buildTimingSection(track, offset, mEnd, cells, majorGroup) {
             btn.style.background = color;
             btn.style.borderColor = color;
         }
+        if (isPendingDeleteNote(pendingDeleteId)) btn.classList.add('is-delete-pending');
+        if (isChordDragOrigin(track.id, si)) btn.style.visibility = 'hidden';
         btn.addEventListener('click', (event) => {
             event.stopPropagation();
-            toggleStep(track.soundSteps, si, getCurrentDuration(), mEnd);
+            if (consumeSuppressedNoteClick()) return;
+            if (isPendingDeleteNote(pendingDeleteId)) {
+                clearPendingDeleteNote();
+                toggleStep(track.soundSteps, si, getCurrentDuration(), mEnd);
+                callbacks.renderEditor();
+                return;
+            }
+            setPendingDeleteNote(pendingDeleteId);
             callbacks.renderEditor();
+        });
+        btn.addEventListener('pointerdown', (event) => {
+            startChordNoteDrag({
+                event,
+                track,
+                soundCells,
+                cells,
+                mEnd,
+                sourceIndex: si,
+                duration: val,
+            });
         });
         soundCells.appendChild(btn);
     }
-
+    appendChordDragPreview(soundCells, track.id);
     soundCells.appendChild(createPlayheadBar(offset));
     sectionEl.appendChild(soundCells);
     return sectionEl;
+}
+
+function appendChordDragPreview(soundCells, trackId) {
+    const drag = appState.noteDrag;
+    if (!drag || drag.type !== 'chord' || drag.trackId !== trackId) return;
+    if (drag.targetIndex === null || drag.targetIndex === undefined) return;
+
+    const previewEl = document.createElement('div');
+    previewEl.className = 'timeline-note chord-note is-note-drag-preview';
+    previewEl.style.left = `${((drag.targetIndex % STEPS_PER_MEASURE) / STEPS_PER_MEASURE) * 100}%`;
+    previewEl.style.width = `${((DURATION_CELLS[drag.duration] || 1) / STEPS_PER_MEASURE) * 100}%`;
+    const color = drag.color ?? '#111';
+    previewEl.style.background = color;
+    previewEl.style.borderColor = color;
+    soundCells.appendChild(previewEl);
+}
+
+function isChordDragOrigin(trackId, sourceIndex) {
+    const drag = appState.noteDrag;
+    return !!drag
+        && drag.type === 'chord'
+        && drag.trackId === trackId
+        && drag.sourceIndex === sourceIndex;
+}
+
+function startChordNoteDrag({ event, track, soundCells, cells, mEnd, sourceIndex, duration }) {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+
+    let holdTimer = null;
+    let dragStarted = false;
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const pointerId = event.pointerId;
+    const inheritedChord = getInheritedChordAtStep(track, sourceIndex);
+    const dragColor = inheritedChord ? (ROOT_COLORS[inheritedChord.root] ?? '#111') : '#111';
+
+    const clearListeners = () => {
+        window.removeEventListener('pointermove', handlePointerMove);
+        window.removeEventListener('pointerup', handlePointerEnd);
+        window.removeEventListener('pointercancel', handlePointerEnd);
+    };
+
+    const clearHoldTimer = () => {
+        if (!holdTimer) return;
+        window.clearTimeout(holdTimer);
+        holdTimer = null;
+    };
+
+    const updateTargetFromEvent = (moveEvent) => {
+        const activeGridEl = document.querySelector('.chord-timing-grid');
+        if (!(activeGridEl instanceof HTMLElement)) return;
+        const rect = activeGridEl.getBoundingClientRect();
+        const x = Math.max(0, Math.min(rect.width - 1, moveEvent.clientX - rect.left));
+        const column = Math.floor((x / rect.width) * cells.length);
+        const cellInfo = cells[Math.max(0, Math.min(cells.length - 1, column))];
+        const targetIndex = Number(activeGridEl.dataset.measureStart || 0) + cellInfo.localStep;
+        const drag = appState.noteDrag;
+        if (!drag || drag.type !== 'chord') return;
+        if (drag.targetIndex === targetIndex) return;
+        setNoteDrag({ ...drag, targetIndex });
+        callbacks.renderEditor();
+    };
+
+    const handlePointerMove = (moveEvent) => {
+        if (moveEvent.pointerId !== pointerId) return;
+        if (!dragStarted) {
+            const movedX = Math.abs(moveEvent.clientX - startX);
+            const movedY = Math.abs(moveEvent.clientY - startY);
+            if (Math.max(movedX, movedY) > 8) clearHoldTimer();
+            return;
+        }
+        moveEvent.preventDefault();
+        updateTargetFromEvent(moveEvent);
+    };
+
+    const handlePointerEnd = (endEvent) => {
+        if (endEvent.pointerId !== pointerId) return;
+        clearHoldTimer();
+        clearListeners();
+        if (!dragStarted) return;
+
+        endEvent.preventDefault();
+        suppressNextNoteClick();
+        const drag = appState.noteDrag;
+        clearNoteDrag();
+        if (drag?.type === 'chord' && drag.targetIndex !== null && drag.targetIndex !== sourceIndex) {
+            clearNote(track.soundSteps, sourceIndex);
+            placeNote(track.soundSteps, drag.targetIndex, duration, mEnd);
+        }
+        callbacks.renderEditor();
+    };
+
+    holdTimer = window.setTimeout(() => {
+        dragStarted = true;
+        clearPendingDeleteNote();
+        setNoteDrag({
+            type: 'chord',
+            trackId: track.id,
+            sourceIndex,
+            targetIndex: sourceIndex,
+            duration,
+            color: dragColor,
+        });
+        callbacks.renderEditor();
+    }, NOTE_DRAG_HOLD_MS);
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerEnd);
+    window.addEventListener('pointercancel', handlePointerEnd);
+}
+
+function getInheritedChordAtStep(track, step) {
+    let inherited = null;
+    for (let i = 0; i <= step; i++) {
+        if (track.chordMap[i]) inherited = track.chordMap[i];
+    }
+    return inherited;
 }

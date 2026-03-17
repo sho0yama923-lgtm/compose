@@ -1,6 +1,18 @@
-﻿import { appState, STEPS_PER_MEASURE, callbacks } from '../core/state.js';
+﻿import {
+    appState,
+    STEPS_PER_MEASURE,
+    callbacks,
+    clearPendingDeleteNote,
+    clearNoteDrag,
+    consumeSuppressedNoteClick,
+    isPendingDeleteNote,
+    isNoteDragActive,
+    setNoteDrag,
+    setPendingDeleteNote,
+    suppressNextNoteClick,
+} from '../core/state.js';
 import { DURATION_CELLS } from '../core/constants.js';
-import { toggleStep, isStepHead, isStepTie } from '../core/duration.js';
+import { clearNote, placeNote, toggleStep, isStepHead, isStepTie } from '../core/duration.js';
 import { renderDurationToolbar, getCurrentDuration } from './duration-toolbar.js';
 import {
     getEditorCells,
@@ -9,6 +21,8 @@ import {
     getGridModeLabel,
     getMeasureStart,
 } from '../core/rhythm-grid.js';
+
+const NOTE_DRAG_HOLD_MS = 380;
 
 export function renderDrumEditor(track, editorEl) {
     const measureIndex = appState.currentMeasure;
@@ -76,9 +90,12 @@ export function renderDrumEditor(track, editorEl) {
         rowEl.className = 'timeline-row';
         rowEl.style.setProperty('--timeline-columns', String(cells.length));
         rowEl.style.setProperty('--timeline-major', String(majorGroup));
+        rowEl.dataset.rowLabel = row.label;
         rowEl.addEventListener('click', (event) => {
             const target = event.target;
             if (target.classList.contains('timeline-note')) return;
+            if (isNoteDragActive()) return;
+            clearPendingDeleteNote();
             const rect = rowEl.getBoundingClientRect();
             const x = Math.max(0, Math.min(rect.width - 1, event.clientX - rect.left));
             const column = Math.floor((x / rect.width) * cells.length);
@@ -97,17 +114,40 @@ export function renderDrumEditor(track, editorEl) {
             btn.className = 'timeline-note drum-note';
             const widthPct = ((DURATION_CELLS[val] || 1) / STEPS_PER_MEASURE) * 100;
             const leftPct = (localStep / STEPS_PER_MEASURE) * 100;
+            const pendingDeleteId = `drum:${track.id}:${row.label}:${si}`;
             btn.style.left = `${leftPct}%`;
             btn.style.width = `${widthPct}%`;
+            if (isPendingDeleteNote(pendingDeleteId)) btn.classList.add('is-delete-pending');
+            if (isDrumDragOrigin(track.id, row.label, si)) btn.style.visibility = 'hidden';
 
             btn.addEventListener('click', (event) => {
                 event.stopPropagation();
-                const dur = getCurrentDuration();
-                toggleStep(row.steps, si, dur, maxIndex);
+                if (consumeSuppressedNoteClick()) return;
+                if (isPendingDeleteNote(pendingDeleteId)) {
+                    clearPendingDeleteNote();
+                    const dur = getCurrentDuration();
+                    toggleStep(row.steps, si, dur, maxIndex);
+                    callbacks.renderEditor();
+                    return;
+                }
+                setPendingDeleteNote(pendingDeleteId);
                 callbacks.renderEditor();
+            });
+            btn.addEventListener('pointerdown', (event) => {
+                startDrumNoteDrag({
+                    event,
+                    track,
+                    row,
+                    rowEl,
+                    cells,
+                    maxIndex,
+                    sourceIndex: si,
+                    duration: val,
+                });
             });
             rowEl.appendChild(btn);
         }
+        appendDrumDragPreview(rowEl, track.id, row.label);
         gridEl.appendChild(rowEl);
     });
 
@@ -158,4 +198,118 @@ function buildEditorHint(title, body, onDismiss) {
 
     el.append(titleEl, bodyEl);
     return el;
+}
+
+function isDrumDragOrigin(trackId, rowLabel, sourceIndex) {
+    const drag = appState.noteDrag;
+    return !!drag
+        && drag.type === 'drum'
+        && drag.trackId === trackId
+        && drag.rowLabel === rowLabel
+        && drag.sourceIndex === sourceIndex;
+}
+
+function appendDrumDragPreview(rowEl, trackId, rowLabel) {
+    const drag = appState.noteDrag;
+    if (!drag || drag.type !== 'drum' || drag.trackId !== trackId || drag.rowLabel !== rowLabel) return;
+    if (drag.targetIndex === null || drag.targetIndex === undefined) return;
+
+    const previewEl = document.createElement('div');
+    previewEl.className = 'timeline-note drum-note is-note-drag-preview';
+    previewEl.style.left = `${((drag.targetIndex % STEPS_PER_MEASURE) / STEPS_PER_MEASURE) * 100}%`;
+    previewEl.style.width = `${((DURATION_CELLS[drag.duration] || 1) / STEPS_PER_MEASURE) * 100}%`;
+    rowEl.appendChild(previewEl);
+}
+
+function startDrumNoteDrag({
+    event,
+    track,
+    row,
+    rowEl,
+    cells,
+    maxIndex,
+    sourceIndex,
+    duration,
+}) {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+
+    let holdTimer = null;
+    let dragStarted = false;
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const pointerId = event.pointerId;
+
+    const clearListeners = () => {
+        window.removeEventListener('pointermove', handlePointerMove);
+        window.removeEventListener('pointerup', handlePointerEnd);
+        window.removeEventListener('pointercancel', handlePointerEnd);
+    };
+
+    const clearHoldTimer = () => {
+        if (!holdTimer) return;
+        window.clearTimeout(holdTimer);
+        holdTimer = null;
+    };
+
+    const updateTargetFromEvent = (moveEvent) => {
+        const activeRowEl = document.querySelector(`.timeline-row[data-row-label="${CSS.escape(row.label)}"]`);
+        if (!(activeRowEl instanceof HTMLElement)) return;
+        const rect = activeRowEl.getBoundingClientRect();
+        const x = Math.max(0, Math.min(rect.width - 1, moveEvent.clientX - rect.left));
+        const column = Math.floor((x / rect.width) * cells.length);
+        const cellInfo = cells[Math.max(0, Math.min(cells.length - 1, column))];
+        const nextTargetIndex = getMeasureStart(appState.currentMeasure) + cellInfo.localStep;
+        const drag = appState.noteDrag;
+        if (!drag || drag.type !== 'drum') return;
+        if (drag.targetIndex === nextTargetIndex) return;
+        setNoteDrag({ ...drag, targetIndex: nextTargetIndex });
+        callbacks.renderEditor();
+    };
+
+    const handlePointerMove = (moveEvent) => {
+        if (moveEvent.pointerId !== pointerId) return;
+        if (!dragStarted) {
+            const movedX = Math.abs(moveEvent.clientX - startX);
+            const movedY = Math.abs(moveEvent.clientY - startY);
+            if (Math.max(movedX, movedY) > 8) clearHoldTimer();
+            return;
+        }
+        moveEvent.preventDefault();
+        updateTargetFromEvent(moveEvent);
+    };
+
+    const handlePointerEnd = (endEvent) => {
+        if (endEvent.pointerId !== pointerId) return;
+        clearHoldTimer();
+        clearListeners();
+        if (!dragStarted) return;
+
+        endEvent.preventDefault();
+        suppressNextNoteClick();
+        const drag = appState.noteDrag;
+        clearNoteDrag();
+        if (drag?.type === 'drum' && drag.targetIndex !== null && drag.targetIndex !== sourceIndex) {
+            clearNote(row.steps, sourceIndex);
+            placeNote(row.steps, drag.targetIndex, duration, maxIndex);
+        }
+        callbacks.renderEditor();
+    };
+
+    holdTimer = window.setTimeout(() => {
+        dragStarted = true;
+        clearPendingDeleteNote();
+        setNoteDrag({
+            type: 'drum',
+            trackId: track.id,
+            rowLabel: row.label,
+            sourceIndex,
+            targetIndex: sourceIndex,
+            duration,
+        });
+        callbacks.renderEditor();
+    }, NOTE_DRAG_HOLD_MS);
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerEnd);
+    window.addEventListener('pointercancel', handlePointerEnd);
 }

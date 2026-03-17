@@ -317,6 +317,9 @@ export function restoreFromData(data, options = {}) {
     appState.previewToneTrackId = null;
     appState.chordDetailTrackId = null;
     appState.chordDetailStep = null;
+    appState.pendingDeleteNoteId = null;
+    appState.noteDrag = null;
+    appState.suppressNextNoteClick = false;
     options.clearPreviewCopyState?.();
     appState.clipboard = null;
     options.clearRepeatState?.();

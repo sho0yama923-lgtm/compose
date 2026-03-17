@@ -447,6 +447,7 @@
     box-shadow: none;
     cursor: pointer;
     z-index: 3;
+    touch-action: none;
 }
 .melody-playhead {
     top: 22px;

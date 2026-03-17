@@ -1,6 +1,19 @@
-﻿import { appState, STEPS_PER_BEAT, STEPS_PER_MEASURE, callbacks } from '../core/state.js';
+﻿import {
+    appState,
+    STEPS_PER_BEAT,
+    STEPS_PER_MEASURE,
+    callbacks,
+    clearPendingDeleteNote,
+    clearNoteDrag,
+    consumeSuppressedNoteClick,
+    isPendingDeleteNote,
+    isNoteDragActive,
+    setNoteDrag,
+    setPendingDeleteNote,
+    suppressNextNoteClick,
+} from '../core/state.js';
 import { CHROMATIC, BLACK_KEYS, DURATION_CELLS, ROOT_COLORS } from '../core/constants.js';
-import { toggleStep, isStepHead, isStepTie } from '../core/duration.js';
+import { clearNote, placeNote, toggleStep, isStepHead, isStepTie } from '../core/duration.js';
 import { renderDurationToolbar, getCurrentDuration } from './duration-toolbar.js';
 import { getChordPitchClasses, getEffectiveChordAtStep, getScalePitchClasses } from '../core/music-theory.js';
 import {
@@ -8,6 +21,8 @@ import {
     getEditorGridLineGroup,
     getMeasureStart,
 } from '../core/rhythm-grid.js';
+
+const NOTE_DRAG_HOLD_MS = 380;
 
 export function renderMelodicEditor(track, editorEl) {
     const measureIndex = appState.currentMeasure;
@@ -141,6 +156,8 @@ export function renderMelodicEditor(track, editorEl) {
             rowEl.addEventListener('click', (event) => {
                 const target = event.target;
                 if (target.classList.contains('melody-grid-note')) return;
+                if (isNoteDragActive()) return;
+                clearPendingDeleteNote();
                 const rect = rowEl.getBoundingClientRect();
                 const x = Math.max(0, Math.min(rect.width - 1, event.clientX - rect.left));
                 const column = Math.floor((x / rect.width) * cells.length);
@@ -161,16 +178,44 @@ export function renderMelodicEditor(track, editorEl) {
 
                 const noteEl = document.createElement('div');
                 noteEl.className = 'melody-grid-note';
+                const pendingDeleteId = `melody:${track.id}:${fullNote}:${si}`;
                 noteEl.style.left = `${(localStep / STEPS_PER_MEASURE) * 100}%`;
                 noteEl.style.width = `${((DURATION_CELLS[val] || 1) / STEPS_PER_MEASURE) * 100}%`;
+                if (isPendingDeleteNote(pendingDeleteId)) noteEl.classList.add('is-delete-pending');
+                if (isMelodyDragOrigin(track.id, fullNote, si)) continue;
                 noteEl.addEventListener('click', (event) => {
                     event.stopPropagation();
+                    if (consumeSuppressedNoteClick()) return;
+                    if (isPendingDeleteNote(pendingDeleteId)) {
+                        clearPendingDeleteNote();
+                        track.activeOctave = octave;
+                        toggleStep(steps, si, getCurrentDuration(), maxIndex);
+                        callbacks.renderEditor();
+                        return;
+                    }
+                    setPendingDeleteNote(pendingDeleteId);
                     track.activeOctave = octave;
-                    toggleStep(steps, si, getCurrentDuration(), maxIndex);
                     callbacks.renderEditor();
+                });
+                noteEl.addEventListener('pointerdown', (event) => {
+                    startMelodyNoteDrag({
+                        event,
+                        track,
+                        scrollEl,
+                        rowEl,
+                        cells,
+                        maxIndex,
+                        fullNote,
+                        octave,
+                        steps,
+                        sourceIndex: si,
+                        duration: val,
+                    });
                 });
                 rowEl.appendChild(noteEl);
             }
+
+            appendMelodyDragPreview(rowEl, track.id, fullNote);
 
             laneEl.append(keyEl, rowEl);
             contentEl.appendChild(laneEl);
@@ -245,6 +290,145 @@ function withAlpha(hex, alpha) {
     const green = parseInt(normalized.slice(2, 4), 16);
     const blue = parseInt(normalized.slice(4, 6), 16);
     return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+
+function appendMelodyDragPreview(rowEl, trackId, fullNote) {
+    const drag = appState.noteDrag;
+    if (!drag || drag.type !== 'melody' || drag.trackId !== trackId || drag.targetFullNote !== fullNote) return;
+    if (drag.targetIndex === null || drag.targetIndex === undefined) return;
+
+    const previewEl = document.createElement('div');
+    previewEl.className = 'melody-grid-note is-note-drag-preview';
+    previewEl.style.left = `${((drag.targetIndex % STEPS_PER_MEASURE) / STEPS_PER_MEASURE) * 100}%`;
+    previewEl.style.width = `${((DURATION_CELLS[drag.duration] || 1) / STEPS_PER_MEASURE) * 100}%`;
+    rowEl.appendChild(previewEl);
+}
+
+function isMelodyDragOrigin(trackId, sourceFullNote, sourceIndex) {
+    const drag = appState.noteDrag;
+    return !!drag
+        && drag.type === 'melody'
+        && drag.trackId === trackId
+        && drag.sourceFullNote === sourceFullNote
+        && drag.sourceIndex === sourceIndex;
+}
+
+function startMelodyNoteDrag({
+    event,
+    track,
+    scrollEl,
+    rowEl,
+    cells,
+    maxIndex,
+    fullNote,
+    octave,
+    steps,
+    sourceIndex,
+    duration,
+}) {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+
+    let holdTimer = null;
+    let dragStarted = false;
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const pointerId = event.pointerId;
+
+    const clearListeners = () => {
+        window.removeEventListener('pointermove', handlePointerMove);
+        window.removeEventListener('pointerup', handlePointerEnd);
+        window.removeEventListener('pointercancel', handlePointerEnd);
+    };
+
+    const clearHoldTimer = () => {
+        if (!holdTimer) return;
+        window.clearTimeout(holdTimer);
+        holdTimer = null;
+    };
+
+    const resolveTarget = (moveEvent) => {
+        const hoveredEl = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
+        const targetRow = hoveredEl?.closest('.melody-grid-row');
+        if (!(targetRow instanceof HTMLElement)) return null;
+
+        const targetNoteName = targetRow.dataset.noteName;
+        const targetOctave = targetRow.dataset.octave;
+        if (!targetNoteName || !targetOctave) return null;
+
+        const rect = targetRow.getBoundingClientRect();
+        const x = Math.max(0, Math.min(rect.width - 1, moveEvent.clientX - rect.left));
+        const column = Math.floor((x / rect.width) * cells.length);
+        const cellInfo = cells[Math.max(0, Math.min(cells.length - 1, column))];
+        const targetIndex = getMeasureStart(appState.currentMeasure) + cellInfo.localStep;
+        const targetFullNote = `${targetNoteName}${targetOctave}`;
+        return { targetIndex, targetFullNote };
+    };
+
+    const updateTargetFromEvent = (moveEvent) => {
+        const nextTarget = resolveTarget(moveEvent);
+        const drag = appState.noteDrag;
+        if (!drag || drag.type !== 'melody') return;
+        const targetIndex = nextTarget?.targetIndex ?? drag.sourceIndex;
+        const targetFullNote = nextTarget?.targetFullNote ?? drag.sourceFullNote;
+        if (drag.targetIndex === targetIndex && drag.targetFullNote === targetFullNote) return;
+        setNoteDrag({ ...drag, targetIndex, targetFullNote });
+        callbacks.renderEditor();
+    };
+
+    const handlePointerMove = (moveEvent) => {
+        if (moveEvent.pointerId !== pointerId) return;
+        if (!dragStarted) {
+            const movedX = Math.abs(moveEvent.clientX - startX);
+            const movedY = Math.abs(moveEvent.clientY - startY);
+            if (Math.max(movedX, movedY) > 8) clearHoldTimer();
+            return;
+        }
+        moveEvent.preventDefault();
+        updateTargetFromEvent(moveEvent);
+    };
+
+    const handlePointerEnd = (endEvent) => {
+        if (endEvent.pointerId !== pointerId) return;
+        clearHoldTimer();
+        clearListeners();
+        if (!dragStarted) return;
+
+        endEvent.preventDefault();
+        suppressNextNoteClick();
+        const drag = appState.noteDrag;
+        clearNoteDrag();
+        if (drag?.type === 'melody'
+            && (drag.targetIndex !== sourceIndex || drag.targetFullNote !== fullNote)) {
+            const targetSteps = track.stepsMap[drag.targetFullNote];
+            if (Array.isArray(targetSteps)) {
+                clearNote(steps, sourceIndex);
+                placeNote(targetSteps, drag.targetIndex, duration, maxIndex);
+                track.activeOctave = Number.parseInt(drag.targetFullNote.slice(-1), 10) || octave;
+            }
+        }
+        callbacks.renderEditor();
+    };
+
+    holdTimer = window.setTimeout(() => {
+        dragStarted = true;
+        clearPendingDeleteNote();
+        setNoteDrag({
+            type: 'melody',
+            trackId: track.id,
+            sourceFullNote: fullNote,
+            sourceIndex,
+            targetFullNote: fullNote,
+            targetIndex: sourceIndex,
+            duration,
+        });
+        callbacks.renderEditor();
+    }, NOTE_DRAG_HOLD_MS);
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerEnd);
+    window.addEventListener('pointercancel', handlePointerEnd);
+
+    void scrollEl;
 }
 
 function buildChordHeaderStrip(chordsByBeat) {

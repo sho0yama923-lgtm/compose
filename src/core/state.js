@@ -31,6 +31,9 @@ export const appState = {
     chordHintDismissed: false,
     melodicHintDismissed: false,
     previewHintDismissed: false,
+    pendingDeleteNoteId: null,
+    noteDrag: null,
+    suppressNextNoteClick: false,
     songRoot: 'C',
     songHarmony: 'major',
     songScaleFamily: 'diatonic',
@@ -75,6 +78,40 @@ export function clearPreviewCopyState() {
     appState.previewRangeMode = null;
     appState.previewRangeStartMeasure = null;
     appState.previewRangeEndMeasure = null;
+}
+
+export function setPendingDeleteNote(noteId) {
+    appState.pendingDeleteNoteId = noteId || null;
+}
+
+export function clearPendingDeleteNote() {
+    appState.pendingDeleteNoteId = null;
+}
+
+export function isPendingDeleteNote(noteId) {
+    return !!noteId && appState.pendingDeleteNoteId === noteId;
+}
+
+export function setNoteDrag(dragState) {
+    appState.noteDrag = dragState || null;
+}
+
+export function clearNoteDrag() {
+    appState.noteDrag = null;
+}
+
+export function isNoteDragActive() {
+    return !!appState.noteDrag;
+}
+
+export function suppressNextNoteClick() {
+    appState.suppressNextNoteClick = true;
+}
+
+export function consumeSuppressedNoteClick() {
+    if (!appState.suppressNextNoteClick) return false;
+    appState.suppressNextNoteClick = false;
+    return true;
 }
 
 export function clearRepeatState(trackId = null) {

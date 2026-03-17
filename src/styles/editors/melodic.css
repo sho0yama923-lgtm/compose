@@ -160,6 +160,7 @@
     cursor: pointer;
     z-index: 2;
     user-select: none;
+    touch-action: none;
 }
 .timeline-note:hover,
 .timeline-note:focus,
@@ -185,6 +186,32 @@
     background: #222;
     border-color: #111;
 }
+.timeline-note.is-delete-pending,
+.melodic-track-editor .continuous-roll .melody-grid-note.is-delete-pending {
+    opacity: 0.72;
+}
+.timeline-note.is-note-drag-preview,
+.melodic-track-editor .continuous-roll .melody-grid-note.is-note-drag-preview {
+    opacity: 0.72;
+    transform: scale(1.08);
+    transform-origin: center;
+    z-index: 4;
+}
+.timeline-note.is-delete-pending::after,
+.melodic-track-editor .continuous-roll .melody-grid-note.is-delete-pending::after {
+    content: '×';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.28);
+    pointer-events: none;
+}
 .playhead-bar {
     position: absolute;
     top: 0;
@@ -196,4 +223,3 @@
     pointer-events: none;
     z-index: 5;
 }
-
