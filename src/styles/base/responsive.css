@@ -333,7 +333,6 @@
     padding-right: 3px;
     font-size: 10px;
     font-weight: 700;
-    border-right: 1px solid #d7d7d7;
 }
 .melodic-track-editor .continuous-roll .melody-key-octave-divider {
     width: var(--melody-key-width);
@@ -361,18 +360,18 @@
     color: #777;
     background: #efefef;
     border-bottom: 1px solid #dbdbdb;
-    border-right: 1px solid #d7d7d7;
 }
 .melody-grid-octave-divider {
     padding-left: 0;
     color: #666;
     background: linear-gradient(90deg, #f3f3f3, #f8f8f8);
+    border-left: 1px solid #c8c8c8;
     border-bottom: 1px solid #dbdbdb;
 }
 .melodic-track-editor .continuous-roll .melody-grid-row {
     position: relative;
     overflow: hidden;
-    border-bottom: 1px solid #f0f0f0;
+    border-left: 1px solid #c8c8c8;
     background:
         repeating-linear-gradient(
             to right,

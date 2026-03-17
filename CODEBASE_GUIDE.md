@@ -18,7 +18,7 @@
   - 起動順序、初期化、保存フック、初回トラック生成
 - `playwright.config.js`
   - WebKit の E2E 起動設定
-  - `PORT=41234 python3 ./dev-server.py` で静的サーバーを固定ポート起動する
+  - `npm run dev -- --host 127.0.0.1 --port 41234` で固定ポート起動する
 - `src/styles/editor.css`
   - CSS の入口ファイル
   - 実体は `@import` で `src/styles/base/` `src/styles/components/` `src/styles/editors/` へ分割済み
@@ -211,7 +211,7 @@
 
 - `playwright.config.js`
 - `tests/webkit-smoke.spec.js`
-- `dev-server.py`
+- `start.command`
 
 ## 読み方のコツ
 

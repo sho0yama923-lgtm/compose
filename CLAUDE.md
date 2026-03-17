@@ -20,7 +20,7 @@
 ## [Tech Stack]
 - 音声: Tone.js v14.8.49 (CDN)
 - モジュール: ES Modules (`type="module"`)
-- 開発環境: `python3 -m http.server 8080` (CORS対策必須)
+- 開発環境: `npm run dev` (`vite` を使用)
 
 ## [Architecture & Files]
 *Rule: index.htmlのインラインJS禁止。定数はconstants.jsへ。肥大化時は適宜ファイル分割。*

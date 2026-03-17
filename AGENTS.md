@@ -43,7 +43,7 @@
 - 基本方針として、仕様通り動くかの最終確認はユーザーの手動確認を前提とする。
 - 不要なテストコード追加や、自律的なブラウザ確認を前提にしない。
 - ただし既存の確認基盤が必要な変更では、既存の `playwright` / スモークテスト資産を読む。
-- 実ブラウザや WebKit 確認が必要になった場合は、`playwright.config.js` `tests/webkit-smoke.spec.js` `dev-server.py` を参照する。
+- 実ブラウザや WebKit 確認が必要になった場合は、`playwright.config.js` `tests/webkit-smoke.spec.js` `start.command` を参照する。
 
 ## モバイルUI制約
 
