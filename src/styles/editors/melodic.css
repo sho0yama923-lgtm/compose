@@ -152,7 +152,7 @@
     position: absolute;
     top: 2px;
     height: calc(100% - 4px);
-    border: 1px solid #111;
+    border: 0;
     border-radius: 4px;
     background: #111;
     box-shadow: none;
@@ -161,6 +161,7 @@
     z-index: 2;
     user-select: none;
     touch-action: none;
+    box-sizing: border-box;
 }
 .timeline-note:hover,
 .timeline-note:focus,
@@ -171,12 +172,8 @@
     top: 4px;
     height: calc(100% - 8px);
     border-radius: 3px;
-    background: linear-gradient(180deg, #2a2a2a 0%, #121212 100%);
-    border-color: #3a3a3a;
-    box-shadow:
-        inset 0 0 0 1px rgba(255, 255, 255, 0.1),
-        1px 0 0 rgba(255, 255, 255, 0.78),
-        -1px 0 0 rgba(255, 255, 255, 0.45);
+    background: #1b1b1b;
+    box-shadow: none;
 }
 .timeline-note.melodic-note {
     background: linear-gradient(90deg, #1d4ed8, #2563eb);
@@ -184,7 +181,10 @@
 }
 .timeline-note.chord-note {
     background: #222;
-    border-color: #111;
+}
+.timeline-note.drum-note,
+.timeline-note.chord-note {
+    margin-left: 0;
 }
 .timeline-note.is-delete-pending,
 .melodic-track-editor .continuous-roll .melody-grid-note.is-delete-pending {

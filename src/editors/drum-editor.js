@@ -115,8 +115,8 @@ export function renderDrumEditor(track, editorEl) {
             const widthPct = ((DURATION_CELLS[val] || 1) / STEPS_PER_MEASURE) * 100;
             const leftPct = (localStep / STEPS_PER_MEASURE) * 100;
             const pendingDeleteId = `drum:${track.id}:${row.label}:${si}`;
-            btn.style.left = `${leftPct}%`;
-            btn.style.width = `${widthPct}%`;
+            btn.style.left = `calc(${leftPct}% + 1px)`;
+            btn.style.width = `calc(${widthPct}% - 3px)`;
             if (isPendingDeleteNote(pendingDeleteId)) btn.classList.add('is-delete-pending');
             if (isDrumDragOrigin(track.id, row.label, si)) btn.style.visibility = 'hidden';
 
@@ -216,8 +216,8 @@ function appendDrumDragPreview(rowEl, trackId, rowLabel) {
 
     const previewEl = document.createElement('div');
     previewEl.className = 'timeline-note drum-note is-note-drag-preview';
-    previewEl.style.left = `${((drag.targetIndex % STEPS_PER_MEASURE) / STEPS_PER_MEASURE) * 100}%`;
-    previewEl.style.width = `${((DURATION_CELLS[drag.duration] || 1) / STEPS_PER_MEASURE) * 100}%`;
+    previewEl.style.left = `calc(${((drag.targetIndex % STEPS_PER_MEASURE) / STEPS_PER_MEASURE) * 100}% + 1px)`;
+    previewEl.style.width = `calc(${((DURATION_CELLS[drag.duration] || 1) / STEPS_PER_MEASURE) * 100}% - 3px)`;
     rowEl.appendChild(previewEl);
 }
 

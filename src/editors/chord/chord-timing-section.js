@@ -65,8 +65,8 @@ export function buildTimingSection(track, offset, mEnd, cells, majorGroup) {
         const btn = document.createElement('div');
         btn.className = 'timeline-note chord-note';
         const pendingDeleteId = `chord:${track.id}:${si}`;
-        btn.style.left = `${(localStep / STEPS_PER_MEASURE) * 100}%`;
-        btn.style.width = `${((DURATION_CELLS[val] || 1) / STEPS_PER_MEASURE) * 100}%`;
+        btn.style.left = `calc(${(localStep / STEPS_PER_MEASURE) * 100}% + 1px)`;
+        btn.style.width = `calc(${((DURATION_CELLS[val] || 1) / STEPS_PER_MEASURE) * 100}% - 3px)`;
         if (inheritedChords[si]) {
             const color = ROOT_COLORS[inheritedChords[si].root] ?? '#111';
             btn.style.background = color;
@@ -112,8 +112,8 @@ function appendChordDragPreview(soundCells, trackId) {
 
     const previewEl = document.createElement('div');
     previewEl.className = 'timeline-note chord-note is-note-drag-preview';
-    previewEl.style.left = `${((drag.targetIndex % STEPS_PER_MEASURE) / STEPS_PER_MEASURE) * 100}%`;
-    previewEl.style.width = `${((DURATION_CELLS[drag.duration] || 1) / STEPS_PER_MEASURE) * 100}%`;
+    previewEl.style.left = `calc(${((drag.targetIndex % STEPS_PER_MEASURE) / STEPS_PER_MEASURE) * 100}% + 1px)`;
+    previewEl.style.width = `calc(${((DURATION_CELLS[drag.duration] || 1) / STEPS_PER_MEASURE) * 100}% - 3px)`;
     const color = drag.color ?? '#111';
     previewEl.style.background = color;
     previewEl.style.borderColor = color;

@@ -1,14 +1,18 @@
 /* ======= スマホ向けUI改善 上書き ======= */
 .drum-track-editor .drum-editor {
-    flex: 1;
-    min-height: 0;
+    flex: 0 0 auto;
+    min-height: auto;
+    align-items: flex-start;
 }
 .drum-track-editor .drum-editor .timeline-grid {
-    flex: 1;
-    min-height: 0;
+    flex: 0 0 auto;
+    min-height: auto;
 }
 .drum-track-editor .drum-editor .piano-key-spacer {
-    height: 18px;
+    height: 22px;
+}
+.drum-track-editor .drum-editor .steps-grid-scroll {
+    align-self: flex-start;
 }
 .drum-track-editor .drum-editor .piano-key,
 .drum-track-editor .drum-editor .timeline-row {
