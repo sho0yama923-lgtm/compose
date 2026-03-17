@@ -82,12 +82,7 @@ export function renderDurationToolbar(containerEl, onUpdate) {
             iconWrap.appendChild(badgeEl);
         }
 
-        const labelEl = document.createElement('span');
-        labelEl.className = 'dur-label';
-        labelEl.textContent = label;
-
         btn.appendChild(iconWrap);
-        btn.appendChild(labelEl);
         btn.addEventListener('click', () => {
             appState.selectedDuration = value;
             if (value.endsWith('t')) appState.lastTripletDuration = value;
@@ -108,7 +103,8 @@ export function renderDurationToolbar(containerEl, onUpdate) {
     dotBtn.className = 'dur-btn dotted' + (appState.dottedMode ? ' selected' : '');
     dotBtn.type = 'button';
     dotBtn.title = '付点';
-    dotBtn.innerHTML = '<span class="dur-icon-wrap"><span class="dur-icon">.</span></span><span class="dur-label">付点</span>';
+    dotBtn.setAttribute('aria-label', '付点');
+    dotBtn.innerHTML = '<span class="dur-icon-wrap"><span class="dur-icon">.</span></span>';
     dotBtn.disabled = !canDot;
     dotBtn.addEventListener('click', () => {
         appState.dottedMode = !appState.dottedMode;
@@ -142,32 +138,40 @@ function getDurationButtonMeta(value) {
     const map = {
         '1n': { kind: 'whole' },
         '2n': { kind: 'half' },
-        '4n': { icon: '♩' },
-        '8n': { icon: '♪' },
-        '16n': { icon: '♬' },
-        '8t': { icon: '♪', badge: '3' },
-        '16t': { icon: '♬', badge: '3' },
+        '4n': { kind: 'quarter' },
+        '8n': { kind: 'eighth' },
+        '16n': { kind: 'sixteenth' },
+        '8t': { kind: 'eighth', badge: '3' },
+        '16t': { kind: 'sixteenth', badge: '3' },
     };
-    return map[value] ?? { icon: '♪' };
+    return map[value] ?? { kind: 'eighth' };
 }
 
 function buildDurationIcon(meta) {
-    if (meta.kind === 'whole') {
-        const el = document.createElement('span');
-        el.className = 'dur-icon whole-note-icon';
-        el.innerHTML = '<span class="note-head"></span>';
-        return el;
-    }
-
-    if (meta.kind === 'half') {
-        const el = document.createElement('span');
-        el.className = 'dur-icon half-note-icon';
-        el.innerHTML = '<span class="note-head"></span><span class="note-stem"></span>';
-        return el;
-    }
-
     const el = document.createElement('span');
-    el.className = 'dur-icon';
-    el.textContent = meta.icon;
+    el.className = `dur-icon css-note-icon ${meta.kind || 'eighth'}-note-icon`;
+
+    const headEl = document.createElement('span');
+    headEl.className = 'note-head';
+    el.appendChild(headEl);
+
+    if (meta.kind !== 'whole') {
+        const stemEl = document.createElement('span');
+        stemEl.className = 'note-stem';
+        el.appendChild(stemEl);
+    }
+
+    if (meta.kind === 'eighth' || meta.kind === 'sixteenth') {
+        const flagEl = document.createElement('span');
+        flagEl.className = 'note-flag note-flag-1';
+        el.appendChild(flagEl);
+    }
+
+    if (meta.kind === 'sixteenth') {
+        const flagEl = document.createElement('span');
+        flagEl.className = 'note-flag note-flag-2';
+        el.appendChild(flagEl);
+    }
+
     return el;
 }

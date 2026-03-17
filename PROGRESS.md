@@ -158,3 +158,13 @@
 - import の静的確認は通過
 - 構成変更後はブラウザのハードリロードが前提
 - WebKit 確認は `npm install` → `npm run playwright:install` → `npm run test:e2e:webkit`
+
+## 2026-03-17 追記
+
+- 音価ツールバーの音符アイコンを CSS 描画へ統一したうえで、8分音符/16分音符の旗を参考画像寄りの流線形シルエットへ更新
+- 旗は `src/styles/components/duration-toolbar.css` の `note-flag` で1本の形として描画し、以前の「円弧 + 先端」の分離感を解消
+- 旗の根本が棒を貫通して見えないよう、シルエット開始位置を `1px` 右へ寄せ、回転を `10deg -> 7deg` に調整
+- 16分音符だけ旗の高さを `8px -> 6px` に下げ、1本目 `top 1px`、2本目 `top 5px` へ詰めて8分との差を整理
+- 音価ボタンの `全 / 2分 / 4分 / 8分 / 16分 / 付点` ラベルを削除し、記号のみを中央表示へ変更。`3連` バッジは維持
+- WebKit の一時 Playwright spec で `.duration-value-row` を撮影して見た目確認済み
+- build 成功を確認済み

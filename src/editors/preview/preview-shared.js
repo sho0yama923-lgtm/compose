@@ -7,8 +7,8 @@ import {
 
 export const LONG_PRESS_MS = 420;
 export const SVG_NS = 'http://www.w3.org/2000/svg';
-export const EQ_MIN_DB = -24;
-export const EQ_MAX_DB = 24;
+export const EQ_MIN_DB = -12;
+export const EQ_MAX_DB = 12;
 export const EQ_GRAPH_MIN_FREQ = 80;
 export const EQ_GRAPH_MAX_FREQ = 9000;
 export const EQ_GRAPH_BANDS = [
@@ -16,7 +16,7 @@ export const EQ_GRAPH_BANDS = [
     { key: 'mid', label: 'Mid', freqKey: 'midFreq', color: '#059669' },
     { key: 'high', label: 'High', freqKey: 'highFreq', color: '#ef6c00' },
 ];
-export const EQ_GRAPH_DB_TICKS = [-24, -12, 0, 12, 24];
+export const EQ_GRAPH_DB_TICKS = [-12, -6, 0, 6, 12];
 export const EQ_GRAPH_FREQ_TICKS = [100, 200, 500, 1000, 2000, 5000];
 export const TONE_CONTROL_CONFIG = [
     { key: 'gainDb', label: 'Gain', unit: 'dB', format: formatSignedValue },

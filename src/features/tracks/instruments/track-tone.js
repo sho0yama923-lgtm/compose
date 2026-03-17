@@ -1,7 +1,7 @@
 import { INST_LABEL } from './instrument-config.js';
 
-const EQ_MIN_DB = -24;
-const EQ_MAX_DB = 24;
+const EQ_MIN_DB = -12;
+const EQ_MAX_DB = 12;
 const EQ_BANDS = ['low', 'mid', 'high'];
 
 export const TRACK_TONE_DEFAULTS = {
