@@ -177,3 +177,16 @@
 - iOS WebView の音源読み込み安定化のため、`capacitor.config.json` に `server.hostname = localhost` と `server.iosScheme = http` を追加し、`http://localhost/...` でサンプルを読ませる構成へ変更
 - 音源 URL 解決の曖昧さを減らすため、`playback-chains.js` で Sampler の `baseUrl` を `'/sounds/.../'` 形式の絶対パスへ統一し、ロード成功/失敗のログも追加
 - iOS WKWebView で `.mp3` 拡張子のカスタムスキーム応答と `Tone.Sampler` が噛み合わない可能性に対応するため、`vite.config.js` で `dist/audio-buffers/sounds/**/*.mp3.bin` を生成し、Sampler には `.bin` 側を読ませる構成へ変更
+- `@capacitor/android` を追加して `android/` プロジェクトを生成し、`android:sync / android:open / android:buildprep` の導線を追加
+- `src/features/bridges/` に `audio / storage / file-share / device` を追加し、再生と保存の呼び出し境界をアプリ共通化の方向へ整理
+- preview カード長押し時の iOS 選択ハンドル抑止のため、`preview.css` と `preview-actions.js` で `user-select / -webkit-touch-callout` と `contextmenu / selectstart` 抑止を preview UI 限定で追加
+- `@capacitor/filesystem` 利用に備えて `ios/App/PrivacyInfo.xcprivacy` を追加
+- `score-serializer.js` を追加し、step 配列の score から native plugin 向け `events[]` payload と音源 manifest を組み立てる層を分離
+- `audio-bridge.js` を iOS native playback 優先・Web/Android Tone.js fallback の二段構成へ変更し、`playbackStep` listener を既存 playhead 更新へ接続
+- `ios/App/App/NativePlaybackPlugin.swift` を追加し、`AVAudioEngine + AVAudioPlayerNode + AVAudioUnitVarispeed` でサンプル再生を行う Capacitor custom plugin を実装
+- `AppDelegate.swift` でアプリ起動後に `NativePlaybackPlugin` を bridge 登録するよう変更
+- iOS 起動直後の `Filesystem mkdir` 重複エラーを抑えるため、`storage-bridge.js` のディレクトリ初期化を共有 Promise 化して並行呼び出しを 1 回へ畳んだ
+- 再生ラインのカクつきを減らすため、playhead 更新を native の step 通知依存から外し、`playback-controller.js` で `requestAnimationFrame` による連続補間へ変更
+- iOS native 再生では `NativePlaybackPlugin.swift` の全ステップ `playbackStep` 通知を廃止し、音声スケジューリングだけに責務を絞ってループ時の負荷と揺れを減らした
+- native plugin の `play()` は `startDelayMs` を返すようにし、JS 側の playhead 開始タイミングを音の立ち上がりに合わせやすくした
+- `npm run build`、`npm run test:e2e:webkit`、`npm run ios:buildprep`、`xcodebuild -project ios/App/App.xcodeproj -scheme App -destination generic/platform=iOS -derivedDataPath /tmp/compose-iosbuild CODE_SIGNING_ALLOWED=NO build` が通過

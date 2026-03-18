@@ -6,6 +6,8 @@
   - Web ビルド成果物 `dist/` を iOS ラッパーへ渡す設定
 - `ios/`
   - Capacitor が管理するネイティブ側プロジェクト
+- `android/`
+  - Capacitor が管理するネイティブ側プロジェクト
 - `src/main.js`
   - アプリ初期化だけを担当する
 - `src/core/`
@@ -14,6 +16,9 @@
   - ドラム、メロディ、コード、プレビューの描画
 - `src/features/`
   - 再生、保存、トラック管理のような振る舞い単位のロジック
+- `src/features/bridges/`
+  - audio / storage / file-share / device のネイティブ境界
+  - audio は iOS で native plugin、Web / Android で Tone.js fallback を使い分ける
 - `src/ui/`
   - サイドバー、モーダル、トップバー補助、下部シークバーなどアプリ外枠の UI
 - `src/styles/`
@@ -25,6 +30,17 @@
 - `editors -> core`
 - `features -> core`
 - `ui -> features/core`
+
+## 再生アーキテクチャ
+
+- `playback-controller.js`
+  - トラック状態から step 配列の score を構築する
+- `score-serializer.js`
+  - step 配列を native plugin 向け `events[]` payload と音源 manifest へ正規化する
+- `audio-bridge.js`
+  - iOS 実機では `NativePlaybackPlugin.swift` を呼び、Web / Android では `scheduler.js` へフォールバックする
+- `scheduler.js`
+  - browser fallback として Tone.js 再生を維持する
 
 ## 近いうちにやる整理
 

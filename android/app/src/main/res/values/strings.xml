@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Compose</string>
+    <string name="title_activity_main">Compose</string>
+    <string name="package_name">com.yamaoxiogo.compose</string>
+    <string name="custom_url_scheme">com.yamaoxiogo.compose</string>
+</resources>

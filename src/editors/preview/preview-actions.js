@@ -146,6 +146,10 @@ export function attachPreviewCardLongPress(cardEl, trackId) {
     let startX = 0;
     let startY = 0;
 
+    const isInteractiveTarget = (target) => {
+        return target instanceof Element && !!target.closest('input, select, textarea, option');
+    };
+
     const clearTimer = () => {
         if (timerId !== null) {
             clearTimeout(timerId);
@@ -175,6 +179,14 @@ export function attachPreviewCardLongPress(cardEl, trackId) {
     cardEl.addEventListener('pointerup', clearTimer);
     cardEl.addEventListener('pointercancel', clearTimer);
     cardEl.addEventListener('pointerleave', clearTimer);
+    cardEl.addEventListener('contextmenu', (event) => {
+        if (isInteractiveTarget(event.target)) return;
+        event.preventDefault();
+    });
+    cardEl.addEventListener('selectstart', (event) => {
+        if (isInteractiveTarget(event.target)) return;
+        event.preventDefault();
+    });
 }
 
 export function closePreviewActions(shouldRender) {

@@ -4,7 +4,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:android-web": "vite build",
     "build:ios-web": "vite build",
+    "android:sync": "npx cap sync android",
+    "android:open": "npx cap open android",
+    "android:buildprep": "npm run build:android-web && npm run android:sync",
     "ios:sync": "npx cap sync ios",
     "ios:open": "npx cap open ios",
     "ios:buildprep": "npm run build:ios-web && npm run ios:sync",
@@ -15,9 +19,12 @@
     "playwright:install": "playwright install webkit"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.2.0",
     "@capacitor/cli": "^8.2.0",
     "@capacitor/core": "^8.2.0",
+    "@capacitor/filesystem": "^8.1.2",
     "@capacitor/ios": "^8.2.0",
+    "@capacitor/share": "^8.0.1",
     "@playwright/test": "^1.54.2",
     "vite": "^7.1.5"
   }

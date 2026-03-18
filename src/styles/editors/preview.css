@@ -121,6 +121,16 @@
     border-radius: 8px;
     overflow: visible;
     flex-shrink: 0;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+.preview-card input,
+.preview-card select,
+.preview-card textarea {
+    user-select: auto;
+    -webkit-user-select: auto;
+    -webkit-touch-callout: default;
 }
 .preview-card.repeat-source {
     background: #fffdf3;
@@ -214,6 +224,26 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+}
+.preview-card-header,
+.preview-card-title,
+.preview-card-actions,
+.preview-card-action-btn,
+.preview-track-controls,
+.preview-track-toggle-row,
+.preview-track-toggle,
+.preview-track-repeat-slot,
+.preview-track-volume,
+.preview-track-volume-label,
+.preview-range-picker,
+.preview-range-title,
+.preview-range-status,
+.preview-range-current,
+.preview-clipboard-summary,
+.preview-clipboard-chip {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
 }
 .preview-track-tone-btn {
     width: 24px;

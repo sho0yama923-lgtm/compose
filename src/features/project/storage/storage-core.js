@@ -1,23 +1,24 @@
 import { appState, callbacks, clearPreviewCopyState, clearRepeatState } from '../../../core/state.js';
 import {
-    STORAGE_KEY,
     createSaveData,
     restoreFromData,
     buildDefaultExportFileName,
     normalizeExportFileName,
 } from './storage-helpers.js';
+import { exportProjectData, requestProjectImport } from '../../bridges/file-share-bridge.js';
+import { clearProjectData, loadProjectData, saveProjectData } from '../../bridges/storage-bridge.js';
 
-export function saveState() {
+export async function saveState() {
     try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(createSaveData()));
+        await saveProjectData(JSON.stringify(createSaveData()));
     } catch (e) {
         console.warn('saveState failed:', e);
     }
 }
 
-export function loadState() {
+export async function loadState() {
     try {
-        const raw = localStorage.getItem(STORAGE_KEY);
+        const raw = await loadProjectData();
         if (!raw) return false;
 
         const data = JSON.parse(raw);
@@ -28,9 +29,9 @@ export function loadState() {
     }
 }
 
-export function exportJSON() {
-    saveState();
-    const json = localStorage.getItem(STORAGE_KEY);
+export async function exportJSON() {
+    await saveState();
+    const json = await loadProjectData();
     if (!json) return false;
 
     const defaultFileName = buildDefaultExportFileName();
@@ -39,13 +40,7 @@ export function exportJSON() {
 
     const normalizedName = normalizeExportFileName(requestedName, defaultFileName);
 
-    const blob = new Blob([json], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = normalizedName;
-    a.click();
-    URL.revokeObjectURL(a.href);
-    return true;
+    return exportProjectData(json, normalizedName);
 }
 
 export async function importJSON(file) {
@@ -58,7 +53,7 @@ export async function importJSON(file) {
             return;
         }
 
-        saveState();
+        await saveState();
         appState.previewMode = true;
         appState.chordDrumSheetOpen = false;
         callbacks.renderEditor();
@@ -69,20 +64,20 @@ export async function importJSON(file) {
     }
 }
 
-export function resetState() {
-    localStorage.removeItem(STORAGE_KEY);
+export async function resetState() {
+    await clearProjectData();
     location.reload();
 }
 
 export function initSaveLoad() {
-    document.getElementById('exportBtn').addEventListener('click', () => {
-        if (exportJSON()) {
+    document.getElementById('exportBtn').addEventListener('click', async () => {
+        if (await exportJSON()) {
             callbacks.closeSidebar();
         }
     });
 
     document.getElementById('importBtn').addEventListener('click', () => {
-        document.getElementById('importFile').click();
+        requestProjectImport(document.getElementById('importFile'));
     });
 
     document.getElementById('importFile').addEventListener('change', async (e) => {
@@ -92,9 +87,9 @@ export function initSaveLoad() {
         callbacks.closeSidebar();
     });
 
-    document.getElementById('resetBtn').addEventListener('click', () => {
+    document.getElementById('resetBtn').addEventListener('click', async () => {
         if (confirm('現在のデータを破棄して新規作成しますか？')) {
-            resetState();
+            await resetState();
         }
     });
 }

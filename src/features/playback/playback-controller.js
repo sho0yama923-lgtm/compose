@@ -1,12 +1,15 @@
 // playback.js — 再生/停止 + スコア構築
 
 import { appState, STEPS_PER_MEASURE, totalSteps, callbacks, getNormalizedPlayRangeMeasures } from '../../core/state.js';
-import { play, stop } from './scheduler.js';
+import { playScore, stopScorePlayback } from '../bridges/audio-bridge.js';
 import { INST_TYPE } from '../tracks/instrument-map.js';
 import { getResolvedChordNotes } from '../../core/constants.js';
 import { isStepHead } from '../../core/duration.js';
+import { serializeScoreForNativePlayback } from './score-serializer.js';
 
 let playbackRequestId = 0;
+let playheadAnimationFrameId = null;
+let playheadAnimationState = null;
 
 export function initPlayback() {
     const playToggleBtn = document.getElementById('playToggleBtn');
@@ -100,54 +103,151 @@ export function initPlayback() {
             }
         }
 
+        const nativePayload = serializeScoreForNativePlayback(score, {
+            bpm,
+            tracks: appState.tracks,
+            startStep,
+            endStepExclusive,
+            loop: true,
+        });
+
         appState.isPlaying = true;
         setPlaybackButtonState();
         const requestId = ++playbackRequestId;
-        const started = await play(score, {
+        const playbackResult = await playScore({
+            score,
+            nativePayload,
+        }, {
             bpm,
             tracks: appState.tracks,
             beatConfig: appState.beatConfig,
             numMeasures: appState.numMeasures,
             startStep,
             endStepExclusive,
-            onStep(globalStep) {
-                appState.playheadStep = globalStep;
-                const measure = Math.floor(globalStep / STEPS_PER_MEASURE);
-
-                // 小節が変わったら自動ページ送り
-                if (measure !== appState.currentMeasure) {
-                    syncPreviewScrollTop();
-                    appState.currentMeasure = measure;
-                    callbacks.renderEditor();
-                }
-
-                // 再生位置ハイライト更新
-                document.querySelectorAll('.preview-cell.playing')
-                    .forEach(el => el.classList.remove('playing'));
-                document.querySelectorAll(`.preview-cell[data-start="${globalStep}"]`)
-                    .forEach(el => el.classList.add('playing'));
-                updatePlayheadIndicators(globalStep);
-            }
         });
         if (requestId !== playbackRequestId) {
+            stopPlaybackAnimation();
             return;
         }
+        const started = typeof playbackResult === 'object'
+            ? !!playbackResult?.started
+            : !!playbackResult;
         appState.isPlaying = started;
+        if (started) {
+            beginPlaybackAnimation({
+                bpm,
+                startStep,
+                endStepExclusive,
+                startDelayMs: Number(playbackResult?.startDelayMs) || 0,
+                loop: true,
+            });
+        } else {
+            stopPlaybackAnimation();
+        }
         setPlaybackButtonState();
     });
 }
 
-function updatePlayheadIndicators(globalStep) {
+function updatePlayheadIndicators(globalStepPosition) {
     document.querySelectorAll('.playhead-bar').forEach((barEl) => {
         const measureStart = Number(barEl.dataset.measureStart || '0');
-        if (globalStep === null || globalStep < measureStart || globalStep >= measureStart + STEPS_PER_MEASURE) {
+        if (
+            globalStepPosition === null
+            || globalStepPosition < measureStart
+            || globalStepPosition >= measureStart + STEPS_PER_MEASURE
+        ) {
             barEl.style.display = 'none';
             return;
         }
-        const localStep = globalStep - measureStart;
+        const localStep = globalStepPosition - measureStart;
         barEl.style.display = 'block';
         barEl.style.left = `${(localStep / STEPS_PER_MEASURE) * 100}%`;
     });
+}
+
+function updatePlayingPreviewCells(globalStep) {
+    document.querySelectorAll('.preview-cell.playing')
+        .forEach((el) => el.classList.remove('playing'));
+    document.querySelectorAll(`.preview-cell[data-start="${globalStep}"]`)
+        .forEach((el) => el.classList.add('playing'));
+}
+
+function applyPlaybackUi(globalStep, globalStepPosition = globalStep) {
+    const measure = Math.floor(globalStep / STEPS_PER_MEASURE);
+    const stepChanged = appState.playheadStep !== globalStep;
+
+    if (measure !== appState.currentMeasure) {
+        syncPreviewScrollTop();
+        appState.currentMeasure = measure;
+        callbacks.renderEditor();
+    }
+
+    if (stepChanged) {
+        appState.playheadStep = globalStep;
+        updatePlayingPreviewCells(globalStep);
+    }
+
+    updatePlayheadIndicators(globalStepPosition);
+}
+
+function beginPlaybackAnimation({
+    bpm,
+    startStep,
+    endStepExclusive,
+    startDelayMs = 0,
+    loop = true,
+}) {
+    stopPlaybackAnimation();
+    playheadAnimationState = {
+        startAtMs: performance.now() + Math.max(0, startDelayMs),
+        msPerStep: (60_000 / Math.max(1, bpm)) / 12,
+        startStep,
+        endStepExclusive,
+        cycleSteps: Math.max(1, endStepExclusive - startStep),
+        loop,
+    };
+    tickPlaybackAnimation();
+}
+
+function stopPlaybackAnimation() {
+    if (playheadAnimationFrameId !== null) {
+        cancelAnimationFrame(playheadAnimationFrameId);
+        playheadAnimationFrameId = null;
+    }
+    playheadAnimationState = null;
+}
+
+function tickPlaybackAnimation() {
+    if (!playheadAnimationState || !appState.isPlaying) {
+        playheadAnimationFrameId = null;
+        return;
+    }
+
+    const {
+        startAtMs,
+        msPerStep,
+        startStep,
+        endStepExclusive,
+        cycleSteps,
+        loop,
+    } = playheadAnimationState;
+
+    const now = performance.now();
+    if (now < startAtMs) {
+        updatePlayheadIndicators(null);
+        playheadAnimationFrameId = requestAnimationFrame(tickPlaybackAnimation);
+        return;
+    }
+
+    const elapsedSteps = Math.max(0, (now - startAtMs) / msPerStep);
+    const cycledSteps = loop
+        ? (elapsedSteps % cycleSteps)
+        : Math.min(elapsedSteps, Math.max(0, cycleSteps - 0.001));
+    const globalStepPosition = Math.min(endStepExclusive - 0.001, startStep + cycledSteps);
+    const globalStep = Math.min(endStepExclusive - 1, Math.floor(globalStepPosition));
+
+    applyPlaybackUi(globalStep, globalStepPosition);
+    playheadAnimationFrameId = requestAnimationFrame(tickPlaybackAnimation);
 }
 
 function syncPreviewScrollTop() {
@@ -158,7 +258,8 @@ function syncPreviewScrollTop() {
 
 function stopPlayback() {
     playbackRequestId += 1;
-    stop();
+    stopScorePlayback();
+    stopPlaybackAnimation();
     appState.isPlaying = false;
     appState.playheadStep = null;
     document.querySelectorAll('.preview-cell.playing')

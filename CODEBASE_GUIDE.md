@@ -22,8 +22,14 @@
 - `ios/`
   - Capacitor が生成する Xcode プロジェクト
   - `npm run ios:buildprep` 後に Xcode で開いてビルドする
+  - `ios/App/App/NativePlaybackPlugin.swift` に iOS 実機向けの native 再生 plugin を置く
+- `android/`
+  - Capacitor が生成する Android Studio プロジェクト
+  - `npm run android:buildprep` 後に Android Studio で開いてビルドする
 - `docs/ios-build.md`
   - iPhone アプリ向けのセットアップ手順と日常フロー
+- `docs/android-build.md`
+  - Android アプリ向けのセットアップ手順と日常フロー
 - `playwright.config.js`
   - WebKit の E2E 起動設定
   - `npm run dev -- --host 127.0.0.1 --port 41234` で固定ポート起動する
@@ -103,10 +109,16 @@
   - 各トラックを再生用スコアへ変換
   - 再生ボタン、再生範囲、playhead 更新を変える時はここ
   - 将来のトラックEQ追加では event に `trackId` を流す入口になる
+- `src/features/playback/score-serializer.js`
+  - step 配列の score を native plugin 向け payload と音源 manifest に正規化する
+  - iOS / Android の native 再生へ渡す契約を変える時はここ
 - `src/features/playback/scheduler.js`
   - Tone.js への実送出
   - タイミングや Tone.js 側の鳴らし方を変える時はここ
   - EQ やエフェクトを実際に挿すならここ
+- `src/features/bridges/`
+  - audio / storage / file-share / device の抽象境界
+  - Web fallback とネイティブ導線を分けたい時はここ
 - `src/features/project/project-storage.js`
   - 保存機能の公開入口ファサード
   - 実体は `src/features/project/storage/` に分割
@@ -197,7 +209,9 @@
 ### 6. 再生タイミングや音の出し方を変えたい
 
 - `src/features/playback/playback-controller.js`
+- `src/features/playback/score-serializer.js`
 - `src/features/playback/scheduler.js`
+- `ios/App/App/NativePlaybackPlugin.swift`
 - `src/core/rhythm-grid.js`
 - エフェクト追加なら `src/features/tracks/instrument-map.js` も読む
 
@@ -229,6 +243,15 @@
 - `npm run build:ios-web`
 - `npm run ios:sync`
 - `npm run ios:open`
+
+### 11. Android アプリとしてビルドしたい
+
+- `capacitor.config.json`
+- `package.json`
+- `android/`
+- `npm run build:android-web`
+- `npm run android:sync`
+- `npm run android:open`
 
 ## 読み方のコツ
 

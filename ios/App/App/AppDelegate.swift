@@ -6,6 +6,7 @@ import AVFAudio
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
+    private var didRegisterCustomPlugins = false
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         configureAudioSession()
@@ -38,6 +39,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func applicationDidBecomeActive(_ application: UIApplication) {
         // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
+        registerCustomPluginsIfNeeded()
     }
 
     func applicationWillTerminate(_ application: UIApplication) {
@@ -55,6 +57,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Feel free to add additional processing here, but if you want the App API to support
         // tracking app url opens, make sure to keep this call
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
+    }
+
+    private func registerCustomPluginsIfNeeded() {
+        guard !didRegisterCustomPlugins else { return }
+        guard let bridgeViewController = window?.rootViewController as? CAPBridgeViewController,
+              let bridge = bridgeViewController.bridge else {
+            return
+        }
+        bridge.registerPluginInstance(NativePlaybackPlugin())
+        didRegisterCustomPlugins = true
     }
 
 }

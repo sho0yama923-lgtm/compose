@@ -184,6 +184,11 @@ test('webkit mobile smoke check', async ({ page }) => {
   await page.selectOption('.preview-song-family-select', 'pentatonic');
   await page.locator('.preview-harmony-btn[data-harmony="minor"]').click();
   await expect(page.locator('.preview-harmony-btn.selected')).toContainText('m');
+  await longPressSelector(page, '.preview-card[data-instrument="drums"]');
+  await expect(page.locator('.preview-card[data-instrument="drums"] .preview-card-actions')).toBeVisible();
+  await page.locator('.preview-card[data-instrument="drums"] .preview-card-action-btn', { hasText: 'コピー' }).click();
+  await expect(page.locator('.preview-range-title')).toHaveText('コピー範囲');
+  await page.locator('.preview-card[data-instrument="drums"] .preview-card-action-btn.compact', { hasText: '中止' }).click();
 
   await page.evaluate(() => {
     document.querySelectorAll('#trackList li')[1]?.click();

@@ -13,15 +13,15 @@ import { saveState, loadState, initSaveLoad } from './features/project/project-s
 // 循環依存を回避するコールバック登録（自動保存フック付き）
 callbacks.renderEditor = (...args) => {
     renderEditor(...args);
-    if (!appState.isPlaying) saveState();
+    if (!appState.isPlaying) void saveState();
 };
 callbacks.renderSidebar = (...args) => {
     renderSidebar(...args);
-    if (!appState.isPlaying) saveState();
+    if (!appState.isPlaying) void saveState();
 };
 callbacks.closeSidebar = closeSidebar;
 callbacks.saveState = () => {
-    if (!appState.isPlaying) saveState();
+    if (!appState.isPlaying) void saveState();
 };
 
 function showBootError(error) {
@@ -37,7 +37,7 @@ function showBootError(error) {
     }
 }
 
-try {
+async function boot() {
     // 各モジュール初期化
     initSidebar();
     initPlayback();
@@ -65,7 +65,7 @@ try {
 
     // 起動時: 保存データがあれば復元、なければデフォルトトラック生成
     // (loadState成功でもトラック0件ならデフォルト作成)
-    if (!loadState() || appState.tracks.length === 0) {
+    if (!(await loadState()) || appState.tracks.length === 0) {
         // beatConfig 初期化（全小節デフォルト [4,4,4,4]）
         appState.beatConfig = Array.from({ length: appState.numMeasures }, () => [4, 4, 4, 4]);
         addTrack('drums');
@@ -85,6 +85,8 @@ try {
     callbacks.renderSidebar();
     callbacks.renderEditor();
     initOnboarding();
-} catch (error) {
-    showBootError(error);
 }
+
+boot().catch((error) => {
+    showBootError(error);
+});
