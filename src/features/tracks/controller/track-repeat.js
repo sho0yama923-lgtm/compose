@@ -23,6 +23,9 @@ export function copyTrackMeasureRange(track, startMeasure, endMeasure) {
             payload: {
                 rows: track.rows.map((row) => ({
                     label: row.label,
+                    note: row.note,
+                    sampleInstrumentId: row.sampleInstrumentId,
+                    sampleId: row.sampleId,
                     steps: row.steps.slice(startStep, endStepExclusive),
                 })),
             },

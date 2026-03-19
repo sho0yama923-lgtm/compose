@@ -9,6 +9,19 @@ function resolvePlaybackInstrumentId(track) {
     return track.instrument;
 }
 
+function collectTrackInstrumentIds(track) {
+    if (track.instrument !== 'drums') {
+        return [resolvePlaybackInstrumentId(track)];
+    }
+    return Array.from(
+        new Set(
+            (track.rows || [])
+                .map((row) => row.sampleInstrumentId || 'drums_default')
+                .filter(Boolean)
+        )
+    );
+}
+
 function normalizeNotes(notes) {
     if (Array.isArray(notes)) {
         return notes.filter((note) => typeof note === 'string');
@@ -83,25 +96,26 @@ export function buildNativePlaybackManifest(tracks = []) {
     const manifests = [];
 
     tracks.forEach((track) => {
-        const instrumentId = resolvePlaybackInstrumentId(track);
-        if (seenInstrumentIds.has(instrumentId)) return;
-        seenInstrumentIds.add(instrumentId);
+        collectTrackInstrumentIds(track).forEach((instrumentId) => {
+            if (seenInstrumentIds.has(instrumentId)) return;
+            seenInstrumentIds.add(instrumentId);
 
-        const config = INSTRUMENT_CONFIG_MAP[instrumentId];
-        const sampleMap = getInstrumentUrls(config);
-        const sampleEntries = Object.entries(sampleMap)
-            .map(([note, fileName]) => {
-                const path = resolveInstrumentAssetPath(instrumentId, fileName);
-                return path ? [note, path] : null;
-            })
-            .filter(Boolean)
-            .sort((left, right) => left[0].localeCompare(right[0]));
+            const config = INSTRUMENT_CONFIG_MAP[instrumentId];
+            const sampleMap = getInstrumentUrls(config);
+            const sampleEntries = Object.entries(sampleMap)
+                .map(([note, fileName]) => {
+                    const path = resolveInstrumentAssetPath(instrumentId, fileName);
+                    return path ? [note, path] : null;
+                })
+                .filter(Boolean)
+                .sort((left, right) => left[0].localeCompare(right[0]));
 
-        if (sampleEntries.length === 0) return;
+            if (sampleEntries.length === 0) return;
 
-        manifests.push({
-            instrumentId,
-            samples: Object.fromEntries(sampleEntries),
+            manifests.push({
+                instrumentId,
+                samples: Object.fromEntries(sampleEntries),
+            });
         });
     });
 

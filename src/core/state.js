@@ -27,6 +27,7 @@ export const appState = {
     chordDrumSheetOpen: false,
     chordDetailTrackId: null,
     chordDetailStep: null,
+    drumAddTrackId: null,
     drumHintDismissed: false,
     chordHintDismissed: false,
     melodicHintDismissed: false,

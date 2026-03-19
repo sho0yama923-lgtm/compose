@@ -1,6 +1,7 @@
-﻿import {
+import {
     appState,
     STEPS_PER_MEASURE,
+    totalSteps,
     callbacks,
     clearPendingDeleteNote,
     clearNoteDrag,
@@ -21,6 +22,7 @@ import {
     getGridModeLabel,
     getMeasureStart,
 } from '../core/rhythm-grid.js';
+import { DRUM_ROW_CANDIDATES, createDrumRow } from '../features/tracks/instrument-map.js';
 
 const NOTE_DRAG_HOLD_MS = 380;
 
@@ -51,6 +53,8 @@ export function renderDrumEditor(track, editorEl) {
             }
         ));
     }
+
+    topbarEl.appendChild(buildDrumAddButton(track));
 
     const wrapEl = document.createElement('div');
     wrapEl.className = 'melodic-editor drum-editor';
@@ -105,7 +109,7 @@ export function renderDrumEditor(track, editorEl) {
             callbacks.renderEditor();
         });
 
-        for (let localStep = 0; localStep < STEPS_PER_MEASURE; localStep++) {
+        for (let localStep = 0; localStep < STEPS_PER_MEASURE; localStep += 1) {
             const si = offset + localStep;
             const val = row.steps[si];
             if (isStepTie(val) || !isStepHead(val)) continue;
@@ -138,7 +142,6 @@ export function renderDrumEditor(track, editorEl) {
                     event,
                     track,
                     row,
-                    rowEl,
                     cells,
                     maxIndex,
                     sourceIndex: si,
@@ -156,6 +159,106 @@ export function renderDrumEditor(track, editorEl) {
     wrapEl.appendChild(keysEl);
     wrapEl.appendChild(gridScrollEl);
     editorEl.appendChild(wrapEl);
+
+    if (appState.drumAddTrackId === track.id) {
+        editorEl.appendChild(buildDrumAddSheet(track));
+    }
+}
+
+function buildDrumAddButton(track) {
+    const buttonEl = document.createElement('button');
+    buttonEl.className = 'drum-add-source-btn';
+    buttonEl.type = 'button';
+    buttonEl.textContent = '音源を追加';
+    buttonEl.addEventListener('click', () => {
+        appState.drumAddTrackId = track.id;
+        callbacks.renderEditor();
+    });
+    return buttonEl;
+}
+
+function buildDrumAddSheet(track) {
+    const overlayEl = document.createElement('div');
+    overlayEl.className = 'drum-add-sheet-overlay';
+    overlayEl.addEventListener('click', (event) => {
+        if (event.target !== overlayEl) return;
+        appState.drumAddTrackId = null;
+        callbacks.renderEditor();
+    });
+
+    const sheetEl = document.createElement('section');
+    sheetEl.className = 'drum-add-sheet';
+    overlayEl.appendChild(sheetEl);
+
+    const handleEl = document.createElement('div');
+    handleEl.className = 'drum-add-sheet-handle';
+    sheetEl.appendChild(handleEl);
+
+    const titleEl = document.createElement('div');
+    titleEl.className = 'drum-add-sheet-title';
+    titleEl.textContent = '音源を追加';
+    sheetEl.appendChild(titleEl);
+
+    const candidateGroups = groupDrumRowCandidates(track);
+    candidateGroups.forEach(([groupLabel, candidates]) => {
+        if (candidates.length === 0) return;
+        const sectionEl = document.createElement('section');
+        sectionEl.className = 'drum-add-sheet-group';
+
+        const headingEl = document.createElement('h3');
+        headingEl.className = 'drum-add-sheet-group-title';
+        headingEl.textContent = groupLabel;
+        sectionEl.appendChild(headingEl);
+
+        const listEl = document.createElement('div');
+        listEl.className = 'drum-add-sheet-list';
+        candidates.forEach((candidate) => {
+            const itemBtn = document.createElement('button');
+            itemBtn.className = 'drum-add-sheet-item';
+            itemBtn.type = 'button';
+            itemBtn.textContent = candidate.label;
+            itemBtn.addEventListener('click', () => {
+                track.rows.push(createDrumRow(candidate.sampleInstrumentId, candidate.sampleId, {
+                    label: candidate.label,
+                    steps: Array(totalSteps()).fill(null),
+                }));
+                appState.drumAddTrackId = null;
+                callbacks.renderEditor();
+            });
+            listEl.appendChild(itemBtn);
+        });
+        sectionEl.appendChild(listEl);
+        sheetEl.appendChild(sectionEl);
+    });
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'drum-add-sheet-close';
+    closeBtn.type = 'button';
+    closeBtn.textContent = '閉じる';
+    closeBtn.addEventListener('click', () => {
+        appState.drumAddTrackId = null;
+        callbacks.renderEditor();
+    });
+    sheetEl.appendChild(closeBtn);
+
+    return overlayEl;
+}
+
+function groupDrumRowCandidates(track) {
+    const existingRowIds = new Set(
+        (track.rows || []).map((row) => `${row.sampleInstrumentId || 'drums_default'}:${row.sampleId || ''}`)
+    );
+    const grouped = new Map();
+
+    DRUM_ROW_CANDIDATES.forEach((candidate) => {
+        if (existingRowIds.has(candidate.id)) return;
+        if (!grouped.has(candidate.groupLabel)) {
+            grouped.set(candidate.groupLabel, []);
+        }
+        grouped.get(candidate.groupLabel).push(candidate);
+    });
+
+    return Array.from(grouped.entries());
 }
 
 function createPlayheadBar(measureStart) {
@@ -225,7 +328,6 @@ function startDrumNoteDrag({
     event,
     track,
     row,
-    rowEl,
     cells,
     maxIndex,
     sourceIndex,

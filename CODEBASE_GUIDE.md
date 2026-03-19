@@ -72,6 +72,7 @@
   - 音価UIや表示ルールを変える時はここ
 - `src/editors/drum-editor.js`
   - ドラムエディタ描画
+  - `音源を追加` の下部シートもここで描く
 - `src/editors/melodic-editor.js`
   - ピアノロール描画
   - 音程、オクターブ、ノート配置のUIを変える時はここ
@@ -140,6 +141,7 @@
 
 - `src/features/project/storage/storage-helpers.js`
   - migrate / normalize / restore の純粋寄りロジック
+  - ドラム行の `sampleInstrumentId / sampleId` 移行もここ
 - `src/features/project/storage/storage-core.js`
   - save/load/import/export/reset と UI フック
 - `src/features/tracks/controller/track-selection.js`
@@ -150,6 +152,7 @@
   - copy / paste / repeat / repeat 同期
 - `src/features/tracks/instruments/instrument-config.js`
   - 楽器カタログ、表示名、URL解決
+  - ドラムの再生キット定義と追加候補もここ
 - `src/features/tracks/instruments/track-tone.js`
   - EQ / tone の正規化と既定値
 - `src/features/tracks/instruments/playback-chains.js`
@@ -236,7 +239,16 @@
 - `src/features/tracks/instrument-map.js`
 - `src/core/state.js`
 
-### 9. Safari / WebKit で画面確認したい
+### 9. ドラム行の追加候補やキットを変えたい
+
+- `src/features/tracks/instruments/instrument-config.js`
+- `src/editors/drum-editor.js`
+- `src/features/project/storage/storage-helpers.js`
+- `src/features/playback/playback-controller.js`
+- `src/features/playback/score-serializer.js`
+- `src/features/tracks/instruments/playback-chains.js`
+
+### 10. Safari / WebKit で画面確認したい
 
 - `playwright.config.js`
 - `tests/webkit-smoke.spec.js`

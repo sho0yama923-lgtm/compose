@@ -22,9 +22,7 @@ const TRACK_BUS_CONFIG = {
         release: 0.18,
         knee: 12,
     },
-    limiter: {
-        threshold: -1,
-    },
+    limiter: { threshold: -1 },
 };
 
 const TRACK_MIX_PRESETS = {
@@ -49,9 +47,7 @@ const MASTER_BUS_CONFIG = {
         release: 0.22,
         knee: 10,
     },
-    limiter: {
-        threshold: -0.8,
-    },
+    limiter: { threshold: -0.8 },
     outputGainDb: -0.5,
 };
 
@@ -72,6 +68,22 @@ function dbToLinearGain(value) {
 
 function getTrackMixPreset(instrumentId) {
     return TRACK_MIX_PRESETS[instrumentId] || TRACK_MIX_PRESETS.default;
+}
+
+function getPlaybackChainKey(trackId, playbackInstrumentId) {
+    return `${trackId}:${playbackInstrumentId}`;
+}
+
+function getTrackPlaybackInstrumentIds(track) {
+    if (track.instrument === 'chord') return [track.playbackInstrument || 'piano'];
+    if (track.instrument !== 'drums') return [track.instrument];
+    return Array.from(
+        new Set(
+            (track.rows || [])
+                .map((row) => row.sampleInstrumentId || 'drums_default')
+                .filter(Boolean)
+        )
+    );
 }
 
 function disposeMasterBus() {
@@ -110,24 +122,8 @@ function ensureMasterBus() {
     limiter.connect(outputGain);
     outputGain.toDestination();
 
-    masterBus = {
-        input,
-        highpass,
-        lowpass,
-        compressor,
-        limiter,
-        outputGain,
-    };
+    masterBus = { input, highpass, lowpass, compressor, limiter, outputGain };
     return masterBus;
-}
-
-function resolveTrackPlaybackInstrumentId(track) {
-    if (track.instrument === 'chord') return track.playbackInstrument || 'piano';
-    return track.instrument;
-}
-
-function resolvePlaybackInstrumentId(instrumentId) {
-    return instrumentId;
 }
 
 function applyTrackEq(chain, eq) {
@@ -153,8 +149,8 @@ function applyTrackTone(chain, tone) {
     chain.compressor.knee.value = compression.knee;
 }
 
-function disposePlaybackChain(trackId) {
-    const chain = playbackChains.get(trackId);
+function disposePlaybackChain(chainKey) {
+    const chain = playbackChains.get(chainKey);
     if (!chain) return;
     chain.sampler?.dispose?.();
     chain.sourceTrim?.dispose?.();
@@ -165,13 +161,11 @@ function disposePlaybackChain(trackId) {
     chain.highFilter?.dispose?.();
     chain.compressor?.dispose?.();
     chain.limiter?.dispose?.();
-    playbackChains.delete(trackId);
-    if (playbackChains.size === 0) {
-        disposeMasterBus();
-    }
+    playbackChains.delete(chainKey);
+    if (playbackChains.size === 0) disposeMasterBus();
 }
 
-function createPlaybackChain(track) {
+function createPlaybackChain(track, playbackInstrumentId) {
     if (!ToneLib) {
         console.warn('[Warning] Tone.js の読み込み前のため、音源初期化をスキップします。');
         return null;
@@ -180,7 +174,6 @@ function createPlaybackChain(track) {
     const master = ensureMasterBus();
     if (!master) return null;
 
-    const playbackInstrumentId = resolveTrackPlaybackInstrumentId(track);
     const config = INSTRUMENT_CONFIG_MAP[playbackInstrumentId];
     if (!config?.sampleType) return null;
     const mixPreset = getTrackMixPreset(track.instrument);
@@ -195,7 +188,9 @@ function createPlaybackChain(track) {
     const firstSampleEntry = sampleEntries[0] || null;
     if (firstSampleEntry) {
         console.info(`[Audio] ${playbackInstrumentId} sample bufferUrl: ${baseUrl}${firstSampleEntry[1]}`);
-        console.info(`[Audio] ${playbackInstrumentId} original asset path: ${getInstrumentBaseUrl(config)}${Object.values(getInstrumentUrls(config))[0] || ''}`);
+        console.info(
+            `[Audio] ${playbackInstrumentId} original asset path: ${getInstrumentBaseUrl(config)}${Object.values(getInstrumentUrls(config))[0] || ''}`
+        );
     }
 
     const lowFilter = new ToneLib.Filter(TRACK_BUS_CONFIG.low.frequency, TRACK_BUS_CONFIG.low.type);
@@ -212,7 +207,6 @@ function createPlaybackChain(track) {
     compressor.knee.value = TRACK_BUS_CONFIG.compressor.knee;
 
     const limiter = new ToneLib.Limiter(TRACK_BUS_CONFIG.limiter.threshold);
-
     const sourceTrim = new ToneLib.Gain(dbToLinearGain(mixPreset.trimDb));
     const preHighpass = new ToneLib.Filter(mixPreset.highpassHz, 'highpass');
     const inputGain = new ToneLib.Gain(dbToLinearGain(TRACK_TONE_DEFAULTS.gainDb));
@@ -226,6 +220,7 @@ function createPlaybackChain(track) {
             console.error(`[Audio] ${playbackInstrumentId} の音源ロードに失敗しました。`, error);
         },
     });
+
     sampler.connect(sourceTrim);
     sourceTrim.connect(preHighpass);
     preHighpass.connect(inputGain);
@@ -255,46 +250,47 @@ function createPlaybackChain(track) {
 }
 
 export function syncTrackPlaybackChains(tracks = []) {
-    const activeTrackIds = new Set();
+    const activeChainKeys = new Set();
 
     tracks.forEach((track) => {
-        const playbackInstrumentId = resolveTrackPlaybackInstrumentId(track);
-        const config = INSTRUMENT_CONFIG_MAP[playbackInstrumentId];
-        if (!config?.sampleType) return;
+        getTrackPlaybackInstrumentIds(track).forEach((playbackInstrumentId) => {
+            const config = INSTRUMENT_CONFIG_MAP[playbackInstrumentId];
+            if (!config?.sampleType) return;
 
-        activeTrackIds.add(track.id);
-        let chain = playbackChains.get(track.id);
-        if (!chain || chain.playbackInstrumentId !== playbackInstrumentId) {
-            disposePlaybackChain(track.id);
-            chain = createPlaybackChain(track);
-            if (!chain) return;
-            playbackChains.set(track.id, chain);
-        }
+            const chainKey = getPlaybackChainKey(track.id, playbackInstrumentId);
+            activeChainKeys.add(chainKey);
 
-        applyTrackTone(chain, track.tone);
-        applyTrackEq(chain, track.eq);
+            let chain = playbackChains.get(chainKey);
+            if (!chain || chain.playbackInstrumentId !== playbackInstrumentId) {
+                disposePlaybackChain(chainKey);
+                chain = createPlaybackChain(track, playbackInstrumentId);
+                if (!chain) return;
+                playbackChains.set(chainKey, chain);
+            }
+
+            applyTrackTone(chain, track.tone);
+            applyTrackEq(chain, track.eq);
+        });
     });
 
-    Array.from(playbackChains.keys()).forEach((trackId) => {
-        if (!activeTrackIds.has(trackId)) {
-            disposePlaybackChain(trackId);
+    Array.from(playbackChains.keys()).forEach((chainKey) => {
+        if (!activeChainKeys.has(chainKey)) {
+            disposePlaybackChain(chainKey);
         }
     });
-    if (activeTrackIds.size === 0) {
-        disposeMasterBus();
-    }
+
+    if (activeChainKeys.size === 0) disposeMasterBus();
 }
 
 export function getTrackPlaybackInstrument(trackId, instrumentId) {
-    const chain = playbackChains.get(trackId);
-    if (!chain) return null;
-    if (chain.playbackInstrumentId !== resolvePlaybackInstrumentId(instrumentId)) return null;
-    return chain.sampler;
+    const chain = playbackChains.get(getPlaybackChainKey(trackId, instrumentId));
+    return chain?.sampler || null;
 }
 
 export function updateTrackPlaybackChain(track) {
-    const chain = playbackChains.get(track.id);
-    if (!chain) return;
-    applyTrackTone(chain, track.tone);
-    applyTrackEq(chain, track.eq);
+    Array.from(playbackChains.entries()).forEach(([chainKey, chain]) => {
+        if (!chainKey.startsWith(`${track.id}:`)) return;
+        applyTrackTone(chain, track.tone);
+        applyTrackEq(chain, track.eq);
+    });
 }

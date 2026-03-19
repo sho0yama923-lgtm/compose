@@ -207,3 +207,8 @@
 - 上段オクターブ表示は `<octN>` ではなく `◀ oct4 ▶` の中央表記へ変更し、進行ヘッダー右側の `全クリア` は削除
 - コード詳細編集シートも `C / M / oct` の 1 行構成へ揃え、ルート・タイプ・オクターブの日本語ラベルを外した
 - コードを鳴らす楽器のプルダウンは `C / M / oct` の下ではなく同じコード進行ブロックの最上段へ移動し、楽器選択 -> 設定行 -> 進行 -> グリッドの順へ整理
+- ドラム再生用キットを `drums_default / drums_hiphop1 / drums_hiphop2 / drums_hiphop3` に分離し、既存 `drums` はトラック種別だけを持つ形へ整理
+- ドラム行データに `sampleInstrumentId / sampleId` を追加し、旧セーブは `note` から `DEFAULT` キットへ自動補完するよう migration を追加
+- ドラムトラック初期行は `Kick / Snare / HiHat / Tom1` を維持しつつ、`Tom2 / Tom3` と `HIPHOP1/2/3` の各行を `音源を追加` 下部シートから追加できるようにした
+- Web 再生チェーンと native manifest は「1トラック1キット」前提をやめ、同一ドラムトラック内で複数キットを同時に鳴らせるよう変更
+- `npm run build`、`npm run test:e2e:webkit`、`npm run mobile:sync:ios`、`xcodebuild -project ios/App/App.xcodeproj -scheme App -destination generic/platform=iOS -derivedDataPath /tmp/compose-iosbuild CODE_SIGNING_ALLOWED=NO build` が通過

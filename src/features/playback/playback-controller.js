@@ -41,7 +41,7 @@ export function initPlayback() {
                         score[i] = score[i] || [];
                         score[i].push({
                             trackId: track.id,
-                            instrument: track.instrument,
+                            instrument: row.sampleInstrumentId || 'drums_default',
                             notes: row.note,
                             duration: val,
                             volume: trackVolume,

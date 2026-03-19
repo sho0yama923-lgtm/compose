@@ -191,6 +191,18 @@ test('webkit mobile smoke check', async ({ page }) => {
   await page.locator('.preview-card[data-instrument="drums"] .preview-card-action-btn.compact', { hasText: '中止' }).click();
 
   await page.evaluate(() => {
+    document.querySelectorAll('#trackList li')[0]?.click();
+  });
+  await page.locator('#trackModeBtn').click();
+  await expect(page.locator('.drum-add-source-btn')).toBeVisible();
+  await expect(page.locator('.drum-key')).toHaveCount(4);
+  await page.locator('.drum-add-source-btn').click();
+  await expect(page.locator('.drum-add-sheet')).toBeVisible();
+  await page.getByRole('button', { name: 'Tom2', exact: true }).click();
+  await expect(page.locator('.drum-key')).toHaveCount(5);
+  await expect(page.locator('.drum-key').nth(4)).toHaveText('Tom2');
+
+  await page.evaluate(() => {
     document.querySelectorAll('#trackList li')[1]?.click();
   });
   await page.locator('#trackModeBtn').click();

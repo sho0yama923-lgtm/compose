@@ -1,5 +1,14 @@
 import { appState, totalSteps, STEPS_PER_MEASURE } from '../../../core/state.js';
-import { INST_TYPE, OCTAVE_DEFAULT_BASE, DRUM_ROWS, normalizeTrackEq, normalizeTrackTone } from '../../tracks/instrument-map.js';
+import {
+    INST_TYPE,
+    OCTAVE_DEFAULT_BASE,
+    DRUM_ROWS,
+    createDrumRow,
+    getDrumSampleDefinition,
+    getDrumSampleIdFromNote,
+    normalizeTrackEq,
+    normalizeTrackTone,
+} from '../../tracks/instrument-map.js';
 import {
     CHROMATIC,
     DURATION_CELLS,
@@ -11,7 +20,7 @@ import {
 } from '../../../core/constants.js';
 
 export const STORAGE_KEY = 'compose_save';
-export const DATA_VERSION = 9;
+export const DATA_VERSION = 10;
 export const VALID_DURATIONS = new Set(Object.keys(DURATION_CELLS));
 
 function migrateV1toV2(data) {
@@ -129,12 +138,23 @@ function normalizeTrack(track, length) {
     track.tone = normalizeTrackTone(track.tone);
 
     if (type === 'rhythm') {
-        const rows = Array.isArray(track.rows) ? track.rows : DRUM_ROWS.map((row) => ({ label: row.label, note: row.note, steps: [] }));
-        track.rows = rows.map((row, idx) => ({
-            label: row.label ?? DRUM_ROWS[idx]?.label ?? `Row ${idx + 1}`,
-            note: row.note ?? DRUM_ROWS[idx]?.note ?? 'C1',
-            steps: normalizeStepArray(row.steps, length) ?? expandLegacyStepArray(row.steps, appState.numMeasures, appState.beatConfig) ?? Array(length).fill(null),
-        }));
+        const rows = Array.isArray(track.rows)
+            ? track.rows
+            : DRUM_ROWS.map((row) => createDrumRow(row.sampleInstrumentId, row.sampleId));
+        track.rows = rows.map((row, idx) => {
+            const fallback = DRUM_ROWS[idx] || null;
+            const note = row.note ?? fallback?.note ?? 'C1';
+            const sampleId = row.sampleId || getDrumSampleIdFromNote(note) || fallback?.sampleId || 'kick';
+            const sampleDefinition = getDrumSampleDefinition(sampleId);
+            const sampleInstrumentId = row.sampleInstrumentId || 'drums_default';
+            const normalizedSteps = normalizeStepArray(row.steps, length)
+                ?? expandLegacyStepArray(row.steps, appState.numMeasures, appState.beatConfig)
+                ?? Array(length).fill(null);
+            return createDrumRow(sampleInstrumentId, sampleId, {
+                label: row.label ?? fallback?.label ?? sampleDefinition?.label ?? `Row ${idx + 1}`,
+                steps: normalizedSteps,
+            });
+        });
         return track;
     }
 
@@ -317,6 +337,7 @@ export function restoreFromData(data, options = {}) {
     appState.previewToneTrackId = null;
     appState.chordDetailTrackId = null;
     appState.chordDetailStep = null;
+    appState.drumAddTrackId = null;
     appState.pendingDeleteNoteId = null;
     appState.noteDrag = null;
     appState.suppressNextNoteClick = false;

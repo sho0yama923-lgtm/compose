@@ -4,6 +4,7 @@ import {
     INST_TYPE,
     OCTAVE_DEFAULT_BASE,
     DRUM_ROWS,
+    createDrumRow,
     createDefaultTrackEq,
     createDefaultTrackTone,
     getTrackDisplayLabel,
@@ -56,7 +57,10 @@ export function addTrack(instrument) {
             volume: 1,
             eq: createDefaultTrackEq(instrument),
             tone: createDefaultTrackTone(),
-            rows: DRUM_ROWS.map((row) => ({ label: row.label, note: row.note, steps: Array(steps).fill(null) })),
+            rows: DRUM_ROWS.map((row) => createDrumRow(row.sampleInstrumentId, row.sampleId, {
+                label: row.label,
+                steps: Array(steps).fill(null),
+            })),
         };
     } else if (INST_TYPE[instrument] === 'chord') {
         track = {

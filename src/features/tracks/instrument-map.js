@@ -5,6 +5,11 @@ export {
     MELODY_INSTRUMENT_LIST,
     OCTAVE_DEFAULT_BASE,
     DRUM_ROWS,
+    DRUM_ROW_CANDIDATES,
+    DRUM_SAMPLE_INSTRUMENTS,
+    createDrumRow,
+    getDrumSampleDefinition,
+    getDrumSampleIdFromNote,
 } from './instruments/instrument-config.js';
 
 export {
