@@ -1,5 +1,10 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
-import { play as playSchedulerScore, stop as stopSchedulerScore } from '../playback/scheduler.js';
+import { appState } from '../../core/state.js';
+import {
+    play as playSchedulerScore,
+    previewDrumSample as previewSchedulerDrumSample,
+    stop as stopSchedulerScore,
+} from '../playback/scheduler.js';
 import { buildNativePlaybackManifest } from '../playback/score-serializer.js';
 import { isIosApp } from './device-bridge.js';
 
@@ -50,6 +55,24 @@ export async function playScore(playbackData, options = {}) {
         mode: 'web',
         startDelayMs: 0,
     };
+}
+
+export async function previewDrumSample({
+    sampleInstrumentId,
+    sampleId,
+    trackId,
+} = {}) {
+    if (appState.isPlaying) {
+        console.warn('[Audio] 曲再生中のため、ドラム試聴をスキップしました。');
+        return false;
+    }
+
+    return previewSchedulerDrumSample({
+        sampleInstrumentId,
+        sampleId,
+        trackId,
+        tracks: appState.tracks,
+    });
 }
 
 export function stopScorePlayback() {

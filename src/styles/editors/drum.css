@@ -1,3 +1,16 @@
+/* ======= ドラム追加UI ======= */
+.drum-track-editor {
+    --drum-add-action-height: 44px;
+    --drum-add-row-gap: 8px;
+    --drum-add-section-gap: 10px;
+    --drum-add-padding-x: 12px;
+    --drum-add-padding-y: 12px;
+    --drum-add-sheet-radius: 22px;
+    --drum-add-button-radius: 14px;
+    --drum-add-sheet-width: 420px;
+    --drum-add-overlay-side-padding: 12px;
+}
+
 /* ======= ドラム行 ======= */
 .row {
     background: #fff;
@@ -52,16 +65,25 @@
 
 .drum-add-source-btn {
     width: 100%;
-    min-height: 44px;
+    min-height: var(--drum-add-action-height);
+    padding: 0 14px;
     border: 1px solid #d9e0ee;
-    border-radius: 14px;
+    border-radius: var(--drum-add-button-radius);
     background: #fff;
     color: #111;
     font-size: 14px;
     font-weight: 700;
+    line-height: 1.2;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
     touch-action: manipulation;
     -webkit-user-select: none;
     user-select: none;
+}
+
+.drum-add-source-btn:active,
+.drum-add-sheet-item:active,
+.drum-add-sheet-close:active {
+    opacity: 0.72;
 }
 
 .drum-add-sheet-overlay {
@@ -72,20 +94,26 @@
     display: flex;
     align-items: flex-end;
     justify-content: center;
-    padding: 20px 12px calc(env(safe-area-inset-bottom, 0px) + 12px);
+    padding:
+        20px
+        var(--drum-add-overlay-side-padding)
+        calc(env(safe-area-inset-bottom, 0px) + var(--drum-add-padding-y));
 }
 
 .drum-add-sheet {
-    width: min(100%, 420px);
+    width: min(100%, var(--drum-add-sheet-width));
     max-height: min(72vh, 520px);
     overflow: auto;
-    border-radius: 22px;
+    border-radius: var(--drum-add-sheet-radius);
     background: #fff;
-    padding: 10px 12px 14px;
+    padding:
+        10px
+        var(--drum-add-padding-x)
+        calc(env(safe-area-inset-bottom, 0px) + var(--drum-add-padding-y));
     box-shadow: 0 18px 46px rgba(16, 20, 29, 0.22);
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--drum-add-section-gap);
     -webkit-overflow-scrolling: touch;
 }
 
@@ -101,12 +129,13 @@
     font-size: 16px;
     font-weight: 800;
     color: #111;
+    line-height: 1.3;
 }
 
 .drum-add-sheet-group {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--drum-add-row-gap);
 }
 
 .drum-add-sheet-group-title {
@@ -119,23 +148,42 @@
 
 .drum-add-sheet-list {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--drum-add-row-gap);
 }
 
 .drum-add-sheet-item,
 .drum-add-sheet-close {
-    min-height: 44px;
+    min-height: var(--drum-add-action-height);
+    padding: 10px 14px;
     border: 1px solid #d9e0ee;
-    border-radius: 14px;
+    border-radius: var(--drum-add-button-radius);
     background: #fff;
     color: #111;
     font-size: 13px;
     font-weight: 700;
-    text-align: center;
+    line-height: 1.2;
     touch-action: manipulation;
+}
+
+.drum-add-sheet-item {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    text-align: left;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
 }
 
 .drum-add-sheet-close {
     margin-top: 2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #f6f8fc;
+}
+
+@media (min-width: 400px) {
+    .drum-add-sheet-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }

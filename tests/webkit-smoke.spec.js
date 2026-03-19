@@ -38,6 +38,40 @@ async function longPressSelector(page, selector, duration = 520) {
   }, duration);
 }
 
+async function dragTimelineNote(page, selector, deltaX = 70, holdMs = 430) {
+  await page.locator(selector).evaluate(async (element, options) => {
+    const rect = element.getBoundingClientRect();
+    const startX = rect.left + rect.width / 2;
+    const startY = rect.top + rect.height / 2;
+    const pointerId = 73;
+    element.dispatchEvent(new PointerEvent('pointerdown', {
+      pointerId,
+      bubbles: true,
+      clientX: startX,
+      clientY: startY,
+      pointerType: 'touch',
+      isPrimary: true,
+    }));
+    await new Promise((resolve) => window.setTimeout(resolve, options.holdMs));
+    window.dispatchEvent(new PointerEvent('pointermove', {
+      pointerId,
+      bubbles: true,
+      clientX: startX + options.deltaX,
+      clientY: startY,
+      pointerType: 'touch',
+      isPrimary: true,
+    }));
+    window.dispatchEvent(new PointerEvent('pointerup', {
+      pointerId,
+      bubbles: true,
+      clientX: startX + options.deltaX,
+      clientY: startY,
+      pointerType: 'touch',
+      isPrimary: true,
+    }));
+  }, { deltaX, holdMs });
+}
+
 async function swipeChordDetailKeyboard(page, deltaX = 140) {
   await page.locator('[data-chord-detail-keyboard="true"]').evaluate((element, dragDistance) => {
     element.scrollLeft += dragDistance;
@@ -194,13 +228,59 @@ test('webkit mobile smoke check', async ({ page }) => {
     document.querySelectorAll('#trackList li')[0]?.click();
   });
   await page.locator('#trackModeBtn').click();
-  await expect(page.locator('.drum-add-source-btn')).toBeVisible();
+  await expect(page.locator('.drum-add-panel')).toBeVisible();
+  await expect(page.locator('.drum-add-panel-title')).toHaveText('音源を追加');
   await expect(page.locator('.drum-key')).toHaveCount(4);
-  await page.locator('.drum-add-source-btn').click();
-  await expect(page.locator('.drum-add-sheet')).toBeVisible();
-  await page.getByRole('button', { name: 'Tom2', exact: true }).click();
+  const drumPanelSummary = await page.evaluate(() => {
+    const panelRect = document.querySelector('.drum-add-panel')?.getBoundingClientRect();
+    const gridRect = document.querySelector('.timeline-grid')?.getBoundingClientRect();
+    return {
+      viewportWidth: window.innerWidth,
+      panelTop: panelRect?.top ?? null,
+      panelRight: panelRect?.right ?? null,
+      gridBottom: gridRect?.bottom ?? null,
+      groups: Array.from(document.querySelectorAll('.drum-add-group')).map((group) => ({
+        title: group.querySelector('.drum-add-group-summary')?.textContent?.trim() ?? '',
+        open: group.open,
+        itemCount: group.querySelectorAll('.drum-add-row').length,
+      })),
+      firstGroupActions: Array.from(
+        document.querySelectorAll('.drum-add-group:first-of-type .drum-add-row:first-of-type button')
+      ).map((button) => button.textContent?.trim() ?? ''),
+    };
+  });
+  expect(drumPanelSummary.panelTop).toBeGreaterThanOrEqual(drumPanelSummary.gridBottom - 1);
+  expect(drumPanelSummary.panelRight).toBeLessThanOrEqual(drumPanelSummary.viewportWidth);
+  expect(drumPanelSummary.groups).toEqual([
+    { title: 'DEFAULT', open: true, itemCount: 2 },
+    { title: 'HIPHOP1', open: false, itemCount: 6 },
+    { title: 'HIPHOP2', open: false, itemCount: 6 },
+    { title: 'HIPHOP3', open: false, itemCount: 6 },
+  ]);
+  expect(drumPanelSummary.firstGroupActions).toEqual(['再生', '追加']);
+  await expect(page.locator('.drum-add-group').first().locator('.drum-add-row-label')).toHaveText(['Tom2', 'Tom3']);
+  await page.locator('.drum-add-group').first().locator('.drum-add-row').first().getByRole('button', { name: '追加' }).click();
   await expect(page.locator('.drum-key')).toHaveCount(5);
   await expect(page.locator('.drum-key').nth(4)).toHaveText('Tom2');
+  await expect(page.locator('.drum-add-group').first().locator('.drum-add-row-label')).toHaveText(['Tom3']);
+
+  await page.locator('.timeline-row[data-row-label="Kick"]').click({ position: { x: 14, y: 10 } });
+  await expect(page.locator('.timeline-row[data-row-label="Kick"] .timeline-note')).toHaveCount(1);
+  const kickNote = page.locator('.timeline-row[data-row-label="Kick"] .timeline-note').first();
+  await kickNote.click();
+  await expect(kickNote).toHaveClass(/is-delete-pending/);
+  await kickNote.click();
+  await expect(page.locator('.timeline-row[data-row-label="Kick"] .timeline-note')).toHaveCount(0);
+
+  await page.locator('.timeline-row[data-row-label="Snare"]').click({ position: { x: 14, y: 10 } });
+  const snareNote = page.locator('.timeline-row[data-row-label="Snare"] .timeline-note').first();
+  const beforeDragLeft = await snareNote.evaluate((element) => element.style.left);
+  await dragTimelineNote(page, '.timeline-row[data-row-label="Snare"] .timeline-note', 70, 430);
+  await expect
+    .poll(async () =>
+      page.locator('.timeline-row[data-row-label="Snare"] .timeline-note').first().evaluate((element) => element.style.left)
+    )
+    .not.toBe(beforeDragLeft);
 
   await page.evaluate(() => {
     document.querySelectorAll('#trackList li')[1]?.click();

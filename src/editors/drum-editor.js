@@ -23,6 +23,7 @@ import {
     getMeasureStart,
 } from '../core/rhythm-grid.js';
 import { DRUM_ROW_CANDIDATES, createDrumRow } from '../features/tracks/instrument-map.js';
+import { previewDrumSample } from '../features/playback/scheduler.js';
 
 const NOTE_DRAG_HOLD_MS = 380;
 
@@ -53,8 +54,6 @@ export function renderDrumEditor(track, editorEl) {
             }
         ));
     }
-
-    topbarEl.appendChild(buildDrumAddButton(track));
 
     const wrapEl = document.createElement('div');
     wrapEl.className = 'melodic-editor drum-editor';
@@ -159,89 +158,92 @@ export function renderDrumEditor(track, editorEl) {
     wrapEl.appendChild(keysEl);
     wrapEl.appendChild(gridScrollEl);
     editorEl.appendChild(wrapEl);
-
-    if (appState.drumAddTrackId === track.id) {
-        editorEl.appendChild(buildDrumAddSheet(track));
-    }
+    editorEl.appendChild(buildDrumAddPanel(track));
 }
 
-function buildDrumAddButton(track) {
-    const buttonEl = document.createElement('button');
-    buttonEl.className = 'drum-add-source-btn';
-    buttonEl.type = 'button';
-    buttonEl.textContent = '音源を追加';
-    buttonEl.addEventListener('click', () => {
-        appState.drumAddTrackId = track.id;
-        callbacks.renderEditor();
-    });
-    return buttonEl;
-}
+function buildDrumAddPanel(track) {
+    const panelEl = document.createElement('section');
+    panelEl.className = 'drum-add-panel';
 
-function buildDrumAddSheet(track) {
-    const overlayEl = document.createElement('div');
-    overlayEl.className = 'drum-add-sheet-overlay';
-    overlayEl.addEventListener('click', (event) => {
-        if (event.target !== overlayEl) return;
-        appState.drumAddTrackId = null;
-        callbacks.renderEditor();
-    });
-
-    const sheetEl = document.createElement('section');
-    sheetEl.className = 'drum-add-sheet';
-    overlayEl.appendChild(sheetEl);
-
-    const handleEl = document.createElement('div');
-    handleEl.className = 'drum-add-sheet-handle';
-    sheetEl.appendChild(handleEl);
-
-    const titleEl = document.createElement('div');
-    titleEl.className = 'drum-add-sheet-title';
+    const titleEl = document.createElement('h2');
+    titleEl.className = 'drum-add-panel-title';
     titleEl.textContent = '音源を追加';
-    sheetEl.appendChild(titleEl);
+    panelEl.appendChild(titleEl);
 
     const candidateGroups = groupDrumRowCandidates(track);
-    candidateGroups.forEach(([groupLabel, candidates]) => {
-        if (candidates.length === 0) return;
-        const sectionEl = document.createElement('section');
-        sectionEl.className = 'drum-add-sheet-group';
+    if (candidateGroups.length === 0) {
+        const emptyEl = document.createElement('p');
+        emptyEl.className = 'drum-add-panel-empty';
+        emptyEl.textContent = '追加できる音源はありません。';
+        panelEl.appendChild(emptyEl);
+        return panelEl;
+    }
 
-        const headingEl = document.createElement('h3');
-        headingEl.className = 'drum-add-sheet-group-title';
-        headingEl.textContent = groupLabel;
-        sectionEl.appendChild(headingEl);
+    candidateGroups.forEach(([groupLabel, candidates], index) => {
+        if (candidates.length === 0) return;
+
+        const detailsEl = document.createElement('details');
+        detailsEl.className = 'drum-add-group';
+        if (index === 0) detailsEl.open = true;
+
+        const summaryEl = document.createElement('summary');
+        summaryEl.className = 'drum-add-group-summary';
+        summaryEl.textContent = groupLabel;
+        detailsEl.appendChild(summaryEl);
 
         const listEl = document.createElement('div');
-        listEl.className = 'drum-add-sheet-list';
+        listEl.className = 'drum-add-group-list';
         candidates.forEach((candidate) => {
-            const itemBtn = document.createElement('button');
-            itemBtn.className = 'drum-add-sheet-item';
-            itemBtn.type = 'button';
-            itemBtn.textContent = candidate.label;
-            itemBtn.addEventListener('click', () => {
-                track.rows.push(createDrumRow(candidate.sampleInstrumentId, candidate.sampleId, {
-                    label: candidate.label,
-                    steps: Array(totalSteps()).fill(null),
-                }));
-                appState.drumAddTrackId = null;
-                callbacks.renderEditor();
-            });
-            listEl.appendChild(itemBtn);
+            listEl.appendChild(buildDrumAddCandidateRow(track, candidate));
         });
-        sectionEl.appendChild(listEl);
-        sheetEl.appendChild(sectionEl);
+        detailsEl.appendChild(listEl);
+        panelEl.appendChild(detailsEl);
     });
 
-    const closeBtn = document.createElement('button');
-    closeBtn.className = 'drum-add-sheet-close';
-    closeBtn.type = 'button';
-    closeBtn.textContent = '閉じる';
-    closeBtn.addEventListener('click', () => {
-        appState.drumAddTrackId = null;
+    return panelEl;
+}
+
+function buildDrumAddCandidateRow(track, candidate) {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'drum-add-row';
+
+    const labelEl = document.createElement('span');
+    labelEl.className = 'drum-add-row-label';
+    labelEl.textContent = candidate.label;
+    rowEl.appendChild(labelEl);
+
+    const previewBtn = document.createElement('button');
+    previewBtn.className = 'drum-add-row-preview';
+    previewBtn.type = 'button';
+    previewBtn.textContent = '再生';
+    previewBtn.addEventListener('click', async () => {
+        previewBtn.disabled = true;
+        try {
+            await previewDrumSample({
+                sampleInstrumentId: candidate.sampleInstrumentId,
+                sampleId: candidate.sampleId,
+                trackId: track.id,
+            });
+        } finally {
+            previewBtn.disabled = false;
+        }
+    });
+    rowEl.appendChild(previewBtn);
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'drum-add-row-add';
+    addBtn.type = 'button';
+    addBtn.textContent = '追加';
+    addBtn.addEventListener('click', () => {
+        track.rows.push(createDrumRow(candidate.sampleInstrumentId, candidate.sampleId, {
+            label: candidate.label,
+            steps: Array(totalSteps()).fill(null),
+        }));
         callbacks.renderEditor();
     });
-    sheetEl.appendChild(closeBtn);
+    rowEl.appendChild(addBtn);
 
-    return overlayEl;
+    return rowEl;
 }
 
 function groupDrumRowCandidates(track) {

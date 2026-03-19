@@ -249,27 +249,35 @@ function createPlaybackChain(track, playbackInstrumentId) {
     return chain;
 }
 
+function ensurePlaybackChain(track, playbackInstrumentId) {
+    if (!track?.id || !playbackInstrumentId) return null;
+
+    const config = INSTRUMENT_CONFIG_MAP[playbackInstrumentId];
+    if (!config?.sampleType) return null;
+
+    const chainKey = getPlaybackChainKey(track.id, playbackInstrumentId);
+    let chain = playbackChains.get(chainKey);
+    if (!chain || chain.playbackInstrumentId !== playbackInstrumentId) {
+        disposePlaybackChain(chainKey);
+        chain = createPlaybackChain(track, playbackInstrumentId);
+        if (!chain) return null;
+        playbackChains.set(chainKey, chain);
+    }
+
+    applyTrackTone(chain, track.tone);
+    applyTrackEq(chain, track.eq);
+    return chain;
+}
+
 export function syncTrackPlaybackChains(tracks = []) {
     const activeChainKeys = new Set();
 
     tracks.forEach((track) => {
         getTrackPlaybackInstrumentIds(track).forEach((playbackInstrumentId) => {
-            const config = INSTRUMENT_CONFIG_MAP[playbackInstrumentId];
-            if (!config?.sampleType) return;
-
             const chainKey = getPlaybackChainKey(track.id, playbackInstrumentId);
             activeChainKeys.add(chainKey);
 
-            let chain = playbackChains.get(chainKey);
-            if (!chain || chain.playbackInstrumentId !== playbackInstrumentId) {
-                disposePlaybackChain(chainKey);
-                chain = createPlaybackChain(track, playbackInstrumentId);
-                if (!chain) return;
-                playbackChains.set(chainKey, chain);
-            }
-
-            applyTrackTone(chain, track.tone);
-            applyTrackEq(chain, track.eq);
+            ensurePlaybackChain(track, playbackInstrumentId);
         });
     });
 
@@ -285,6 +293,15 @@ export function syncTrackPlaybackChains(tracks = []) {
 export function getTrackPlaybackInstrument(trackId, instrumentId) {
     const chain = playbackChains.get(getPlaybackChainKey(trackId, instrumentId));
     return chain?.sampler || null;
+}
+
+export async function prepareTrackPlaybackInstrument(track, playbackInstrumentId) {
+    const chain = ensurePlaybackChain(track, playbackInstrumentId);
+    if (!chain?.sampler) return null;
+    if (typeof ToneLib?.loaded === 'function') {
+        await ToneLib.loaded();
+    }
+    return chain.sampler;
 }
 
 export function updateTrackPlaybackChain(track) {

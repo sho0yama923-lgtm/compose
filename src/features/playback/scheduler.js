@@ -1,6 +1,8 @@
 // player.js
 // Tone.js はグローバル変数として使用（HTMLでCDN読み込み済み）
 import { getTrackPlaybackInstrument, syncTrackPlaybackChains } from '../tracks/instrument-map.js';
+import { getDrumSampleDefinition } from '../tracks/instruments/instrument-config.js';
+import { prepareTrackPlaybackInstrument } from '../tracks/instruments/playback-chains.js';
 import { STEPS_PER_BEAT, STEPS_PER_MEASURE } from '../../core/state.js';
 
 // ==========================================================
@@ -19,6 +21,7 @@ import { STEPS_PER_BEAT, STEPS_PER_MEASURE } from '../../core/state.js';
 // ==========================================================
 
 let _part = null;
+const DRUM_PREVIEW_DURATION_SECONDS = 0.35;
 
 /**
  * 音楽を再生する
@@ -112,6 +115,62 @@ export async function play(score, {
 
     Tone.Transport.position = 0;
     Tone.Transport.start();
+    return true;
+}
+
+export async function previewDrumSample({
+    sampleInstrumentId,
+    sampleId,
+    trackId,
+    tracks = [],
+} = {}) {
+    if (!globalThis.Tone) {
+        alert('Tone.js の読み込みに失敗したため、試聴できません。ネットワーク接続を確認して再読み込みしてください。');
+        return false;
+    }
+
+    if (Tone.Transport.state === 'started') {
+        console.warn('[Audio] 曲再生中のため、ドラム試聴をスキップしました。');
+        return false;
+    }
+
+    const sampleDefinition = getDrumSampleDefinition(sampleId);
+    if (!sampleDefinition?.note || !sampleInstrumentId || !trackId) return false;
+
+    const sourceTrack = tracks.find((track) => track?.id === trackId) || null;
+    const previewTrack = sourceTrack || {
+        id: trackId,
+        instrument: 'drums',
+        volume: 1,
+        tone: null,
+        eq: null,
+        rows: [{ sampleInstrumentId, sampleId }],
+    };
+
+    await Tone.start();
+
+    let sampler = null;
+    try {
+        sampler = await prepareTrackPlaybackInstrument(previewTrack, sampleInstrumentId);
+    } catch (error) {
+        console.error('[Audio] ドラム試聴用の音源ロードに失敗しました。', error);
+        return false;
+    }
+
+    if (!sampler?.loaded) {
+        console.warn('[Audio] ドラム試聴用 sampler のロードが未完了です。');
+        return false;
+    }
+
+    const previewVolume = typeof sourceTrack?.volume === 'number'
+        ? Math.max(0, Math.min(1, sourceTrack.volume))
+        : 1;
+    sampler.triggerAttackRelease(
+        sampleDefinition.note,
+        DRUM_PREVIEW_DURATION_SECONDS,
+        Tone.now(),
+        previewVolume
+    );
     return true;
 }
 
