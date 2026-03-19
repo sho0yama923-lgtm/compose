@@ -75,6 +75,9 @@
 - ファイルが肥大化したら、公開入口を維持したまま内部を分割する。
 - 全体エディタの仕様変更時は、関連する下部シークバーも合わせて確認する。
 - 再生まわりの変更時は、スコア生成側と Tone.js 送出側の両方を見る。
+- `src/` をアプリ本体の正本として扱い、`ios/` と `android/` には native 固有コードだけを置く。
+- `ios/App/App/public/`、`ios/App/App/capacitor.config.json`、`android/app/src/main/assets/public/`、`android/app/src/main/assets/capacitor*.json` は sync 生成物として扱い、手編集しない。
+- スマホ開発の基本導線は `npm run mobile:sync:ios` / `npm run mobile:sync:android` を使う。
 
 ## 音楽データとUI仕様
 

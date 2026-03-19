@@ -19,19 +19,24 @@ import { createPlayheadBar } from './chord-shared.js';
 
 const NOTE_DRAG_HOLD_MS = 380;
 
-export function buildTimingSection(track, offset, mEnd, cells, majorGroup) {
+export function buildTimingSection(track, offset, mEnd, cells, majorGroup, options = {}) {
+    const { embedded = false } = options;
     const sectionEl = document.createElement('section');
-    sectionEl.className = 'chord-section chord-timing-section';
+    sectionEl.className = embedded
+        ? 'chord-sequencer-timing'
+        : 'chord-section chord-timing-section';
 
-    const titleEl = document.createElement('div');
-    titleEl.className = 'chord-section-title';
-    titleEl.textContent = '鳴らすタイミング';
-    sectionEl.appendChild(titleEl);
+    if (!embedded) {
+        const titleEl = document.createElement('div');
+        titleEl.className = 'chord-section-title';
+        titleEl.textContent = '鳴らすタイミング';
+        sectionEl.appendChild(titleEl);
 
-    const descEl = document.createElement('div');
-    descEl.className = 'chord-section-desc';
-    descEl.textContent = 'タイミング: そのコードをどこで鳴らすか';
-    sectionEl.appendChild(descEl);
+        const descEl = document.createElement('div');
+        descEl.className = 'chord-section-desc';
+        descEl.textContent = 'タイミング: そのコードをどこで鳴らすか';
+        sectionEl.appendChild(descEl);
+    }
 
     const soundCells = document.createElement('div');
     soundCells.className = 'chord-steps-cells chord-timing-grid';

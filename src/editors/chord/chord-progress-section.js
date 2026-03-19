@@ -2,41 +2,50 @@ import { appState, callbacks, STEPS_PER_BEAT } from '../../core/state.js';
 import { ROOT_COLORS, normalizeChordCustomNotes } from '../../core/constants.js';
 import { closeChordDetail } from './chord-detail-sheet.js';
 
-export function buildProgressSection(track, offset, mEnd) {
+export function buildProgressSection(track, offset, mEnd, options = {}) {
+    const { embedded = false } = options;
     const sectionEl = document.createElement('section');
-    sectionEl.className = 'chord-section chord-progress-section';
-
-    const titleEl = document.createElement('div');
-    titleEl.className = 'chord-section-title';
-    titleEl.textContent = 'コード進行';
-    sectionEl.appendChild(titleEl);
+    sectionEl.className = embedded
+        ? 'chord-sequencer-progress'
+        : 'chord-section chord-progress-section';
 
     const headEl = document.createElement('div');
-    headEl.className = 'chord-progress-head';
+    headEl.className = embedded ? 'chord-sequencer-head' : 'chord-progress-head';
 
-    const descEl = document.createElement('div');
-    descEl.className = 'chord-section-desc';
-    descEl.textContent = '進行: どの拍でコードを変えるか';
-    headEl.appendChild(descEl);
+    if (!embedded) {
+        const titleEl = document.createElement('div');
+        titleEl.className = 'chord-section-title';
+        titleEl.textContent = 'コード進行';
+        sectionEl.appendChild(titleEl);
 
-    const clearBtn = document.createElement('button');
-    clearBtn.className = 'chord-quick-btn danger';
-    clearBtn.textContent = '全クリア';
-    clearBtn.addEventListener('click', () => {
-        for (let i = offset; i < mEnd; i++) track.chordMap[i] = null;
-        if (appState.chordDetailTrackId === track.id
-            && appState.chordDetailStep !== null
-            && appState.chordDetailStep >= offset
-            && appState.chordDetailStep < mEnd) {
-            closeChordDetail(false);
-        }
-        callbacks.renderEditor();
-    });
-    headEl.appendChild(clearBtn);
+        const descEl = document.createElement('div');
+        descEl.className = 'chord-section-desc';
+        descEl.textContent = '進行: どの拍でコードを変えるか';
+        headEl.appendChild(descEl);
+    }
+
+    if (!embedded) {
+        const clearBtn = document.createElement('button');
+        clearBtn.className = 'chord-quick-btn danger';
+        clearBtn.textContent = '全クリア';
+        clearBtn.addEventListener('click', () => {
+            for (let i = offset; i < mEnd; i++) track.chordMap[i] = null;
+            if (appState.chordDetailTrackId === track.id
+                && appState.chordDetailStep !== null
+                && appState.chordDetailStep >= offset
+                && appState.chordDetailStep < mEnd) {
+                closeChordDetail(false);
+            }
+            callbacks.renderEditor();
+        });
+        headEl.appendChild(clearBtn);
+    }
     sectionEl.appendChild(headEl);
 
     const gridEl = document.createElement('div');
-    gridEl.className = 'chord-progress-grid';
+    gridEl.className = embedded
+        ? 'chord-progress-grid chord-progress-grid-embedded'
+        : 'chord-progress-grid';
 
     for (let beat = 0; beat < 4; beat++) {
         const beatStart = offset + beat * STEPS_PER_BEAT;

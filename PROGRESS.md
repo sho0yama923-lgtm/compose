@@ -190,3 +190,20 @@
 - iOS native 再生では `NativePlaybackPlugin.swift` の全ステップ `playbackStep` 通知を廃止し、音声スケジューリングだけに責務を絞ってループ時の負荷と揺れを減らした
 - native plugin の `play()` は `startDelayMs` を返すようにし、JS 側の playhead 開始タイミングを音の立ち上がりに合わせやすくした
 - `npm run build`、`npm run test:e2e:webkit`、`npm run ios:buildprep`、`xcodebuild -project ios/App/App.xcodeproj -scheme App -destination generic/platform=iOS -derivedDataPath /tmp/compose-iosbuild CODE_SIGNING_ALLOWED=NO build` が通過
+- スマホ開発向けの repo 整理として `.gitignore` に native sync 生成物と個人依存ファイルを追加し、`src/` を正本・`ios/` / `android/` を wrapper として扱う運用ルールを docs と AGENTS へ反映
+- `package.json` に `mobile:sync:ios` / `mobile:open:ios` / `mobile:sync:android` / `mobile:open:android` / `mobile:doctor` を追加し、旧 `ios:buildprep` / `android:buildprep` は alias 化
+- `docs/mobile-dev.md` を追加し、スマホ開発の入口を一本化
+- 下部バーを `measure-seek-card` ベースの浮かせたプレイヤードックへ変更し、下端から `12px + safe-area` 上げた位置に再配置
+- 再生/停止は topbar から下部ドック中央の丸ボタンへ移し、主要寸法を `58px` の主ボタン、`44px` の送りボタン、`40px` の A/B ボタン、`18px` のカード角丸に整理
+- `playback-controller.js` の再生ボタン制御を動的 `data-play-toggle` 前提へ変更し、editor 再描画後も下部再生ボタンが効くようにした
+- `npm run build` と `npm run test:e2e:webkit` が通過し、ローカル WebKit スクリーンショットでも下部ドックの浮き配置を確認
+- コードエディタは `コード進行` 行を `鳴らすタイミング` グリッドの真上へ埋め込み、1 つの連続パネルとして見える `chord-sequencer-section` 構成へ変更
+- 上段のコード進行ヘッダーは `42px` 高の低いセル列、下段のタイミンググリッドは既存幅を維持する形にし、横位置を完全に揃えて拍ごとの読み取りをしやすくした
+- `npm run build` と `npm run test:e2e:webkit` で、埋め込みヘッダー付きコード UI の回帰を確認
+- コードのリズムグリッドを `コード進行` の直下へ固定し、`ドラムを参照` ボタンは `chord-sequencer-actions` としてその下の補助行へ分離
+- 埋め込み時のコードリズムグリッド最小高は `132px` に調整し、進行直下の詰まり感を戻しつつ、下段の補助ボタンとの距離は `8px` で整理
+- コードエディタ上段は `ルート / タイプ / <octN>` と `コード進行` を同じ `chord-sequencer-section` 内へ統合し、独立していた進行ボックスを吸収
+- 上段の日本語ラベルは外し、オクターブ表示は `<oct4>` 形式へ変更。楽器選択だけは別行へ残して既存機能を維持
+- 上段オクターブ表示は `<octN>` ではなく `◀ oct4 ▶` の中央表記へ変更し、進行ヘッダー右側の `全クリア` は削除
+- コード詳細編集シートも `C / M / oct` の 1 行構成へ揃え、ルート・タイプ・オクターブの日本語ラベルを外した
+- コードを鳴らす楽器のプルダウンは `C / M / oct` の下ではなく同じコード進行ブロックの最上段へ移動し、楽器選択 -> 設定行 -> 進行 -> グリッドの順へ整理

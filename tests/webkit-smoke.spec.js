@@ -194,14 +194,17 @@ test('webkit mobile smoke check', async ({ page }) => {
     document.querySelectorAll('#trackList li')[1]?.click();
   });
   await page.locator('#trackModeBtn').click();
+  await expect(page.locator('.chord-sequencer-section')).toBeVisible();
+  await expect(page.locator('.chord-progress-grid-embedded')).toBeVisible();
+  await expect(page.locator('.chord-sequencer-timing .chord-timing-grid')).toBeVisible();
   await expect(page.locator('.chord-progress-cell')).toHaveCount(4);
 
   await page.locator('.chord-progress-cell').nth(0).click();
-  await page.locator('.chord-select-input').nth(0).selectOption('G');
-  await page.locator('.chord-select-input').nth(1).selectOption('7');
+  await page.locator('.chord-select-input[aria-label="コードトラックのルート"]').selectOption('G');
+  await page.locator('.chord-select-input[aria-label="コードトラックのタイプ"]').selectOption('7');
   await page.locator('.chord-progress-cell').nth(1).click();
-  await page.locator('.chord-select-input').nth(0).selectOption('A');
-  await page.locator('.chord-select-input').nth(1).selectOption('m');
+  await page.locator('.chord-select-input[aria-label="コードトラックのルート"]').selectOption('A');
+  await page.locator('.chord-select-input[aria-label="コードトラックのタイプ"]').selectOption('m');
   await page.locator('.chord-progress-cell').nth(2).click();
   await page.locator('.chord-instrument-select .chord-select-input').selectOption('violin');
   await expect(page.locator('#trackModeBtn')).toContainText('Violin');
@@ -209,7 +212,7 @@ test('webkit mobile smoke check', async ({ page }) => {
   await longPressSelector(page, '.chord-progress-cell[data-beat="1"]');
   await expect(page.locator('.chord-detail-select[aria-label="コードのルート"]')).toHaveValue('C');
   await expect(page.locator('.chord-detail-select[aria-label="コードのタイプ"]')).toHaveValue('M');
-  await expect(page.locator('[data-chord-detail-octave="true"]')).toHaveText('4');
+  await expect(page.locator('[data-chord-detail-octave="true"]')).toHaveText('oct4');
   await expect(page.locator('[data-chord-detail-keyboard="true"]')).toBeVisible();
   await page.selectOption('.chord-detail-select[aria-label="コードのルート"]', 'D');
   await expect(page.locator('.chord-detail-select[aria-label="コードのルート"]')).toHaveValue('D');
@@ -250,7 +253,7 @@ test('webkit mobile smoke check', async ({ page }) => {
   const movedScrollLeft = await page.locator('[data-chord-detail-keyboard="true"]').evaluate((element) => element.scrollLeft);
   expect(movedScrollLeft).toBeGreaterThan(initialScrollLeft);
   await page.getByRole('button', { name: 'コードのオクターブを上げる' }).click();
-  await expect(page.locator('[data-chord-detail-octave="true"]')).toHaveText('5');
+  await expect(page.locator('[data-chord-detail-octave="true"]')).toHaveText('oct5');
   await expect(page.locator('.chord-detail-key[data-note="D5"]')).toHaveClass(/is-active/);
   await expect(page.locator('.chord-progress-cell[data-beat="1"] .chord-progress-badge')).toContainText('編集');
   await page.getByRole('button', { name: '閉じる', exact: true }).click();
@@ -344,10 +347,11 @@ test('webkit mobile smoke check', async ({ page }) => {
   await expect(page.locator('.preview-tone-control-value[data-tone-key="midQ"]')).toContainText('1.40');
   await page.getByRole('button', { name: '閉じる', exact: true }).click();
 
-  await page.locator('#playToggleBtn').click();
-  await expect(page.locator('#playToggleBtn')).toContainText('||');
-  await page.locator('#playToggleBtn').click({ force: true });
-  await expect(page.locator('#playToggleBtn')).toContainText('▶');
+  const playToggleBtn = page.locator('[data-play-toggle="true"]').first();
+  await playToggleBtn.click();
+  await expect(playToggleBtn).toContainText('||');
+  await playToggleBtn.click({ force: true });
+  await expect(playToggleBtn).toContainText('▶');
 
   await page.reload();
 
@@ -378,7 +382,7 @@ test('webkit mobile smoke check', async ({ page }) => {
   await longPressSelector(page, '.chord-progress-cell[data-beat="1"]');
   await expect(page.locator('.chord-detail-select[aria-label="コードのルート"]')).toHaveValue('D');
   await expect(page.locator('.chord-detail-select[aria-label="コードのタイプ"]')).toHaveValue('m7');
-  await expect(page.locator('[data-chord-detail-octave="true"]')).toHaveText('5');
+  await expect(page.locator('[data-chord-detail-octave="true"]')).toHaveText('oct5');
   await expect(page.locator('.chord-detail-key[data-note="E5"]')).toHaveClass(/is-active/);
   await expect(page.locator('.chord-detail-key[data-note="D5"]')).toHaveClass(/is-active/);
   await page.getByRole('button', { name: '閉じる', exact: true }).click();

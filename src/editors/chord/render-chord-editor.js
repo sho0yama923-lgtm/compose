@@ -6,7 +6,7 @@ import { getEditorCells, getEditorGridLineGroup, getMeasureStart } from '../../c
 import { buildPaletteOctaveControls, buildProgressSection } from './render-chord-parts.js';
 import { buildDetailAndSheets } from './render-chord-shell.js';
 import { buildTimingSection } from './chord-timing-section.js';
-import { appendChordTypeOptions, buildEditorHint, buildLabel } from './chord-shared.js';
+import { appendChordTypeOptions, buildEditorHint } from './chord-shared.js';
 
 export function renderChordEditor(track, editorEl) {
     const measureIndex = appState.currentMeasure;
@@ -35,11 +35,20 @@ export function renderChordEditor(track, editorEl) {
 
     const bodyEl = document.createElement('div');
     bodyEl.className = 'chord-panel-body';
-    bodyEl.appendChild(buildPalette(track));
-    bodyEl.appendChild(buildProgressSection(track, offset, mEnd));
-    const timingSectionEl = buildTimingSection(track, offset, mEnd, cells, majorGroup);
+    const sequencerSectionEl = document.createElement('section');
+    sequencerSectionEl.className = 'chord-section chord-sequencer-section';
+    sequencerSectionEl.appendChild(buildInstrumentRow(track));
+    sequencerSectionEl.appendChild(buildPalette(track));
+    const sequencerGridEl = document.createElement('div');
+    sequencerGridEl.className = 'chord-sequencer-grid';
+    sequencerGridEl.appendChild(buildProgressSection(track, offset, mEnd, { embedded: true }));
+    const timingSectionEl = buildTimingSection(track, offset, mEnd, cells, majorGroup, { embedded: true });
+    sequencerGridEl.appendChild(timingSectionEl);
+    sequencerSectionEl.appendChild(sequencerGridEl);
     const drumTracks = appState.tracks.filter((item) => INST_TYPE[item.instrument] === 'rhythm');
     if (drumTracks.length > 0) {
+        const actionsEl = document.createElement('div');
+        actionsEl.className = 'chord-sequencer-actions';
         const openBtn = document.createElement('button');
         openBtn.className = 'chord-rhythm-summary';
         openBtn.type = 'button';
@@ -48,9 +57,10 @@ export function renderChordEditor(track, editorEl) {
             appState.chordDrumSheetOpen = true;
             callbacks.renderEditor();
         });
-        timingSectionEl.insertBefore(openBtn, timingSectionEl.lastChild);
+        actionsEl.appendChild(openBtn);
+        sequencerSectionEl.appendChild(actionsEl);
     }
-    bodyEl.appendChild(timingSectionEl);
+    bodyEl.appendChild(sequencerSectionEl);
     editorEl.appendChild(bodyEl);
 
     buildDetailAndSheets(track, editorEl, offset, mEnd, cells);
@@ -58,16 +68,16 @@ export function renderChordEditor(track, editorEl) {
 
 function buildPalette(track) {
     const paletteEl = document.createElement('div');
-    paletteEl.className = 'chord-palette';
+    paletteEl.className = 'chord-palette chord-sequencer-controls';
 
     const paletteRow = document.createElement('div');
     paletteRow.className = 'chord-palette-row';
 
     const rootRow = document.createElement('div');
     rootRow.className = 'chord-selector-row horizontal chord-select-control';
-    rootRow.appendChild(buildLabel('ルート'));
     const rootSelect = document.createElement('select');
     rootSelect.className = 'chord-select-input';
+    rootSelect.setAttribute('aria-label', 'コードトラックのルート');
     rootSelect.style.borderColor = ROOT_COLORS[track.selectedChordRoot] ?? '#d0d0d0';
     CHORD_ROOTS.forEach((root) => {
         const option = document.createElement('option');
@@ -85,9 +95,9 @@ function buildPalette(track) {
 
     const typeRow = document.createElement('div');
     typeRow.className = 'chord-selector-row horizontal chord-select-control';
-    typeRow.appendChild(buildLabel('タイプ'));
     const typeSelect = document.createElement('select');
     typeSelect.className = 'chord-select-input';
+    typeSelect.setAttribute('aria-label', 'コードトラックのタイプ');
     appendChordTypeOptions(typeSelect, track.selectedChordType);
     typeSelect.addEventListener('change', () => {
         track.selectedChordType = typeSelect.value;
@@ -97,12 +107,15 @@ function buildPalette(track) {
 
     paletteRow.appendChild(buildPaletteOctaveControls(track));
 
-    const instrumentRow = document.createElement('div');
-    instrumentRow.className = 'chord-palette-row';
+    paletteEl.append(paletteRow);
+    return paletteEl;
+}
 
+function buildInstrumentRow(track) {
+    const instrumentRow = document.createElement('div');
+    instrumentRow.className = 'chord-palette chord-instrument-row';
     const instrumentWrap = document.createElement('div');
     instrumentWrap.className = 'chord-selector-row horizontal chord-select-control chord-instrument-select';
-    instrumentWrap.appendChild(buildLabel('楽器'));
 
     const instrumentSelect = document.createElement('select');
     instrumentSelect.className = 'chord-select-input';
@@ -120,7 +133,5 @@ function buildPalette(track) {
     });
     instrumentWrap.appendChild(instrumentSelect);
     instrumentRow.appendChild(instrumentWrap);
-
-    paletteEl.append(paletteRow, instrumentRow);
-    return paletteEl;
+    return instrumentRow;
 }

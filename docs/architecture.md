@@ -2,12 +2,17 @@
 
 ## 現在の構成方針
 
+- `src/`
+  - アプリ本体の唯一の正本
+  - UI、作曲ロジック、保存データ、score 生成を持つ
 - `capacitor.config.json`
   - Web ビルド成果物 `dist/` を iOS ラッパーへ渡す設定
 - `ios/`
   - Capacitor が管理するネイティブ側プロジェクト
+  - ラッパーと native 固有コードだけを持つ
 - `android/`
   - Capacitor が管理するネイティブ側プロジェクト
+  - ラッパーと native 固有設定だけを持つ
 - `src/main.js`
   - アプリ初期化だけを担当する
 - `src/core/`
@@ -41,6 +46,12 @@
   - iOS 実機では `NativePlaybackPlugin.swift` を呼び、Web / Android では `scheduler.js` へフォールバックする
 - `scheduler.js`
   - browser fallback として Tone.js 再生を維持する
+
+## スマホ開発運用
+
+- `ios/App/App/public/` と `android/app/src/main/assets/public/` は `cap sync` の生成物
+- `xcuserdata` と `xcuserstate` は個人依存ファイルとして管理対象外
+- 日常運用は `npm run mobile:sync:ios` または `npm run mobile:sync:android` を入口にする
 
 ## 近いうちにやる整理
 

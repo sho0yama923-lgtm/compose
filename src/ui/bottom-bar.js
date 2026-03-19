@@ -8,6 +8,8 @@ import { addMeasure, clearTrackMeasure, removeMeasure } from '../features/tracks
 export function buildSeekBar(renderEditor) {
     const seekShell = document.createElement('div');
     seekShell.className = 'measure-seek-shell';
+    const seekCard = document.createElement('div');
+    seekCard.className = 'measure-seek-card';
     const seekMeta = document.createElement('div');
     seekMeta.className = 'measure-seek-meta';
     const seekDesc = document.createElement('span');
@@ -18,20 +20,11 @@ export function buildSeekBar(renderEditor) {
     seekMeta.appendChild(seekDesc);
     seekMeta.appendChild(seekLabel);
     seekMeta.appendChild(buildMeasureActions(renderEditor));
-    seekShell.appendChild(seekMeta);
+    seekCard.appendChild(seekMeta);
 
-    const seekRow = document.createElement('div');
-    seekRow.className = 'measure-seek';
+    const transportRow = document.createElement('div');
+    transportRow.className = 'measure-seek transport-row';
     const playRange = getNormalizedPlayRangeMeasures();
-
-    const seekPrev = document.createElement('button');
-    seekPrev.className = 'mb-btn';
-    seekPrev.textContent = '‹';
-    seekPrev.disabled = appState.currentMeasure <= 0;
-    seekPrev.addEventListener('click', () => {
-        appState.currentMeasure--;
-        renderEditor();
-    });
 
     const seekStart = document.createElement('button');
     seekStart.className = 'mb-btn mb-range-btn range-start' + (appState.playRangeStartMeasure === appState.currentMeasure ? ' selected' : '');
@@ -54,6 +47,28 @@ export function buildSeekBar(renderEditor) {
             : appState.currentMeasure;
         renderEditor();
     });
+
+    const rangeCluster = document.createElement('div');
+    rangeCluster.className = 'measure-transport-cluster range-cluster';
+    rangeCluster.append(seekStart, seekEnd);
+
+    const seekPrev = document.createElement('button');
+    seekPrev.className = 'mb-btn mb-nav-btn';
+    seekPrev.textContent = '‹';
+    seekPrev.disabled = appState.currentMeasure <= 0;
+    seekPrev.addEventListener('click', () => {
+        appState.currentMeasure--;
+        renderEditor();
+    });
+
+    const playToggleBtn = document.createElement('button');
+    playToggleBtn.className = 'btn btn-play mb-play-btn';
+    playToggleBtn.type = 'button';
+    playToggleBtn.dataset.playToggle = 'true';
+    playToggleBtn.setAttribute('aria-label', appState.isPlaying ? '停止' : '再生');
+    playToggleBtn.setAttribute('aria-pressed', String(appState.isPlaying));
+    playToggleBtn.textContent = appState.isPlaying ? '||' : '▶';
+    playToggleBtn.classList.toggle('is-playing', appState.isPlaying);
 
     const seekSlider = document.createElement('input');
     seekSlider.type = 'range';
@@ -99,7 +114,7 @@ export function buildSeekBar(renderEditor) {
     seekWrap.appendChild(seekSlider);
 
     const seekNext = document.createElement('button');
-    seekNext.className = 'mb-btn';
+    seekNext.className = 'mb-btn mb-nav-btn';
     seekNext.textContent = '›';
     seekNext.disabled = appState.currentMeasure >= appState.numMeasures - 1;
     seekNext.addEventListener('click', () => {
@@ -107,12 +122,18 @@ export function buildSeekBar(renderEditor) {
         renderEditor();
     });
 
-    seekRow.appendChild(seekPrev);
-    seekRow.appendChild(seekStart);
-    seekRow.appendChild(seekEnd);
-    seekRow.appendChild(seekWrap);
-    seekRow.appendChild(seekNext);
-    seekShell.appendChild(seekRow);
+    const navCluster = document.createElement('div');
+    navCluster.className = 'measure-transport-cluster nav-cluster';
+    navCluster.append(seekPrev, seekNext);
+
+    transportRow.append(rangeCluster, playToggleBtn, navCluster);
+
+    const sliderRow = document.createElement('div');
+    sliderRow.className = 'measure-seek slider-row';
+    sliderRow.appendChild(seekWrap);
+
+    seekCard.append(transportRow, sliderRow);
+    seekShell.appendChild(seekCard);
     return seekShell;
 }
 

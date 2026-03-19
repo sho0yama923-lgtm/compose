@@ -83,14 +83,11 @@ private final class NativePlaybackEngine {
         sampleCache = nextCache
     }
 
-    var startDelayMilliseconds: Int {
-        Int(leadTimeSeconds * 1000)
-    }
-
-    func play(payload: NativePlaybackPayload) throws {
+    func play(payload: NativePlaybackPayload) throws -> Int {
         stop()
         playbackSessionId += 1
         let sessionId = playbackSessionId
+        let playStartUptime = ProcessInfo.processInfo.systemUptime
         let cycleDurationSeconds = durationForStepCount(
             payload.endStepExclusive - payload.startStep,
             bpm: payload.bpm,
@@ -112,6 +109,10 @@ private final class NativePlaybackEngine {
             cycleDurationSeconds: cycleDurationSeconds,
             baseHostTime: baseHostTime
         )
+
+        let schedulingElapsed = max(0, ProcessInfo.processInfo.systemUptime - playStartUptime)
+        let remainingLeadTime = max(0, leadTimeSeconds - schedulingElapsed)
+        return Int(remainingLeadTime * 1000)
     }
 
     func stop() {
@@ -349,10 +350,10 @@ public class NativePlaybackPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func play(_ call: CAPPluginCall) {
         do {
             let payload = try decode(NativePlaybackPayload.self, from: call.options["payload"])
-            try playbackEngine.play(payload: payload)
+            let startDelayMs = try playbackEngine.play(payload: payload)
             call.resolve([
                 "started": true,
-                "startDelayMs": playbackEngine.startDelayMilliseconds
+                "startDelayMs": startDelayMs
             ])
         } catch {
             call.reject("Failed to start native playback.", nil, error)

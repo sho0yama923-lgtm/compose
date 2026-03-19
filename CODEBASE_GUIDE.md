@@ -7,6 +7,7 @@
 1. `PROGRESS.md`
 2. `src/main.js`
 3. 変更対象に対応する以下のファイル
+4. スマホ開発運用を見る時は `docs/mobile-dev.md`
 
 ## ディレクトリ構成
 
@@ -19,13 +20,18 @@
 - `capacitor.config.json`
   - iOS ラッパーの基本設定
   - `webDir` は `dist` を参照する
+- `docs/mobile-dev.md`
+  - スマホ開発の入口
+  - `src/` を正本として、`ios/` / `android/` を wrapper として扱う運用ルールをまとめる
 - `ios/`
   - Capacitor が生成する Xcode プロジェクト
-  - `npm run ios:buildprep` 後に Xcode で開いてビルドする
+  - `npm run mobile:sync:ios` 後に Xcode で開いてビルドする
   - `ios/App/App/NativePlaybackPlugin.swift` に iOS 実機向けの native 再生 plugin を置く
+  - `ios/App/App/public/` と `ios/App/App/capacitor.config.json` は sync 生成物なので手編集しない
 - `android/`
   - Capacitor が生成する Android Studio プロジェクト
-  - `npm run android:buildprep` 後に Android Studio で開いてビルドする
+  - `npm run mobile:sync:android` 後に Android Studio で開いてビルドする
+  - `android/app/src/main/assets/public/` と `android/app/src/main/assets/capacitor*.json` は sync 生成物なので手編集しない
 - `docs/ios-build.md`
   - iPhone アプリ向けのセットアップ手順と日常フロー
 - `docs/android-build.md`
@@ -119,6 +125,7 @@
 - `src/features/bridges/`
   - audio / storage / file-share / device の抽象境界
   - Web fallback とネイティブ導線を分けたい時はここ
+  - iOS / Android 差分はここ経由で吸収する
 - `src/features/project/project-storage.js`
   - 保存機能の公開入口ファサード
   - 実体は `src/features/project/storage/` に分割

@@ -12,10 +12,12 @@ let playheadAnimationFrameId = null;
 let playheadAnimationState = null;
 
 export function initPlayback() {
-    const playToggleBtn = document.getElementById('playToggleBtn');
     setPlaybackButtonState();
-
-    playToggleBtn.addEventListener('click', async () => {
+    document.addEventListener('click', async (event) => {
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+        const playToggleBtn = target.closest('[data-play-toggle="true"]');
+        if (!playToggleBtn) return;
         if (appState.isPlaying) {
             stopPlayback();
             return;
@@ -269,9 +271,10 @@ function stopPlayback() {
 }
 
 function setPlaybackButtonState() {
-    const playToggleBtn = document.getElementById('playToggleBtn');
-    if (!playToggleBtn) return;
-    playToggleBtn.textContent = appState.isPlaying ? '||' : '▶';
-    playToggleBtn.setAttribute('aria-label', appState.isPlaying ? '停止' : '再生');
-    playToggleBtn.classList.toggle('is-playing', appState.isPlaying);
+    document.querySelectorAll('[data-play-toggle="true"]').forEach((playToggleBtn) => {
+        playToggleBtn.textContent = appState.isPlaying ? '||' : '▶';
+        playToggleBtn.setAttribute('aria-label', appState.isPlaying ? '停止' : '再生');
+        playToggleBtn.setAttribute('aria-pressed', String(appState.isPlaying));
+        playToggleBtn.classList.toggle('is-playing', appState.isPlaying);
+    });
 }

@@ -81,15 +81,11 @@ function buildChordDetailHarmonyControls(track, step, chord) {
     const controlsEl = document.createElement('div');
     controlsEl.className = 'chord-detail-harmony-controls';
 
-    const rootRowEl = document.createElement('div');
-    rootRowEl.className = 'chord-detail-select-row';
+    const rowEl = document.createElement('div');
+    rowEl.className = 'chord-detail-select-row chord-detail-harmony-row';
 
     const rootFieldEl = document.createElement('label');
     rootFieldEl.className = 'chord-detail-select-field';
-
-    const rootLabelEl = document.createElement('span');
-    rootLabelEl.className = 'chord-detail-row-label';
-    rootLabelEl.textContent = 'ルート';
 
     const rootSelectEl = document.createElement('select');
     rootSelectEl.className = 'chord-select-input chord-detail-select';
@@ -111,16 +107,10 @@ function buildChordDetailHarmonyControls(track, step, chord) {
         });
     });
 
-    rootFieldEl.append(rootLabelEl, rootSelectEl);
-    rootRowEl.append(rootFieldEl, buildChordDetailOctaveControl(track, step, chord));
+    rootFieldEl.append(rootSelectEl);
 
-    const typeRowEl = document.createElement('label');
-    typeRowEl.className = 'chord-detail-select-row';
-
-    const typeLabelEl = document.createElement('span');
-    typeLabelEl.className = 'chord-detail-row-label';
-    typeLabelEl.textContent = 'タイプ';
-
+    const typeFieldEl = document.createElement('label');
+    typeFieldEl.className = 'chord-detail-select-field';
     const typeSelectEl = document.createElement('select');
     typeSelectEl.className = 'chord-select-input chord-detail-select';
     typeSelectEl.setAttribute('aria-label', 'コードのタイプ');
@@ -132,9 +122,10 @@ function buildChordDetailHarmonyControls(track, step, chord) {
             octave: chord.octave,
         });
     });
+    typeFieldEl.append(typeSelectEl);
 
-    typeRowEl.append(typeLabelEl, typeSelectEl);
-    controlsEl.append(rootRowEl, typeRowEl);
+    rowEl.append(rootFieldEl, typeFieldEl, buildChordDetailOctaveControl(track, step, chord));
+    controlsEl.append(rowEl);
     return controlsEl;
 }
 
@@ -142,17 +133,13 @@ function buildChordDetailOctaveControl(track, step, chord) {
     const rowEl = document.createElement('label');
     rowEl.className = 'chord-detail-select-field chord-detail-oct-row';
 
-    const labelEl = document.createElement('span');
-    labelEl.className = 'chord-detail-row-label';
-    labelEl.textContent = 'オクターブ';
-
     const ctrlEl = document.createElement('div');
     ctrlEl.className = 'chord-detail-oct-ctrl';
 
     const downBtn = document.createElement('button');
     downBtn.type = 'button';
     downBtn.className = 'oct-range-btn';
-    downBtn.innerHTML = '◀<span class="btn-guide">低</span>';
+    downBtn.textContent = '◀';
     downBtn.disabled = chord.octave <= CHORD_OCTAVE_MIN;
     downBtn.setAttribute('aria-label', 'コードのオクターブを下げる');
     downBtn.addEventListener('click', () => {
@@ -162,12 +149,12 @@ function buildChordDetailOctaveControl(track, step, chord) {
     const valueEl = document.createElement('span');
     valueEl.className = 'chord-detail-oct-value';
     valueEl.dataset.chordDetailOctave = 'true';
-    valueEl.textContent = String(chord.octave);
+    valueEl.textContent = `oct${chord.octave}`;
 
     const upBtn = document.createElement('button');
     upBtn.type = 'button';
     upBtn.className = 'oct-range-btn';
-    upBtn.innerHTML = '▶<span class="btn-guide">高</span>';
+    upBtn.textContent = '▶';
     upBtn.disabled = chord.octave >= CHORD_OCTAVE_MAX;
     upBtn.setAttribute('aria-label', 'コードのオクターブを上げる');
     upBtn.addEventListener('click', () => {
@@ -175,7 +162,7 @@ function buildChordDetailOctaveControl(track, step, chord) {
     });
 
     ctrlEl.append(downBtn, valueEl, upBtn);
-    rowEl.append(labelEl, ctrlEl);
+    rowEl.append(ctrlEl);
     return rowEl;
 }
 
