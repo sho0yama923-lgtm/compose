@@ -3,7 +3,7 @@ import Capacitor
 import AVFAudio
 
 @UIApplicationMain
-class AppDelegate: UIResponder, UIApplicationDelegate {
+class AppDelegate: UIResponder, UIApplicationDelegate, UIWindowSceneDelegate {
 
     var window: UIWindow?
     private var didRegisterCustomPlugins = false
@@ -42,6 +42,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         registerCustomPluginsIfNeeded()
     }
 
+    func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
+        if let windowScene = scene as? UIWindowScene {
+            window = windowScene.windows.first
+        }
+        registerCustomPluginsIfNeeded()
+    }
+
+    func sceneDidBecomeActive(_ scene: UIScene) {
+        if let windowScene = scene as? UIWindowScene {
+            window = windowScene.windows.first
+        }
+        registerCustomPluginsIfNeeded()
+    }
+
     func applicationWillTerminate(_ application: UIApplication) {
         // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
     }
@@ -61,12 +75,28 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     private func registerCustomPluginsIfNeeded() {
         guard !didRegisterCustomPlugins else { return }
-        guard let bridgeViewController = window?.rootViewController as? CAPBridgeViewController,
+        guard let bridgeViewController = resolveBridgeViewController(),
               let bridge = bridgeViewController.bridge else {
             return
         }
         bridge.registerPluginInstance(NativePlaybackPlugin())
         didRegisterCustomPlugins = true
+    }
+
+    private func resolveBridgeViewController() -> CAPBridgeViewController? {
+        if let bridgeViewController = window?.rootViewController as? CAPBridgeViewController {
+            return bridgeViewController
+        }
+
+        for scene in UIApplication.shared.connectedScenes {
+            guard let windowScene = scene as? UIWindowScene else { continue }
+            if let bridgeViewController = windowScene.windows.first?.rootViewController as? CAPBridgeViewController {
+                window = windowScene.windows.first
+                return bridgeViewController
+            }
+        }
+
+        return nil
     }
 
 }

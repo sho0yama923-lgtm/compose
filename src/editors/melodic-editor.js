@@ -421,9 +421,15 @@ function startMelodyNoteDrag({
             && (drag.targetIndex !== sourceIndex || drag.targetFullNote !== fullNote)) {
             const targetSteps = track.stepsMap[drag.targetFullNote];
             if (Array.isArray(targetSteps)) {
-                clearNote(steps, sourceIndex);
-                placeNote(targetSteps, drag.targetIndex, duration, maxIndex);
-                track.activeOctave = Number.parseInt(drag.targetFullNote.slice(-1), 10) || octave;
+                const movingWithinSameLane = targetSteps === steps;
+                const nextSourceSteps = movingWithinSameLane ? [...steps] : [...steps];
+                clearNote(nextSourceSteps, sourceIndex);
+                const nextTargetSteps = movingWithinSameLane ? nextSourceSteps : [...targetSteps];
+                if (placeNote(nextTargetSteps, drag.targetIndex, duration, maxIndex)) {
+                    track.stepsMap[fullNote] = movingWithinSameLane ? nextTargetSteps : nextSourceSteps;
+                    track.stepsMap[drag.targetFullNote] = nextTargetSteps;
+                    track.activeOctave = Number.parseInt(drag.targetFullNote.slice(-1), 10) || octave;
+                }
             }
         }
         callbacks.renderEditor();

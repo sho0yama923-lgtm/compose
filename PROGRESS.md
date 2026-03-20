@@ -11,6 +11,16 @@
 
 ## 今回の整理内容
 
+- `UIScene lifecycle will soon be required` 警告に対応するため、`Info.plist` に `UIApplicationSceneManifest` を追加し、`AppDelegate.swift` を `UIWindowSceneDelegate` 兼用にした。custom plugin 登録も scene 経由で `CAPBridgeViewController` を解決できるよう整理した
+- 再生中に note cleanup の `stop()` が急に入ると iOS でプツッという切れ音が出やすかったため、`NativePlaybackPlugin.swift` の各 voice に `AVAudioMixerNode` を足し、pool 返却前に数 ms の短いフェードアウトを挟んでから reset するようにした
+- フェードアウト後の pool 返却が遅延クロージャ経由になったことで、古い stop/fade が後から走って voice 状態へ触る危険があったため、`NativePlaybackPlugin.swift` の voice に `fadeSequence` を持たせて世代不一致の古い closure を無効化した。頻出する `finishVoice / scheduleWorkItem` まわりの weak capture も外し、weak reference 警告が出にくい形へ整理した
+- 再生線同期のために `NativePlayback.getStatus()` を常時 polling していたが、Capacitor の `To Native -> NativePlayback getStatus ...` がコンソールを埋めていた。`playback-controller.js` は native 開始時刻ベースのローカル補間だけで再生線を動かす形に戻し、常時 status polling を外した
+- `NativePlaybackPlugin.swift` では drums の voice pool key を `trackId + instrumentId` だけで共有していたため、Kick / Snare / HiHat など同一キット内の別音が同じ pool を奪い合っていた。sample tail を長めに保持する変更と組み合わさると pool 枯渇が起きやすく、ドラム無音や再生途中の音欠けにつながるため、drums だけは `trackId + instrumentId + note` 単位で voice pool を分離した
+- `NativePlayback` の console で `voice pool exhausted for 1|piano` が確認でき、pitched 系でも sample tail を長く保持しすぎて route pool を掴みっぱなしにしていたことが分かった。`NativePlaybackPlugin.swift` では drums と pitched で pool 数と sample tail の保持上限を分け、drums は `12 voices / +0.24s`、pitched は `36 voices / +0.18s` の上限に調整した
+- `run` 直後とタスクキル後再起動の差を見直すと、drum と melody の event 生成よりも `NativePlayback.preload()` の sample cache が部分 manifest で上書きされる構造のほうが危険だった。`NativePlaybackPlugin.swift` は partial preload でも既存 cache を保持するよう変更し、`audio-bridge.js` の drum / melody preview と native warmup も「単独楽器だけ」ではなく「現在のトラック全体 + 要求楽器」をまとめた manifest を送るようにした
+- `AURemoteIO::IOThread` の `memmove` クラッシュが出たため、native `preload()` の挙動も見直した。既に cache 済みの instrument を再 preload した時はサンプルを読み直さず `reused` 扱いで保持し、再生中/直後に古い `AVAudioPCMBuffer` が解放されて audio thread が落ちる経路を避けるようにした
+- iOS 再生のプツプツ音は、voice cleanup を音価長だけで切って sample の実 tail を途中で stop していたことが原因候補だったため、`NativePlaybackPlugin.swift` で cleanup 時刻を `max(音価長, sample実再生長)` 基準に変更し、drums 向けの voice pool 数も 24 に増やした
+- ドラム移動後に音が消える件は、移動先に置けない場合でも元ノートを先に消していたことが原因だったため、`drum-editor.js` では clone 配列に対して配置成功時だけ commit するよう修正した。あわせて同じ欠陥があった `melodic-editor.js` と `chord-timing-section.js` の移動処理も同じ形へ揃えた
 - トラック配列の中にも `viewBase / activeOctave / melodyScrollTop / selectedChordRoot / selectedChordType / selectedChordOctave / selectedDivPos / selectedDrumRows` などのエディタ一時状態が混ざっていたため、`storage-helpers.js` に `serializeTrackForSave()` を追加して保存対象を「曲データとトラック設定」だけに絞った
 - タスクキル後の復元内容を確認したところ、`isPlaying / playheadStep / playRange / previewMode` などの再生状態は保存していなかった一方で、`currentMeasure / activeTrackId / lastTouchedTrackId / selectedDuration / dottedMode` などの画面・編集状態は保存対象だった。`storage-helpers.js` からそれらの保存を外し、復元時も毎回 `先頭小節 / 最初のトラック / 通常16分 / プレビュー画面` に戻すよう整理した
 - 起動直後の待機が見かけだけで効かない経路を潰すため、native plugin の `getStatus()` に `ready / readyAtMs` を追加し、`prepareAudioPlayback()` は `warmup()` 完了だけでなく native ready が true になるまで待つようにした。あわせて下部シークバーの再生ボタンも描画時に `appState.isBooting` を反映するよう修正した
@@ -250,3 +260,6 @@
 - ドラムエディタ本体グリッドと `音源を追加` ボタンの横幅を下部小節ボックスに合わせるため、左右 `8px` のインセットで統一
 - ドラム追加メニューの kit 一覧は `details/summary` を使った 1 セクションずつ開くアコーディオン挙動へ整理
 - iOS native playback の `play` で `NSIndirectTaggedPointerString objectForKey:` が出るケースに対応するため、bridge からの再生 payload は `payloadJson` 文字列で渡し、plugin 側で `Decodable` へ直接復元する経路を追加
+- タスクキル後の再起動で再生準備が整うまで全画面の起動オーバーレイ（`#bootOverlay`）を表示するようにした。`pageshow` / `visibilitychange` 復帰時にも同じオーバーレイを表示する
+- タスクキル後に native 再生が失敗して Tone.js フォールバックへ切り替わった際、`playScore` の options に `bpm / startStep / endStepExclusive / loop` が渡されずデフォルト BPM 120 で再生されるバグを修正
+- BPM 対策として一時的に足していた固定待機時間（起動時 1200ms / 復帰時 800ms）は外し、`#bootOverlay` は `prepareAudioPlayback()` の実完了までだけ表示する形へ整理した

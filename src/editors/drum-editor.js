@@ -23,8 +23,7 @@ import {
     getMeasureStart,
 } from '../core/rhythm-grid.js';
 import { DRUM_ROW_CANDIDATES, createDrumRow } from '../features/tracks/instrument-map.js';
-import { previewDrumSample } from '../features/bridges/audio-bridge.js';
-import { warmupPlaybackInstrument } from '../features/playback/scheduler.js';
+import { previewDrumSample, warmupInstruments } from '../features/bridges/audio-bridge.js';
 
 const NOTE_DRAG_HOLD_MS = 380;
 
@@ -296,9 +295,7 @@ function warmupDrumPreviewCandidates(track, candidateGroups) {
         )
     );
 
-    playbackInstrumentIds.forEach((playbackInstrumentId) => {
-        void warmupPlaybackInstrument(track, playbackInstrumentId);
-    });
+    void warmupInstruments(track, playbackInstrumentIds);
 }
 
 function buildDrumAddCandidateRow(track, candidate) {
@@ -495,8 +492,11 @@ function startDrumNoteDrag({
         const drag = appState.noteDrag;
         clearNoteDrag();
         if (drag?.type === 'drum' && drag.targetIndex !== null && drag.targetIndex !== sourceIndex) {
-            clearNote(row.steps, sourceIndex);
-            placeNote(row.steps, drag.targetIndex, duration, maxIndex);
+            const nextSteps = [...row.steps];
+            clearNote(nextSteps, sourceIndex);
+            if (placeNote(nextSteps, drag.targetIndex, duration, maxIndex)) {
+                row.steps = nextSteps;
+            }
         }
         callbacks.renderEditor();
     };

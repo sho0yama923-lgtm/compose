@@ -59,9 +59,12 @@ private struct NativePlaybackState {
 private final class PlaybackVoice {
     let player = AVAudioPlayerNode()
     let rate = AVAudioUnitVarispeed()
+    let gainMixer = AVAudioMixerNode()
     let trackId: Int
     let poolKey: String
     let mainMixerInputBus: AVAudioNodeBus
+    var isFadingOut = false
+    var fadeSequence = 0
 
     init(trackId: Int, poolKey: String, mainMixerInputBus: AVAudioNodeBus) {
         self.trackId = trackId
@@ -74,13 +77,17 @@ private final class NativePlaybackEngine {
     private let leadTimeSeconds = 0.18
     private let warmupPrimeSeconds = 0.12
     private let warmupReadyLeadSeconds = 1.0
-    private let pooledVoiceCountPerRoute = 16
+    private let pooledVoiceCountPerDrumNote = 12
+    private let pooledVoiceCountPerPitchedRoute = 36
     private let schedulerTickSeconds = 0.12
     private let schedulerHorizonMinimumSeconds = 0.45
     private let schedulerHorizonMaximumSeconds = 0.9
     private let schedulerHorizonCycles = 1
     private let schedulerLateGraceSeconds = 0.04
     private let voiceCleanupTailSeconds = 0.08
+    private let voiceFadeStepDurationSeconds = 0.004
+    private let drumSampleTailCapSeconds = 0.24
+    private let pitchedSampleTailCapSeconds = 0.18
 
     private let audioEngine = AVAudioEngine()
     private let engineQueue = DispatchQueue(label: "NativePlaybackEngine.queue")
@@ -90,9 +97,10 @@ private final class NativePlaybackEngine {
     private var availableVoicesByKey: [String: [PlaybackVoice]] = [:]
     private var activeVoices: [UUID: PlaybackVoice] = [:]
     private var nextMainMixerInputBus: AVAudioNodeBus = 1
+    private var hasBeenPrimed = false
     private var schedulerTimer: DispatchSourceTimer?
     private var scheduledPayload: NativePlaybackPayload?
-    private var scheduledCycleCount = 0
+    private var scheduledUpToHostTime: UInt64 = 0
     private var playbackSessionId = 0
     private var currentPlaybackState: NativePlaybackState?
     private var playbackReadyAtMs = 0
@@ -105,21 +113,39 @@ private final class NativePlaybackEngine {
 
     func preload(manifests: [NativePlaybackInstrumentManifest]) throws {
         try engineQueue.sync {
-            var nextCache: [String: [CachedSample]] = [:]
+            if manifests.isEmpty {
+                print("[NativePlayback] preload: skip empty manifest request (cache keys: \(sampleCache.keys.sorted()))")
+                return
+            }
+
+            var nextCache = sampleCache
+            var loadedInstrumentIds: [String] = []
+            var reusedInstrumentIds: [String] = []
 
             for manifest in manifests {
+                if let cachedSamples = nextCache[manifest.instrumentId], !cachedSamples.isEmpty {
+                    reusedInstrumentIds.append(manifest.instrumentId)
+                    continue
+                }
                 nextCache[manifest.instrumentId] = try loadSamples(for: manifest)
+                loadedInstrumentIds.append(manifest.instrumentId)
             }
 
             sampleCache = nextCache
+            print(
+                "[NativePlayback] preload: loaded=\(loadedInstrumentIds.sorted()) reused=\(reusedInstrumentIds.sorted()) cache=\(sampleCache.keys.sorted())"
+            )
         }
     }
 
     func warmup() throws {
         try engineQueue.sync {
-            audioEngine.mainMixerNode.outputVolume = 0
             try ensureEngineStarted()
-            try primeOutputPathLocked()
+            if !hasBeenPrimed {
+                audioEngine.mainMixerNode.outputVolume = 0
+                try primeOutputPathLocked()
+                hasBeenPrimed = true
+            }
         }
     }
 
@@ -143,13 +169,6 @@ private final class NativePlaybackEngine {
     }
 
     private func playLocked(payload: NativePlaybackPayload) throws -> (startDelayMs: Int, startedAtMs: Int) {
-        guard isPlaybackReadyLocked() else {
-            throw NSError(
-                domain: "NativePlayback",
-                code: 7,
-                userInfo: [NSLocalizedDescriptionKey: "Native playback is still warming up."]
-            )
-        }
         stopLocked()
         playbackSessionId += 1
         let sessionId = playbackSessionId
@@ -159,21 +178,21 @@ private final class NativePlaybackEngine {
             bpm: payload.bpm,
             stepsPerBeat: payload.stepsPerBeat
         )
-        if audioEngine.isRunning {
-            audioEngine.pause()
-        }
+
+        // volume=0 の状態でグラフ変更（stopLockedで0設定済み）
         clearVoicePoolsLocked()
         try prepareVoicePoolsLocked(payload: payload)
-        audioEngine.mainMixerNode.outputVolume = 1
+        if !audioEngine.isRunning {
+            try restartEngine()
+        }
 
-        try ensureEngineStarted()
         let renderBaseHostTime = mach_absolute_time() + AVAudioTime.hostTime(forSeconds: leadTimeSeconds)
         let outputLatencySeconds = estimatedOutputLatencySeconds()
         let audibleBaseHostTime = renderBaseHostTime + AVAudioTime.hostTime(forSeconds: outputLatencySeconds)
         let startedAtMs = Int((Date().timeIntervalSince1970 + leadTimeSeconds + outputLatencySeconds) * 1000)
 
         scheduledPayload = payload
-        scheduledCycleCount = 0
+        scheduledUpToHostTime = 0
         currentPlaybackState = NativePlaybackState(
             sessionId: sessionId,
             startedAtMs: startedAtMs,
@@ -189,6 +208,7 @@ private final class NativePlaybackEngine {
 
         try refillScheduleHorizonLocked()
         startSchedulerTimerLocked()
+        audioEngine.mainMixerNode.outputVolume = 1
         return (Int(leadTimeSeconds * 1000), startedAtMs)
     }
 
@@ -196,15 +216,15 @@ private final class NativePlaybackEngine {
         playbackSessionId += 1
         cancelSchedulerTimerLocked()
         scheduledPayload = nil
-        scheduledCycleCount = 0
+        scheduledUpToHostTime = 0
         currentPlaybackState = nil
         audioEngine.mainMixerNode.outputVolume = 0
 
         let voices = activeVoices
         activeVoices.removeAll()
-        voices.values.forEach { returnVoiceToPool($0) }
+        voices.values.forEach { returnVoiceToPool($0, immediate: true) }
         for key in availableVoicesByKey.keys {
-            availableVoicesByKey[key]?.forEach { stopVoice($0) }
+            availableVoicesByKey[key]?.forEach { stopVoice($0, immediate: true) }
         }
         warmupPlayer.stop()
         warmupPlayer.reset()
@@ -215,6 +235,12 @@ private final class NativePlaybackEngine {
         audioEngine.prepare()
         try audioEngine.start()
         playbackReadyAtMs = currentTimeMs() + Int(warmupReadyLeadSeconds * 1000)
+    }
+
+    private func restartEngine() throws {
+        if audioEngine.isRunning { return }
+        audioEngine.prepare()
+        try audioEngine.start()
     }
 
     private func primeOutputPathLocked() throws {
@@ -294,8 +320,38 @@ private final class NativePlaybackEngine {
             ?? event.instrument
     }
 
-    private func voicePoolKey(trackId: Int, instrumentId: String) -> String {
-        "\(trackId)|\(instrumentId)"
+    private func trackType(for trackId: Int, payload: NativePlaybackPayload) -> String? {
+        payload.tracks.first(where: { $0.trackId == trackId })?.instrument
+    }
+
+    private func voicePoolKey(
+        trackId: Int,
+        instrumentId: String,
+        payload: NativePlaybackPayload,
+        note: String? = nil
+    ) -> String {
+        if trackType(for: trackId, payload: payload) == "drums", let note, !note.isEmpty {
+            return "\(trackId)|\(instrumentId)|\(note)"
+        }
+        return "\(trackId)|\(instrumentId)"
+    }
+
+    private func pooledVoiceCount(
+        trackId: Int,
+        payload: NativePlaybackPayload
+    ) -> Int {
+        trackType(for: trackId, payload: payload) == "drums"
+            ? pooledVoiceCountPerDrumNote
+            : pooledVoiceCountPerPitchedRoute
+    }
+
+    private func sampleTailCapSeconds(
+        trackId: Int,
+        payload: NativePlaybackPayload
+    ) -> Double {
+        trackType(for: trackId, payload: payload) == "drums"
+            ? drumSampleTailCapSeconds
+            : pitchedSampleTailCapSeconds
     }
 
     private func prepareVoicePoolsLocked(payload: NativePlaybackPayload) throws {
@@ -304,20 +360,26 @@ private final class NativePlaybackEngine {
 
         for event in payload.events {
             let instrumentId = resolveInstrumentId(for: event, payload: payload)
-            let poolKey = voicePoolKey(trackId: event.trackId, instrumentId: instrumentId)
-            if nextPools[poolKey] != nil { continue }
-
             guard let sampleFormat = sampleCache[instrumentId]?.first?.buffer.format else {
+                let poolKey = voicePoolKey(trackId: event.trackId, instrumentId: instrumentId, payload: payload)
+                print("[NativePlayback] prepareVoicePools: SKIP \(poolKey) — no samples for '\(instrumentId)' (cache keys: \(sampleCache.keys.sorted()))")
                 continue
             }
 
-            var pool: [PlaybackVoice] = []
-            pool.reserveCapacity(pooledVoiceCountPerRoute)
-            for _ in 0..<pooledVoiceCountPerRoute {
-                pool.append(createVoice(poolKey: poolKey, trackId: event.trackId, format: sampleFormat))
+            let poolKeys = event.notes.map { note in
+                voicePoolKey(trackId: event.trackId, instrumentId: instrumentId, payload: payload, note: note)
             }
-            nextPools[poolKey] = pool
-            nextAvailable[poolKey] = pool
+            let voiceCount = pooledVoiceCount(trackId: event.trackId, payload: payload)
+            for poolKey in Set(poolKeys) {
+                if nextPools[poolKey] != nil { continue }
+                var pool: [PlaybackVoice] = []
+                pool.reserveCapacity(voiceCount)
+                for _ in 0..<voiceCount {
+                    pool.append(createVoice(poolKey: poolKey, trackId: event.trackId, format: sampleFormat))
+                }
+                nextPools[poolKey] = pool
+                nextAvailable[poolKey] = pool
+            }
         }
 
         voicePools = nextPools
@@ -344,9 +406,11 @@ private final class NativePlaybackEngine {
         nextMainMixerInputBus += 1
         audioEngine.attach(voice.player)
         audioEngine.attach(voice.rate)
+        audioEngine.attach(voice.gainMixer)
         audioEngine.connect(voice.player, to: voice.rate, fromBus: 0, toBus: 0, format: format)
+        audioEngine.connect(voice.rate, to: voice.gainMixer, fromBus: 0, toBus: 0, format: format)
         audioEngine.connect(
-            voice.rate,
+            voice.gainMixer,
             to: audioEngine.mainMixerNode,
             fromBus: 0,
             toBus: voice.mainMixerInputBus,
@@ -354,6 +418,7 @@ private final class NativePlaybackEngine {
         )
         voice.rate.rate = 1
         voice.player.volume = 1
+        voice.gainMixer.outputVolume = 1
         return voice
     }
 
@@ -364,28 +429,36 @@ private final class NativePlaybackEngine {
         return voice
     }
 
-    private func returnVoiceToPool(_ voice: PlaybackVoice) {
-        stopVoice(voice)
-        availableVoicesByKey[voice.poolKey, default: []].append(voice)
+    private func returnVoiceToPool(_ voice: PlaybackVoice, immediate: Bool = false) {
+        stopVoice(voice, immediate: immediate) { [self] in
+            self.availableVoicesByKey[voice.poolKey, default: []].append(voice)
+        }
     }
 
-    private func scheduleCycle(
+    private func scheduleEventsInRange(
         payload: NativePlaybackPayload,
-        sessionId: Int,
-        cycleStartHostTime: UInt64
+        state: NativePlaybackState,
+        cycleStartHostTime: UInt64,
+        rangeStart: UInt64,
+        rangeEnd: UInt64
     ) throws {
-        guard playbackSessionId == sessionId else { return }
+        guard playbackSessionId == state.sessionId else { return }
 
         for event in payload.events {
             let relativeStep = event.step - payload.startStep
             if relativeStep < 0 { continue }
-            let eventOffsetSeconds = durationForStepCount(relativeStep, bpm: payload.bpm, stepsPerBeat: payload.stepsPerBeat)
+            let eventOffsetSeconds = durationForStepCount(
+                relativeStep, bpm: payload.bpm, stepsPerBeat: payload.stepsPerBeat
+            )
+            let eventHostTime = cycleStartHostTime + AVAudioTime.hostTime(forSeconds: eventOffsetSeconds)
+            if eventHostTime <= rangeStart { continue }
+            if eventHostTime > rangeEnd { continue }
             try scheduleEvent(
                 event,
                 payload: payload,
-                sessionId: sessionId,
-                hostTime: cycleStartHostTime + AVAudioTime.hostTime(forSeconds: eventOffsetSeconds),
-                secondsPerStep: secondsPerStep(bpm: payload.bpm, stepsPerBeat: payload.stepsPerBeat)
+                sessionId: state.sessionId,
+                hostTime: eventHostTime,
+                secondsPerStep: state.secondsPerStep
             )
         }
     }
@@ -398,18 +471,32 @@ private final class NativePlaybackEngine {
         secondsPerStep: Double
     ) throws {
         let instrumentId = resolveInstrumentId(for: event, payload: payload)
-        let poolKey = voicePoolKey(trackId: event.trackId, instrumentId: instrumentId)
+        let durationSeconds = max(secondsPerStep, secondsPerStep * Double(max(1, event.durationSteps)))
+        let volume = Float(max(0, min(1, event.volume)))
 
         for note in event.notes {
-            guard let sample = nearestSample(instrumentId: instrumentId, note: note) else { continue }
+            let poolKey = voicePoolKey(
+                trackId: event.trackId,
+                instrumentId: instrumentId,
+                payload: payload,
+                note: note
+            )
+            guard let sample = nearestSample(instrumentId: instrumentId, note: note) else {
+                print("[NativePlayback] scheduleEvent: no sample for \(instrumentId) note=\(note)")
+                continue
+            }
             guard let targetMidi = noteToMidi(note) else { continue }
-            guard let voice = checkoutVoice(poolKey: poolKey) else { continue }
+            guard let voice = checkoutVoice(poolKey: poolKey) else {
+                print("[NativePlayback] scheduleEvent: voice pool exhausted for \(poolKey)")
+                continue
+            }
 
             let voiceId = UUID()
             activeVoices[voiceId] = voice
 
-            voice.player.volume = Float(max(0, min(1, event.volume)))
-            voice.rate.rate = powf(2, Float(targetMidi - sample.rootMidi) / 12)
+            voice.player.volume = volume
+            let playbackRate = max(0.01, Double(powf(2, Float(targetMidi - sample.rootMidi) / 12)))
+            voice.rate.rate = Float(playbackRate)
             voice.player.prepare(withFrameCount: sample.buffer.frameLength)
             voice.player.scheduleBuffer(
                 sample.buffer,
@@ -419,39 +506,93 @@ private final class NativePlaybackEngine {
             )
             voice.player.play()
 
-            let durationSeconds = max(secondsPerStep, secondsPerStep * Double(max(1, event.durationSteps)))
+            let sampleDurationSeconds = (
+                Double(sample.buffer.frameLength)
+                / max(1, sample.buffer.format.sampleRate)
+            ) / playbackRate
+            let cappedSampleDurationSeconds = min(
+                sampleDurationSeconds,
+                durationSeconds + sampleTailCapSeconds(trackId: event.trackId, payload: payload)
+            )
+            let cleanupDelaySeconds = max(
+                durationSeconds + voiceCleanupTailSeconds,
+                cappedSampleDurationSeconds
+            )
+
             scheduleWorkItem(
                 sessionId: sessionId,
-                hostTime: hostTime + AVAudioTime.hostTime(forSeconds: durationSeconds + voiceCleanupTailSeconds)
-            ) { [weak self] in
-                self?.finishVoice(voiceId)
+                hostTime: hostTime + AVAudioTime.hostTime(forSeconds: cleanupDelaySeconds)
+            ) { [self] in
+                self.finishVoice(voiceId)
             }
         }
     }
 
     private func finishVoice(_ voiceId: UUID) {
-        guard let voice = activeVoices.removeValue(forKey: voiceId) else { return }
-        returnVoiceToPool(voice)
+        guard let voice = activeVoices[voiceId] else { return }
+        stopVoice(voice) { [self] in
+            guard let stoppedVoice = self.activeVoices.removeValue(forKey: voiceId) else { return }
+            self.availableVoicesByKey[stoppedVoice.poolKey, default: []].append(stoppedVoice)
+        }
     }
 
-    private func stopVoice(_ voice: PlaybackVoice) {
-        voice.player.stop()
-        voice.player.reset()
-        voice.rate.reset()
-        voice.player.volume = 1
-        voice.rate.rate = 1
+    private func stopVoice(
+        _ voice: PlaybackVoice,
+        immediate: Bool = false,
+        completion: (() -> Void)? = nil
+    ) {
+        voice.fadeSequence += 1
+        let fadeSequence = voice.fadeSequence
+        let finalize = {
+            guard voice.fadeSequence == fadeSequence else { return }
+            voice.player.stop()
+            voice.player.reset()
+            voice.rate.reset()
+            voice.player.volume = 1
+            voice.rate.rate = 1
+            voice.gainMixer.outputVolume = 1
+            voice.isFadingOut = false
+            completion?()
+        }
+
+        if immediate || !voice.player.isPlaying {
+            finalize()
+            return
+        }
+        if voice.isFadingOut { return }
+
+        voice.isFadingOut = true
+        let fadeLevels: [Float] = [0.7, 0.35, 0]
+        for (index, level) in fadeLevels.enumerated() {
+            let delaySeconds = voiceFadeStepDurationSeconds * Double(index)
+            engineQueue.asyncAfter(deadline: .now() + delaySeconds) {
+                guard voice.isFadingOut, voice.fadeSequence == fadeSequence else { return }
+                voice.gainMixer.outputVolume = level
+                if index == fadeLevels.count - 1 {
+                    self.engineQueue.asyncAfter(deadline: .now() + self.voiceFadeStepDurationSeconds) {
+                        guard voice.isFadingOut, voice.fadeSequence == fadeSequence else { return }
+                        finalize()
+                    }
+                }
+            }
+        }
     }
 
     private func destroyVoice(_ voice: PlaybackVoice) {
-        stopVoice(voice)
+        stopVoice(voice, immediate: true)
         audioEngine.disconnectNodeOutput(voice.player)
         audioEngine.disconnectNodeInput(voice.rate)
         audioEngine.disconnectNodeOutput(voice.rate)
+        audioEngine.disconnectNodeInput(voice.gainMixer)
+        audioEngine.disconnectNodeOutput(voice.gainMixer)
         if audioEngine.attachedNodes.contains(voice.player) {
             audioEngine.detach(voice.player)
         }
         if audioEngine.attachedNodes.contains(voice.rate) {
             audioEngine.detach(voice.rate)
+        }
+        if audioEngine.attachedNodes.contains(voice.gainMixer) {
+            audioEngine.detach(voice.gainMixer)
         }
     }
 
@@ -466,28 +607,35 @@ private final class NativePlaybackEngine {
                 state.cycleDurationSeconds * Double(schedulerHorizonCycles)
             )
         )
-        let lateThresholdHostTime = nowHostTime + AVAudioTime.hostTime(forSeconds: schedulerLateGraceSeconds)
         let scheduleCutoffHostTime = nowHostTime + AVAudioTime.hostTime(forSeconds: scheduleHorizonSeconds)
+        let rangeStart = scheduledUpToHostTime
+
+        // rangeStart 時刻が属するサイクルを起点にする
+        var cycleIndex = 0
+        if rangeStart > state.renderBaseHostTime {
+            let elapsed = secondsForHostTimeDelta(rangeStart - state.renderBaseHostTime)
+            cycleIndex = max(0, Int(elapsed / state.cycleDurationSeconds))
+        }
 
         while true {
             let cycleStartHostTime = state.renderBaseHostTime + AVAudioTime.hostTime(
-                forSeconds: state.cycleDurationSeconds * Double(scheduledCycleCount)
+                forSeconds: state.cycleDurationSeconds * Double(cycleIndex)
             )
             if cycleStartHostTime > scheduleCutoffHostTime { break }
-            if cycleStartHostTime < lateThresholdHostTime {
-                scheduledCycleCount += 1
-                if !state.loop { break }
-                continue
-            }
 
-            try scheduleCycle(
+            try scheduleEventsInRange(
                 payload: payload,
-                sessionId: state.sessionId,
-                cycleStartHostTime: cycleStartHostTime
+                state: state,
+                cycleStartHostTime: cycleStartHostTime,
+                rangeStart: rangeStart,
+                rangeEnd: scheduleCutoffHostTime
             )
-            scheduledCycleCount += 1
+
+            cycleIndex += 1
             if !state.loop { break }
         }
+
+        scheduledUpToHostTime = scheduleCutoffHostTime
     }
 
     private func startSchedulerTimerLocked() {
@@ -510,8 +658,8 @@ private final class NativePlaybackEngine {
     }
 
     private func scheduleWorkItem(sessionId: Int, hostTime: UInt64, work: @escaping () -> Void) {
-        engineQueue.asyncAfter(deadline: .now() + max(0, secondsUntilHostTime(hostTime))) { [weak self] in
-            guard let self, self.playbackSessionId == sessionId else { return }
+        engineQueue.asyncAfter(deadline: .now() + max(0, secondsUntilHostTime(hostTime))) { [self] in
+            guard self.playbackSessionId == sessionId else { return }
             work()
         }
     }

@@ -194,8 +194,11 @@ function startChordNoteDrag({ event, track, soundCells, cells, mEnd, sourceIndex
         const drag = appState.noteDrag;
         clearNoteDrag();
         if (drag?.type === 'chord' && drag.targetIndex !== null && drag.targetIndex !== sourceIndex) {
-            clearNote(track.soundSteps, sourceIndex);
-            placeNote(track.soundSteps, drag.targetIndex, duration, mEnd);
+            const nextSteps = [...track.soundSteps];
+            clearNote(nextSteps, sourceIndex);
+            if (placeNote(nextSteps, drag.targetIndex, duration, mEnd)) {
+                track.soundSteps = nextSteps;
+            }
         }
         callbacks.renderEditor();
     };

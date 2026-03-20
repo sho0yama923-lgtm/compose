@@ -2,7 +2,7 @@
 
 import { appState, STEPS_PER_MEASURE, totalSteps, callbacks, getNormalizedPlayRangeMeasures } from '../../core/state.js';
 import { getCurrentBpm } from '../../core/bpm.js';
-import { getNativePlaybackState, playScore, stopScorePlayback } from '../bridges/audio-bridge.js';
+import { playScore, stopScorePlayback } from '../bridges/audio-bridge.js';
 import { serializeScoreForNativePlayback } from './score-serializer.js';
 import { buildPlaybackScore, resolvePlaybackWindow } from './score-builder.js';
 
@@ -10,9 +10,6 @@ let playbackRequestId = 0;
 let playheadAnimationFrameId = null;
 let playheadAnimationState = null;
 let pendingPlaybackRenderFrameId = null;
-let nativePlaybackSyncTimeoutId = null;
-
-const NATIVE_PLAYBACK_SYNC_INTERVAL_MS = 80;
 
 function primePlaybackStartUi(step) {
     appState.playheadStep = step;
@@ -98,7 +95,11 @@ export function initPlayback() {
             score,
             nativePayload,
         }, {
+            bpm,
+            loop: true,
             tracks: appState.tracks,
+            startStep,
+            endStepExclusive,
         });
         if (requestId !== playbackRequestId) {
             stopPlaybackAnimation();
@@ -214,9 +215,6 @@ function beginPlaybackAnimation({
         playheadAnimationFrameId = null;
         return;
     }
-    if (mode === 'native') {
-        scheduleNativePlaybackStateSync(requestId);
-    }
     if (shouldRestartLoop || playheadAnimationFrameId === null) {
         tickPlaybackAnimation();
     }
@@ -230,10 +228,6 @@ function stopPlaybackAnimation() {
     if (pendingPlaybackRenderFrameId !== null) {
         cancelAnimationFrame(pendingPlaybackRenderFrameId);
         pendingPlaybackRenderFrameId = null;
-    }
-    if (nativePlaybackSyncTimeoutId !== null) {
-        clearTimeout(nativePlaybackSyncTimeoutId);
-        nativePlaybackSyncTimeoutId = null;
     }
     playheadAnimationState = null;
 }
@@ -271,50 +265,6 @@ function tickPlaybackAnimation() {
 
     applyPlaybackUi(globalStep, globalStepPosition);
     playheadAnimationFrameId = requestAnimationFrame(tickPlaybackAnimation);
-}
-
-function scheduleNativePlaybackStateSync(requestId) {
-    if (nativePlaybackSyncTimeoutId !== null) {
-        clearTimeout(nativePlaybackSyncTimeoutId);
-        nativePlaybackSyncTimeoutId = null;
-    }
-
-    const sync = async () => {
-        if (!appState.isPlaying || requestId !== playbackRequestId) return;
-
-        const state = await getNativePlaybackState();
-        if (!appState.isPlaying || requestId !== playbackRequestId) return;
-
-        if (!state) {
-            nativePlaybackSyncTimeoutId = window.setTimeout(sync, NATIVE_PLAYBACK_SYNC_INTERVAL_MS);
-            return;
-        }
-
-        if (state.playing === false) {
-            stopPlayback();
-            return;
-        }
-
-        const positionStep = Number(state.positionStep);
-        if (playheadAnimationState && Number.isFinite(positionStep)) {
-            playheadAnimationState.anchorStepPosition = positionStep;
-            playheadAnimationState.anchorAtMs = performance.now();
-            if (Number.isFinite(Number(state.startStep))) {
-                playheadAnimationState.startStep = Number(state.startStep);
-            }
-            if (Number.isFinite(Number(state.endStepExclusive))) {
-                playheadAnimationState.endStepExclusive = Number(state.endStepExclusive);
-                playheadAnimationState.cycleSteps = Math.max(
-                    1,
-                    playheadAnimationState.endStepExclusive - playheadAnimationState.startStep
-                );
-            }
-        }
-
-        nativePlaybackSyncTimeoutId = window.setTimeout(sync, NATIVE_PLAYBACK_SYNC_INTERVAL_MS);
-    };
-
-    void sync();
 }
 
 function syncPreviewScrollTop() {

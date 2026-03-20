@@ -5,6 +5,7 @@ import {
     previewDrumSample as previewSchedulerDrumSample,
     previewTrackNote as previewSchedulerTrackNote,
     stop as stopSchedulerScore,
+    warmupPlaybackInstrument as warmupSchedulerInstrument,
 } from '../playback/scheduler.js';
 import { buildNativePlaybackManifest, buildNativePlaybackManifestForInstrumentIds } from '../playback/score-serializer.js';
 import { getDrumSampleDefinition } from '../tracks/instrument-map.js';
@@ -38,6 +39,33 @@ function canUseNativePlayback() {
 
 function getManifestCacheKey(manifests) {
     return JSON.stringify(manifests);
+}
+
+function mergeNativePlaybackManifests(...manifestGroups) {
+    const merged = new Map();
+    manifestGroups
+        .flat()
+        .filter(Boolean)
+        .forEach((manifest) => {
+            if (!manifest?.instrumentId || !manifest?.samples) return;
+            const currentSamples = merged.get(manifest.instrumentId)?.samples || {};
+            merged.set(manifest.instrumentId, {
+                instrumentId: manifest.instrumentId,
+                samples: {
+                    ...currentSamples,
+                    ...manifest.samples,
+                },
+            });
+        });
+
+    return Array.from(merged.values()).sort((left, right) => left.instrumentId.localeCompare(right.instrumentId));
+}
+
+function buildNativePreviewManifest(extraInstrumentIds = []) {
+    return mergeNativePlaybackManifests(
+        buildNativePlaybackManifest(appState.tracks),
+        buildNativePlaybackManifestForInstrumentIds(extraInstrumentIds)
+    );
 }
 
 async function prepareNativePlaybackManifests(manifests = []) {
@@ -160,7 +188,7 @@ export async function previewDrumSample({
             ))?.note || getDrumSampleDefinition(sampleId)?.note;
             if (note) {
                 await prepareNativePlaybackManifests(
-                    buildNativePlaybackManifestForInstrumentIds([sampleInstrumentId])
+                    buildNativePreviewManifest([sampleInstrumentId])
                 );
                 const result = await NativePlayback.preview({
                     instrumentId: sampleInstrumentId,
@@ -199,7 +227,7 @@ export async function previewTrackNote({
     if (canUseNativePlayback() && playbackInstrumentId && note) {
         try {
             await prepareNativePlaybackManifests(
-                buildNativePlaybackManifestForInstrumentIds([playbackInstrumentId])
+                buildNativePreviewManifest([playbackInstrumentId])
             );
             const result = await NativePlayback.preview({
                 instrumentId: playbackInstrumentId,
@@ -229,4 +257,21 @@ export function stopScorePlayback() {
         });
     }
     stopSchedulerScore();
+}
+
+export async function warmupInstruments(track, instrumentIds = []) {
+    if (!Array.isArray(instrumentIds) || instrumentIds.length === 0) return;
+
+    if (canUseNativePlayback()) {
+        try {
+            await prepareNativePlaybackManifests(buildNativePreviewManifest(instrumentIds));
+        } catch (error) {
+            console.warn('[Audio] native instrument warmup failed.', error);
+        }
+        return;
+    }
+
+    instrumentIds.forEach((playbackInstrumentId) => {
+        void warmupSchedulerInstrument(track, playbackInstrumentId);
+    });
 }

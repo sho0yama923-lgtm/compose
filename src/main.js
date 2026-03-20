@@ -12,10 +12,25 @@ import { saveState, loadState, initSaveLoad } from './features/project/project-s
 import { prepareAudioPlayback } from './features/bridges/audio-bridge.js';
 
 let audioWarmupPromise = null;
-let audioWarmupUnlockAt = 0;
 
-const AUDIO_BOOT_MIN_LOCK_MS = 1200;
-const AUDIO_RESUME_MIN_LOCK_MS = 800;
+function showBootOverlay() {
+    const overlay = document.getElementById('bootOverlay');
+    if (!overlay) return;
+    overlay.classList.remove('hide');
+    overlay.style.display = '';
+}
+
+function hideBootOverlay() {
+    const overlay = document.getElementById('bootOverlay');
+    if (!overlay) return;
+    overlay.classList.add('hide');
+    // transitionend で完全に消す
+    const onEnd = () => {
+        overlay.style.display = 'none';
+        overlay.removeEventListener('transitionend', onEnd);
+    };
+    overlay.addEventListener('transitionend', onEnd);
+}
 
 // 循環依存を回避するコールバック登録（自動保存フック付き）
 callbacks.renderEditor = (...args) => {
@@ -49,18 +64,11 @@ function refreshPlaybackAvailabilityUi() {
     callbacks.renderEditor?.();
 }
 
-function wait(ms) {
-    if (ms <= 0) return Promise.resolve();
-    return new Promise((resolve) => {
-        window.setTimeout(resolve, ms);
-    });
-}
-
-async function warmupAudioForPlayback({ minimumLockMs = AUDIO_BOOT_MIN_LOCK_MS } = {}) {
-    audioWarmupUnlockAt = Math.max(audioWarmupUnlockAt, performance.now() + minimumLockMs);
+async function warmupAudioForPlayback() {
     if (audioWarmupPromise) return audioWarmupPromise;
 
     appState.isBooting = true;
+    showBootOverlay();
     refreshPlaybackAvailabilityUi();
 
     audioWarmupPromise = (async () => {
@@ -69,10 +77,9 @@ async function warmupAudioForPlayback({ minimumLockMs = AUDIO_BOOT_MIN_LOCK_MS }
         } catch (error) {
             console.warn('[Audio] playback warmup failed:', error);
         } finally {
-            await wait(audioWarmupUnlockAt - performance.now());
             appState.isBooting = false;
             audioWarmupPromise = null;
-            audioWarmupUnlockAt = 0;
+            hideBootOverlay();
             refreshPlaybackAvailabilityUi();
         }
     })();
@@ -82,16 +89,12 @@ async function warmupAudioForPlayback({ minimumLockMs = AUDIO_BOOT_MIN_LOCK_MS }
 
 function setupPlaybackWarmupLifecycle() {
     window.addEventListener('pageshow', () => {
-        void warmupAudioForPlayback({
-            minimumLockMs: AUDIO_RESUME_MIN_LOCK_MS,
-        });
+        void warmupAudioForPlayback();
     });
 
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState !== 'visible') return;
-        void warmupAudioForPlayback({
-            minimumLockMs: AUDIO_RESUME_MIN_LOCK_MS,
-        });
+        void warmupAudioForPlayback();
     });
 }
 
@@ -101,7 +104,6 @@ async function boot() {
     initPlayback();
     initModal();
     initSaveLoad();
-    setupPlaybackWarmupLifecycle();
 
     document.getElementById('trackModeBtn').addEventListener('click', () => {
         if (appState.activeTrackId === null) return;
@@ -132,9 +134,10 @@ async function boot() {
         addTrack('piano');
     }
 
-    await warmupAudioForPlayback({
-        minimumLockMs: AUDIO_BOOT_MIN_LOCK_MS,
-    });
+    await warmupAudioForPlayback();
+
+    // ライフサイクル監視はブート完了後に登録（pageshow の早期発火で空トラック preload を防ぐ）
+    setupPlaybackWarmupLifecycle();
 
     // ローディング表示を解除し、本来のempty-stateメッセージに切替
     const emptyIcon = document.getElementById('emptyStateIcon');
