@@ -245,6 +245,38 @@ body {
     background: #f0f0f0;
 }
 
+.topbar,
+.sidebar,
+.track-item,
+.main,
+#trackEditor,
+.melody-topbar,
+.measure-actions,
+.measure-seek-shell,
+.measure-seek-card,
+.editor-help {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
+.topbar input,
+.topbar select,
+.topbar textarea,
+.sidebar input,
+.sidebar select,
+.sidebar textarea,
+.main input,
+.main select,
+.main textarea,
+#trackEditor input,
+#trackEditor select,
+#trackEditor textarea {
+    user-select: auto;
+    -webkit-user-select: auto;
+    -webkit-touch-callout: default;
+}
+
 .empty-state {
     display: flex;
     flex-direction: column;

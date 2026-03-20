@@ -23,7 +23,8 @@ import {
     getMeasureStart,
 } from '../core/rhythm-grid.js';
 import { DRUM_ROW_CANDIDATES, createDrumRow } from '../features/tracks/instrument-map.js';
-import { previewDrumSample } from '../features/playback/scheduler.js';
+import { previewDrumSample } from '../features/bridges/audio-bridge.js';
+import { warmupPlaybackInstrument } from '../features/playback/scheduler.js';
 
 const NOTE_DRAG_HOLD_MS = 380;
 
@@ -159,48 +160,124 @@ export function renderDrumEditor(track, editorEl) {
     wrapEl.appendChild(gridScrollEl);
     editorEl.appendChild(wrapEl);
     editorEl.appendChild(buildDrumAddPanel(track));
+    if (appState.drumAddTrackId === track.id) {
+        editorEl.appendChild(buildDrumAddSheet(track));
+    }
 }
 
 function buildDrumAddPanel(track) {
     const panelEl = document.createElement('section');
     panelEl.className = 'drum-add-panel';
 
-    const titleEl = document.createElement('h2');
-    titleEl.className = 'drum-add-panel-title';
+    const triggerBtn = document.createElement('button');
+    triggerBtn.className = 'drum-add-panel-trigger';
+    triggerBtn.type = 'button';
+    triggerBtn.textContent = '音源を追加';
+    triggerBtn.addEventListener('click', () => {
+        appState.drumAddTrackId = appState.drumAddTrackId === track.id ? null : track.id;
+        callbacks.renderEditor();
+    });
+    panelEl.appendChild(triggerBtn);
+    return panelEl;
+}
+
+function buildDrumAddSheet(track) {
+    const overlayEl = document.createElement('div');
+    overlayEl.className = 'drum-add-sheet-overlay';
+    overlayEl.addEventListener('click', (event) => {
+        if (event.target !== overlayEl) return;
+        appState.drumAddTrackId = null;
+        callbacks.renderEditor();
+    });
+
+    const sheetEl = document.createElement('section');
+    sheetEl.className = 'drum-add-sheet';
+    overlayEl.appendChild(sheetEl);
+
+    const handleEl = document.createElement('div');
+    handleEl.className = 'drum-add-sheet-handle';
+    sheetEl.appendChild(handleEl);
+
+    const titleEl = document.createElement('div');
+    titleEl.className = 'drum-add-sheet-title';
     titleEl.textContent = '音源を追加';
-    panelEl.appendChild(titleEl);
+    sheetEl.appendChild(titleEl);
+
+    const bodyEl = document.createElement('div');
+    bodyEl.className = 'drum-add-sheet-body';
+    sheetEl.appendChild(bodyEl);
 
     const candidateGroups = groupDrumRowCandidates(track);
+    warmupDrumPreviewCandidates(track, candidateGroups);
     if (candidateGroups.length === 0) {
         const emptyEl = document.createElement('p');
         emptyEl.className = 'drum-add-panel-empty';
         emptyEl.textContent = '追加できる音源はありません。';
-        panelEl.appendChild(emptyEl);
-        return panelEl;
+        bodyEl.appendChild(emptyEl);
+    } else {
+        const detailsEls = [];
+        candidateGroups.forEach(([groupLabel, candidates]) => {
+            if (candidates.length === 0) return;
+
+            const detailsEl = document.createElement('details');
+            detailsEl.className = 'drum-add-group';
+            detailsEls.push(detailsEl);
+
+            const summaryEl = document.createElement('summary');
+            summaryEl.className = 'drum-add-group-summary';
+            summaryEl.textContent = groupLabel;
+            detailsEl.appendChild(summaryEl);
+
+            const listEl = document.createElement('div');
+            listEl.className = 'drum-add-group-list';
+            candidates.forEach((candidate) => {
+                listEl.appendChild(buildDrumAddCandidateRow(track, candidate));
+            });
+            detailsEl.appendChild(listEl);
+            bodyEl.appendChild(detailsEl);
+        });
+
+        detailsEls.forEach((detailsEl) => {
+            detailsEl.addEventListener('toggle', () => {
+                if (!detailsEl.open) return;
+                detailsEls.forEach((otherEl) => {
+                    if (otherEl === detailsEl) return;
+                    otherEl.open = false;
+                });
+            });
+        });
     }
 
-    candidateGroups.forEach(([groupLabel, candidates], index) => {
-        if (candidates.length === 0) return;
+    const actionsEl = document.createElement('div');
+    actionsEl.className = 'drum-add-sheet-actions';
+    sheetEl.appendChild(actionsEl);
 
-        const detailsEl = document.createElement('details');
-        detailsEl.className = 'drum-add-group';
-        if (index === 0) detailsEl.open = true;
-
-        const summaryEl = document.createElement('summary');
-        summaryEl.className = 'drum-add-group-summary';
-        summaryEl.textContent = groupLabel;
-        detailsEl.appendChild(summaryEl);
-
-        const listEl = document.createElement('div');
-        listEl.className = 'drum-add-group-list';
-        candidates.forEach((candidate) => {
-            listEl.appendChild(buildDrumAddCandidateRow(track, candidate));
-        });
-        detailsEl.appendChild(listEl);
-        panelEl.appendChild(detailsEl);
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'drum-add-sheet-close';
+    closeBtn.type = 'button';
+    closeBtn.textContent = '閉じる';
+    closeBtn.addEventListener('click', () => {
+        appState.drumAddTrackId = null;
+        callbacks.renderEditor();
     });
+    actionsEl.appendChild(closeBtn);
 
-    return panelEl;
+    return overlayEl;
+}
+
+function warmupDrumPreviewCandidates(track, candidateGroups) {
+    const playbackInstrumentIds = Array.from(
+        new Set(
+            candidateGroups
+                .flatMap(([, candidates]) => candidates)
+                .map((candidate) => candidate.sampleInstrumentId)
+                .filter(Boolean)
+        )
+    );
+
+    playbackInstrumentIds.forEach((playbackInstrumentId) => {
+        void warmupPlaybackInstrument(track, playbackInstrumentId);
+    });
 }
 
 function buildDrumAddCandidateRow(track, candidate) {
@@ -215,7 +292,9 @@ function buildDrumAddCandidateRow(track, candidate) {
     const previewBtn = document.createElement('button');
     previewBtn.className = 'drum-add-row-preview';
     previewBtn.type = 'button';
-    previewBtn.textContent = '再生';
+    previewBtn.textContent = '▶︎';
+    previewBtn.setAttribute('aria-label', `${candidate.label} を再生`);
+    previewBtn.title = '再生';
     previewBtn.addEventListener('click', async () => {
         previewBtn.disabled = true;
         try {
@@ -233,7 +312,9 @@ function buildDrumAddCandidateRow(track, candidate) {
     const addBtn = document.createElement('button');
     addBtn.className = 'drum-add-row-add';
     addBtn.type = 'button';
-    addBtn.textContent = '追加';
+    addBtn.textContent = '→';
+    addBtn.setAttribute('aria-label', `${candidate.label} を追加`);
+    addBtn.title = '追加';
     addBtn.addEventListener('click', () => {
         track.rows.push(createDrumRow(candidate.sampleInstrumentId, candidate.sampleId, {
             label: candidate.label,

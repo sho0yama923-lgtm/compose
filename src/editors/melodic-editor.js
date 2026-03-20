@@ -21,6 +21,7 @@ import {
     getEditorGridLineGroup,
     getMeasureStart,
 } from '../core/rhythm-grid.js';
+import { previewTrackNote } from '../features/bridges/audio-bridge.js';
 
 const NOTE_DRAG_HOLD_MS = 380;
 
@@ -145,6 +146,25 @@ export function renderMelodicEditor(track, editorEl) {
             keyEl.textContent = noteName;
             keyEl.style.width = '28px';
             keyEl.style.minWidth = '28px';
+            keyEl.setAttribute('role', 'button');
+            keyEl.tabIndex = 0;
+            keyEl.setAttribute('aria-label', `${fullNote} を試聴`);
+            keyEl.title = `${fullNote} を試聴`;
+            keyEl.addEventListener('click', (event) => {
+                event.preventDefault();
+                void previewTrackNote({
+                    track,
+                    note: fullNote,
+                });
+            });
+            keyEl.addEventListener('keydown', (event) => {
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                event.preventDefault();
+                void previewTrackNote({
+                    track,
+                    note: fullNote,
+                });
+            });
 
             const rowEl = document.createElement('div');
             rowEl.className = 'melody-grid-row';

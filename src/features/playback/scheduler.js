@@ -1,9 +1,9 @@
 // player.js
 // Tone.js はグローバル変数として使用（HTMLでCDN読み込み済み）
+import { appState, STEPS_PER_BEAT, STEPS_PER_MEASURE } from '../../core/state.js';
 import { getTrackPlaybackInstrument, syncTrackPlaybackChains } from '../tracks/instrument-map.js';
 import { getDrumSampleDefinition } from '../tracks/instruments/instrument-config.js';
 import { prepareTrackPlaybackInstrument } from '../tracks/instruments/playback-chains.js';
-import { STEPS_PER_BEAT, STEPS_PER_MEASURE } from '../../core/state.js';
 
 // ==========================================================
 // スコアのデータ形式
@@ -22,6 +22,44 @@ import { STEPS_PER_BEAT, STEPS_PER_MEASURE } from '../../core/state.js';
 
 let _part = null;
 const DRUM_PREVIEW_DURATION_SECONDS = 0.35;
+const PREVIEW_SAMPLER_READY_TIMEOUT_MS = 2000;
+const PREVIEW_SAMPLER_POLL_MS = 50;
+
+async function waitForSamplerReady(sampler, timeoutMs = PREVIEW_SAMPLER_READY_TIMEOUT_MS) {
+    if (!sampler) return false;
+    if (sampler.loaded) return true;
+
+    if (typeof Tone?.loaded === 'function') {
+        try {
+            await Promise.race([
+                Tone.loaded(),
+                new Promise((resolve) => window.setTimeout(resolve, timeoutMs)),
+            ]);
+        } catch {
+            // 個別サンプルが失敗した場合は下の loaded 判定へフォールバックする
+        }
+        if (sampler.loaded) return true;
+    }
+
+    const deadline = Date.now() + Math.max(0, timeoutMs);
+    while (Date.now() < deadline) {
+        await new Promise((resolve) => window.setTimeout(resolve, PREVIEW_SAMPLER_POLL_MS));
+        if (sampler.loaded) return true;
+    }
+    return !!sampler.loaded;
+}
+
+export async function warmupPlaybackInstrument(track, playbackInstrumentId) {
+    if (!globalThis.Tone || !track?.id || !playbackInstrumentId) return false;
+    try {
+        await Tone.start();
+        const sampler = await prepareTrackPlaybackInstrument(track, playbackInstrumentId);
+        return await waitForSamplerReady(sampler, PREVIEW_SAMPLER_READY_TIMEOUT_MS);
+    } catch (error) {
+        console.warn('[Audio] 試聴用音源の先読みをスキップしました。', error);
+        return false;
+    }
+}
 
 /**
  * 音楽を再生する
@@ -31,7 +69,6 @@ const DRUM_PREVIEW_DURATION_SECONDS = 0.35;
  *   @param {boolean} options.loop - ループ再生（デフォルト: true）
  *   @param {Function} options.onStep - 再生位置コールバック
  *   @param {Array}   options.tracks - 現在のトラック一覧
- *   @param {number}  options.numMeasures - 小節数
  *   @param {number}  options.startStep - 再生開始ステップ
  *   @param {number}  options.endStepExclusive - 再生終了ステップ（exclusive）
  */
@@ -40,7 +77,6 @@ export async function play(score, {
     loop = true,
     onStep,
     tracks = [],
-    numMeasures = 1,
     startStep = 0,
     endStepExclusive = score.length,
 } = {}) {
@@ -135,7 +171,7 @@ export async function previewDrumSample({
     }
 
     const sampleDefinition = getDrumSampleDefinition(sampleId);
-    if (!sampleDefinition?.note || !sampleInstrumentId || !trackId) return false;
+    if (!sampleDefinition?.note || !sampleInstrumentId || trackId == null) return false;
 
     const sourceTrack = tracks.find((track) => track?.id === trackId) || null;
     const previewTrack = sourceTrack || {
@@ -157,7 +193,7 @@ export async function previewDrumSample({
         return false;
     }
 
-    if (!sampler?.loaded) {
+    if (!(await waitForSamplerReady(sampler))) {
         console.warn('[Audio] ドラム試聴用 sampler のロードが未完了です。');
         return false;
     }
@@ -171,6 +207,48 @@ export async function previewDrumSample({
         Tone.now(),
         previewVolume
     );
+    return true;
+}
+
+export async function previewTrackNote({
+    track,
+    note,
+    durationSeconds = 0.35,
+} = {}) {
+    if (!globalThis.Tone) {
+        alert('Tone.js の読み込みに失敗したため、試聴できません。ネットワーク接続を確認して再読み込みしてください。');
+        return false;
+    }
+
+    if (appState.isPlaying) {
+        console.warn('[Audio] 曲再生中のため、音試聴をスキップしました。');
+        return false;
+    }
+
+    if (!track || typeof note !== 'string') return false;
+
+    const playbackInstrumentId = track.playbackInstrument || track.instrument;
+    if (!playbackInstrumentId) return false;
+
+    await Tone.start();
+
+    let sampler = null;
+    try {
+        sampler = await prepareTrackPlaybackInstrument(track, playbackInstrumentId);
+    } catch (error) {
+        console.error('[Audio] 音試聴用の音源ロードに失敗しました。', error);
+        return false;
+    }
+
+    if (!(await waitForSamplerReady(sampler))) {
+        console.warn('[Audio] 音試聴用 sampler のロードが未完了です。');
+        return false;
+    }
+
+    const previewVolume = typeof track.volume === 'number'
+        ? Math.max(0, Math.min(1, track.volume))
+        : 1;
+    sampler.triggerAttackRelease(note, durationSeconds, Tone.now(), previewVolume);
     return true;
 }
 

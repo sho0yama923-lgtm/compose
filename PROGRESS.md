@@ -1,6 +1,6 @@
 # PROGRESS.md
 
-最終更新: 2026-03-11
+最終更新: 2026-03-20
 
 ## 進捗ルール
 
@@ -11,12 +11,26 @@
 
 ## 今回の整理内容
 
+- 長押し時の青い選択帯を減らすため、`layout.css` と `drum.css` で編集領域 / 下部ドック / 固定シートに `user-select: none` と `-webkit-touch-callout: none` を寄せ、`input/select/textarea` だけは選択可能に戻した
+- `playback-controller.js` からトラック配列 -> 再生 score 変換を `score-builder.js` へ切り出し、再生開始UIとスコア構築の責務を分離した
+- `playScore` 呼び出しで未使用だった `beatConfig / numMeasures` を落とし、再生経路の引数を実使用分だけに整理した
+- `NativePlaybackPlugin.swift` の未使用 `instrumentManifests` キャッシュを削除し、native preload の責務を sample cache に絞った
+- 今後のスパゲッティ化を防ぐ実装ルールを `docs/coding-rules.md` に追加し、AGENTS / CODEBASE_GUIDE から参照するよう整理した
+- iOS 再生基盤は「音の transport を native が持ち、再生線は native status を参照して JS が描画する」形へ寄せ直し、ループ先読みも `main asyncAfter` から専用 queue + horizon refill へ変更した
+- ドラム追加シートの試聴は `trackId = 0` を通すように修正し、最初のトラックでも再生できるようにした
+- メロディエディタの左鍵盤をタップ / Enter / Space で単音試聴できるようにした
+- iOS native playback の `startDelayMs` は 0ms を正しく扱うようにし、ループの先読みを少し広げて再生線とループ崩れを安定させた
+- iOS native 再生は JS 側を再生の正本から外し、`NativePlaybackPlugin.swift` が持つ transport 状態を `getPlaybackState()` で定期同期して playhead を補正する構成へ寄せた
+- `NativePlaybackPlugin.swift` のループ予約と voice cleanup は「再生開始時点からの絶対時刻」を基準に取り直し、再帰 `asyncAfter` の相対ズレでループが遅れていく構造を解消した
+- native の予約/cleanup は専用 serial queue 上で管理し、pending work の肥大化で数回ループ後に不安定になる経路を抑えた
 - `preview-editor.js` をファサード化し、`preview-row / preview-actions / preview-repeat / preview-tone-sheet / preview-song-settings / preview-shared` へ分割
 - `chord-editor.js` をファサード化し、`progress / timing / detail-sheet / drum-reference / shared` へ分割
 - `editor.css` を入口のまま維持しつつ、`src/styles/base/` `src/styles/components/` `src/styles/editors/` に物理分割
 - `project-storage.js` を `storage-core / storage-helpers` へ分割し、保存I/O と normalize/migration を分離
 - `instrument-map.js` を `instrument-config / track-tone / playback-chains` へ分割し、楽器定義と Tone.js 再生管理を分離
 - `tracks-controller.js` を `track-selection / track-measures / track-repeat` へ分割し、トラックCRUD、小節操作、繰り返し同期を分離
+- ドラムの「音源を追加」シートの試聴ボタンは `trackId = 0` でも動くように修正し、左鍵盤の試聴は `melodic-editor` から単音 helper を呼ぶ形へ整理
+- 再生中の `renderEditor()` は次フレームへ逃がし、iOS で playhead 線の遅延やループ境界のガタつきが出にくいよう再生UI更新を軽くした
 - 再生開始直後に停止した場合でも `play` 完了で `||` 表示へ戻らないよう、`playback-controller.js` に requestId ガードを追加
 
 - 曲全体の `Root / Harmony / Scale Family` 設定を全体エディタへ持ち、メロディ強調を `スケール音 / 非スケール音` 基準へ切り替えた
@@ -212,3 +226,9 @@
 - ドラムトラック初期行は `Kick / Snare / HiHat / Tom1` を維持しつつ、`Tom2 / Tom3` と `HIPHOP1/2/3` の各行を `音源を追加` 下部シートから追加できるようにした
 - Web 再生チェーンと native manifest は「1トラック1キット」前提をやめ、同一ドラムトラック内で複数キットを同時に鳴らせるよう変更
 - `npm run build`、`npm run test:e2e:webkit`、`npm run mobile:sync:ios`、`xcodebuild -project ios/App/App.xcodeproj -scheme App -destination generic/platform=iOS -derivedDataPath /tmp/compose-iosbuild CODE_SIGNING_ALLOWED=NO build` が通過
+- ドラム追加シートは固定 `60vh` から `100dvh` 基準の最大高へ変更し、グループを開いて収まりきらない分はシート内本文だけ縦スクロールするよう調整
+- その後、ドラム追加シートは `60vh` 固定へ戻し、ヘッダーと閉じるボタンは固定、本文だけ `overflow-y: auto` で内部スクロールする構成に整理
+- ドラム追加シートで内部スクロールが効かなかった原因は、本文内の `.drum-add-group` が `flex-shrink: 1` の既定値で縦に潰れていたためで、各グループを `flex: 0 0 auto` にして本文高さを超えた分だけ `scrollTop` が伸びるよう修正
+- ドラムエディタ本体グリッドと `音源を追加` ボタンの横幅を下部小節ボックスに合わせるため、左右 `8px` のインセットで統一
+- ドラム追加メニューの kit 一覧は `details/summary` を使った 1 セクションずつ開くアコーディオン挙動へ整理
+- iOS native playback の `play` で `NSIndirectTaggedPointerString objectForKey:` が出るケースに対応するため、bridge からの再生 payload は `payloadJson` 文字列で渡し、plugin 側で `Decodable` へ直接復元する経路を追加

@@ -1,15 +1,28 @@
 // playback.js — 再生/停止 + スコア構築
 
 import { appState, STEPS_PER_MEASURE, totalSteps, callbacks, getNormalizedPlayRangeMeasures } from '../../core/state.js';
-import { playScore, stopScorePlayback } from '../bridges/audio-bridge.js';
-import { INST_TYPE } from '../tracks/instrument-map.js';
-import { getResolvedChordNotes } from '../../core/constants.js';
-import { isStepHead } from '../../core/duration.js';
+import { getNativePlaybackState, playScore, stopScorePlayback } from '../bridges/audio-bridge.js';
 import { serializeScoreForNativePlayback } from './score-serializer.js';
+import { buildPlaybackScore, resolvePlaybackWindow } from './score-builder.js';
 
 let playbackRequestId = 0;
 let playheadAnimationFrameId = null;
 let playheadAnimationState = null;
+let pendingPlaybackRenderFrameId = null;
+let nativePlaybackSyncTimeoutId = null;
+
+const NATIVE_PLAYBACK_SYNC_INTERVAL_MS = 80;
+
+function primePlaybackStartUi(step) {
+    appState.playheadStep = step;
+    callbacks.renderEditor();
+    updatePlayingPreviewCells(step);
+    updatePlayheadIndicators(step);
+    requestAnimationFrame(() => {
+        updatePlayingPreviewCells(step);
+        updatePlayheadIndicators(step);
+    });
+}
 
 export function initPlayback() {
     setPlaybackButtonState();
@@ -25,84 +38,20 @@ export function initPlayback() {
 
         const bpm   = Number(document.getElementById('bpmInput').value) || 120;
         const ts    = totalSteps();
-        const score = Array(ts).fill(null);
         const playRange = getNormalizedPlayRangeMeasures();
-
-        appState.tracks.forEach(track => {
-            if (track.muted) return;
-            const trackVolume = typeof track.volume === 'number'
-                ? Math.max(0, Math.min(1, track.volume))
-                : 1;
-
-            if (INST_TYPE[track.instrument] === 'rhythm') {
-                track.rows.forEach(row => {
-                    row.steps.forEach((val, i) => {
-                        if (!isStepHead(val)) return;
-                        score[i] = score[i] || [];
-                        score[i].push({
-                            trackId: track.id,
-                            instrument: row.sampleInstrumentId || 'drums_default',
-                            notes: row.note,
-                            duration: val,
-                            volume: trackVolume,
-                        });
-                    });
-                });
-            } else if (INST_TYPE[track.instrument] === 'chord') {
-                let currentChord = null;
-                for (let i = 0; i < ts; i++) {
-                    if (track.chordMap[i]) currentChord = track.chordMap[i];
-                    const dur = track.soundSteps[i];
-                    if (isStepHead(dur) && currentChord) {
-                        const notes = getResolvedChordNotes(currentChord);
-                        score[i] = score[i] || [];
-                        score[i].push({
-                            trackId: track.id,
-                            instrument: track.playbackInstrument || 'piano',
-                            notes: notes.length === 1 ? notes[0] : notes,
-                            duration: dur,
-                            volume: trackVolume,
-                        });
-                    }
-                }
-            } else {
-                const stepNotes = Array.from({ length: ts }, () => []);
-                const stepDurations = Array.from({ length: ts }, () => null);
-                Object.entries(track.stepsMap).forEach(([note, steps]) => {
-                    steps.forEach((val, i) => {
-                        if (isStepHead(val)) {
-                            stepNotes[i].push(note);
-                            // 同じステップに複数ノートがある場合、最も長いデュレーションを採用
-                            if (!stepDurations[i]) stepDurations[i] = val;
-                        }
-                    });
-                });
-                stepNotes.forEach((notes, i) => {
-                    if (notes.length === 0) return;
-                    score[i] = score[i] || [];
-                    score[i].push({
-                        trackId: track.id,
-                        instrument: track.instrument,
-                        notes: notes.length === 1 ? notes[0] : notes,
-                        duration: stepDurations[i] || '16n',
-                        volume: trackVolume,
-                    });
-                });
-            }
+        const score = buildPlaybackScore(appState.tracks, ts);
+        const { startStep, endStepExclusive } = resolvePlaybackWindow({
+            totalStepCount: ts,
+            playRange,
         });
 
-        let startStep = 0;
-        let endStepExclusive = ts;
-        if (playRange) {
-            startStep = playRange.startMeasure * STEPS_PER_MEASURE;
-            endStepExclusive = (playRange.endMeasure + 1) * STEPS_PER_MEASURE;
-            if (appState.currentMeasure !== playRange.startMeasure) {
-                appState.isPlaying = true;
-                syncPreviewScrollTop();
-                appState.currentMeasure = playRange.startMeasure;
-                callbacks.renderEditor();
-                appState.isPlaying = false;
-            }
+        const playbackStartMeasure = Math.floor(startStep / STEPS_PER_MEASURE);
+        if (appState.currentMeasure !== playbackStartMeasure) {
+            appState.isPlaying = true;
+            syncPreviewScrollTop();
+            appState.currentMeasure = playbackStartMeasure;
+            callbacks.renderEditor();
+            appState.isPlaying = false;
         }
 
         const nativePayload = serializeScoreForNativePlayback(score, {
@@ -115,17 +64,13 @@ export function initPlayback() {
 
         appState.isPlaying = true;
         setPlaybackButtonState();
+        primePlaybackStartUi(startStep);
         const requestId = ++playbackRequestId;
         const playbackResult = await playScore({
             score,
             nativePayload,
         }, {
-            bpm,
             tracks: appState.tracks,
-            beatConfig: appState.beatConfig,
-            numMeasures: appState.numMeasures,
-            startStep,
-            endStepExclusive,
         });
         if (requestId !== playbackRequestId) {
             stopPlaybackAnimation();
@@ -137,10 +82,13 @@ export function initPlayback() {
         appState.isPlaying = started;
         if (started) {
             beginPlaybackAnimation({
+                mode: playbackResult?.mode || 'web',
                 bpm,
                 startStep,
                 endStepExclusive,
+                playbackRequestId: requestId,
                 startDelayMs: Number(playbackResult?.startDelayMs) || 0,
+                startedAtMs: Number(playbackResult?.startedAtMs) || null,
                 loop: true,
             });
         } else {
@@ -177,11 +125,12 @@ function updatePlayingPreviewCells(globalStep) {
 function applyPlaybackUi(globalStep, globalStepPosition = globalStep) {
     const measure = Math.floor(globalStep / STEPS_PER_MEASURE);
     const stepChanged = appState.playheadStep !== globalStep;
+    let measureChanged = false;
 
     if (measure !== appState.currentMeasure) {
         syncPreviewScrollTop();
         appState.currentMeasure = measure;
-        callbacks.renderEditor();
+        measureChanged = true;
     }
 
     if (stepChanged) {
@@ -190,24 +139,50 @@ function applyPlaybackUi(globalStep, globalStepPosition = globalStep) {
     }
 
     updatePlayheadIndicators(globalStepPosition);
+
+    if (!measureChanged || pendingPlaybackRenderFrameId !== null) return;
+    pendingPlaybackRenderFrameId = requestAnimationFrame(() => {
+        pendingPlaybackRenderFrameId = null;
+        callbacks.renderEditor();
+    });
 }
 
 function beginPlaybackAnimation({
+    mode = 'web',
     bpm,
     startStep,
     endStepExclusive,
+    playbackRequestId: requestId,
     startDelayMs = 0,
+    startedAtMs = null,
     loop = true,
 }) {
     stopPlaybackAnimation();
+    const nowPerformance = performance.now();
+    const nowWallClock = Date.now();
+    const useNativeStartTime = typeof startedAtMs === 'number' && Number.isFinite(startedAtMs);
+    const elapsedSinceNativeStartMs = useNativeStartTime
+        ? Math.max(0, nowWallClock - startedAtMs)
+        : 0;
+    const anchorAtMs = useNativeStartTime
+        ? nowPerformance - elapsedSinceNativeStartMs
+        : nowPerformance + Math.max(0, startDelayMs);
     playheadAnimationState = {
-        startAtMs: performance.now() + Math.max(0, startDelayMs),
+        mode,
+        playbackRequestId: requestId,
+        anchorAtMs,
+        anchorStepPosition: startStep,
         msPerStep: (60_000 / Math.max(1, bpm)) / 12,
         startStep,
         endStepExclusive,
         cycleSteps: Math.max(1, endStepExclusive - startStep),
         loop,
     };
+    primePlaybackStartUi(startStep);
+    applyPlaybackUi(startStep, startStep);
+    if (mode === 'native') {
+        scheduleNativePlaybackStateSync(requestId);
+    }
     tickPlaybackAnimation();
 }
 
@@ -215,6 +190,14 @@ function stopPlaybackAnimation() {
     if (playheadAnimationFrameId !== null) {
         cancelAnimationFrame(playheadAnimationFrameId);
         playheadAnimationFrameId = null;
+    }
+    if (pendingPlaybackRenderFrameId !== null) {
+        cancelAnimationFrame(pendingPlaybackRenderFrameId);
+        pendingPlaybackRenderFrameId = null;
+    }
+    if (nativePlaybackSyncTimeoutId !== null) {
+        clearTimeout(nativePlaybackSyncTimeoutId);
+        nativePlaybackSyncTimeoutId = null;
     }
     playheadAnimationState = null;
 }
@@ -226,7 +209,8 @@ function tickPlaybackAnimation() {
     }
 
     const {
-        startAtMs,
+        anchorAtMs,
+        anchorStepPosition,
         msPerStep,
         startStep,
         endStepExclusive,
@@ -235,13 +219,14 @@ function tickPlaybackAnimation() {
     } = playheadAnimationState;
 
     const now = performance.now();
-    if (now < startAtMs) {
-        updatePlayheadIndicators(null);
+    if (now < anchorAtMs) {
+        applyPlaybackUi(startStep, startStep);
         playheadAnimationFrameId = requestAnimationFrame(tickPlaybackAnimation);
         return;
     }
 
-    const elapsedSteps = Math.max(0, (now - startAtMs) / msPerStep);
+    const anchorOffsetSteps = Math.max(0, Number(anchorStepPosition) - startStep);
+    const elapsedSteps = anchorOffsetSteps + Math.max(0, (now - anchorAtMs) / msPerStep);
     const cycledSteps = loop
         ? (elapsedSteps % cycleSteps)
         : Math.min(elapsedSteps, Math.max(0, cycleSteps - 0.001));
@@ -250,6 +235,50 @@ function tickPlaybackAnimation() {
 
     applyPlaybackUi(globalStep, globalStepPosition);
     playheadAnimationFrameId = requestAnimationFrame(tickPlaybackAnimation);
+}
+
+function scheduleNativePlaybackStateSync(requestId) {
+    if (nativePlaybackSyncTimeoutId !== null) {
+        clearTimeout(nativePlaybackSyncTimeoutId);
+        nativePlaybackSyncTimeoutId = null;
+    }
+
+    const sync = async () => {
+        if (!appState.isPlaying || requestId !== playbackRequestId) return;
+
+        const state = await getNativePlaybackState();
+        if (!appState.isPlaying || requestId !== playbackRequestId) return;
+
+        if (!state) {
+            nativePlaybackSyncTimeoutId = window.setTimeout(sync, NATIVE_PLAYBACK_SYNC_INTERVAL_MS);
+            return;
+        }
+
+        if (state.playing === false) {
+            stopPlayback();
+            return;
+        }
+
+        const positionStep = Number(state.positionStep);
+        if (playheadAnimationState && Number.isFinite(positionStep)) {
+            playheadAnimationState.anchorStepPosition = positionStep;
+            playheadAnimationState.anchorAtMs = performance.now();
+            if (Number.isFinite(Number(state.startStep))) {
+                playheadAnimationState.startStep = Number(state.startStep);
+            }
+            if (Number.isFinite(Number(state.endStepExclusive))) {
+                playheadAnimationState.endStepExclusive = Number(state.endStepExclusive);
+                playheadAnimationState.cycleSteps = Math.max(
+                    1,
+                    playheadAnimationState.endStepExclusive - playheadAnimationState.startStep
+                );
+            }
+        }
+
+        nativePlaybackSyncTimeoutId = window.setTimeout(sync, NATIVE_PLAYBACK_SYNC_INTERVAL_MS);
+    };
+
+    void sync();
 }
 
 function syncPreviewScrollTop() {
@@ -267,6 +296,7 @@ function stopPlayback() {
     document.querySelectorAll('.preview-cell.playing')
         .forEach(el => el.classList.remove('playing'));
     updatePlayheadIndicators(null);
+    callbacks.renderEditor();
     setPlaybackButtonState();
 }
 

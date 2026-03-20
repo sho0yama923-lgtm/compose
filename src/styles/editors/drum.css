@@ -1,14 +1,25 @@
 /* ======= ドラム追加UI ======= */
 .drum-track-editor {
-    --drum-add-action-height: 44px;
-    --drum-add-row-gap: 8px;
-    --drum-add-section-gap: 10px;
-    --drum-add-padding-x: 12px;
-    --drum-add-padding-y: 12px;
-    --drum-add-sheet-radius: 22px;
-    --drum-add-button-radius: 14px;
-    --drum-add-sheet-width: 420px;
-    --drum-add-overlay-side-padding: 12px;
+    --drum-add-action-height: 34px;
+    --drum-add-row-gap: 6px;
+    --drum-add-section-gap: 8px;
+    --drum-add-padding-x: 10px;
+    --drum-add-padding-y: 10px;
+    --drum-add-panel-radius: 8px;
+    --drum-add-button-radius: 8px;
+    --drum-add-sheet-radius: 16px;
+    --drum-add-sheet-height: 60vh;
+    --drum-add-sheet-header-height: 40px;
+    --drum-add-sheet-footer-height: 42px;
+    --drum-add-sheet-vertical-padding: 22px;
+    --drum-editor-inline-gap: 8px;
+}
+
+.drum-track-editor .drum-editor,
+.drum-track-editor .drum-add-panel {
+    width: calc(100% - (var(--drum-editor-inline-gap) * 2));
+    margin-inline: var(--drum-editor-inline-gap);
+    box-sizing: border-box;
 }
 
 /* ======= ドラム行 ======= */
@@ -63,127 +74,210 @@
 .step:active { opacity: 0.55; }
 .step.playing { background: #f5c518; border-color: #d4a800; }
 
-.drum-add-source-btn {
-    width: 100%;
-    min-height: var(--drum-add-action-height);
-    padding: 0 14px;
-    border: 1px solid #d9e0ee;
-    border-radius: var(--drum-add-button-radius);
-    background: #fff;
-    color: #111;
-    font-size: 14px;
-    font-weight: 700;
-    line-height: 1.2;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
-    touch-action: manipulation;
-    -webkit-user-select: none;
-    user-select: none;
+.drum-add-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--drum-add-section-gap);
+    margin-top: 12px;
 }
 
-.drum-add-source-btn:active,
-.drum-add-sheet-item:active,
-.drum-add-sheet-close:active {
+.drum-add-panel-trigger {
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 700;
+    color: #666;
+    padding: 6px 9px;
+    border: 1px solid #e5e5e5;
+    border-radius: var(--drum-add-panel-radius);
+    background: #fff;
+    text-align: left;
+}
+
+.drum-add-panel-empty {
+    margin: 0;
+    padding: 8px 10px;
+    border: 1px solid #ececec;
+    border-radius: var(--drum-add-panel-radius);
+    background: #fafafa;
+    font-size: 10px;
+    color: #6b7380;
+}
+
+.drum-add-group {
+    flex: 0 0 auto;
+    border: 1px solid #e5e5e5;
+    border-radius: var(--drum-add-panel-radius);
+    background: #fff;
+    overflow: hidden;
+}
+
+.drum-add-group-summary {
+    min-height: var(--drum-add-action-height);
+    padding: 0 9px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    list-style: none;
+    font-size: 11px;
+    font-weight: 700;
+    color: #666;
+}
+
+.drum-add-group-summary::-webkit-details-marker {
+    display: none;
+}
+
+.drum-add-group-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 0 9px 8px;
+}
+
+.drum-add-row {
+    min-height: 40px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 0;
+    border-top: 1px solid #ececec;
+}
+
+.drum-add-row:first-child {
+    border-top: 0;
+}
+
+.drum-add-row-label {
+    min-width: 0;
+    font-size: 11px;
+    font-weight: 700;
+    color: #333;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.drum-add-row-preview,
+.drum-add-row-add {
+    min-width: 30px;
+    min-height: 30px;
+    padding: 0 8px;
+    border: 1px solid #e5e5e5;
+    border-radius: var(--drum-add-button-radius);
+    background: #fff;
+    color: #555;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+    touch-action: manipulation;
+}
+
+.drum-add-panel-trigger:active,
+.drum-add-row-preview:active,
+.drum-add-row-add:active,
+.drum-add-group-summary:active {
     opacity: 0.72;
 }
 
 .drum-add-sheet-overlay {
     position: fixed;
     inset: 0;
-    z-index: 60;
-    background: rgba(15, 19, 30, 0.18);
+    z-index: 220;
+    background: rgba(0, 0, 0, 0.28);
     display: flex;
     align-items: flex-end;
     justify-content: center;
-    padding:
-        20px
-        var(--drum-add-overlay-side-padding)
-        calc(env(safe-area-inset-bottom, 0px) + var(--drum-add-padding-y));
+    padding: max(12px, env(safe-area-inset-top, 0px)) 0 0;
+    box-sizing: border-box;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
 }
 
 .drum-add-sheet {
-    width: min(100%, var(--drum-add-sheet-width));
-    max-height: min(72vh, 520px);
-    overflow: auto;
-    border-radius: var(--drum-add-sheet-radius);
+    width: min(100%, 520px);
+    height: var(--drum-add-sheet-height);
+    max-height: var(--drum-add-sheet-height);
+    box-sizing: border-box;
     background: #fff;
-    padding:
-        10px
-        var(--drum-add-padding-x)
-        calc(env(safe-area-inset-bottom, 0px) + var(--drum-add-padding-y));
-    box-shadow: 0 18px 46px rgba(16, 20, 29, 0.22);
+    border-radius: var(--drum-add-sheet-radius) var(--drum-add-sheet-radius) 0 0;
+    padding: 10px 12px calc(12px + env(safe-area-inset-bottom, 0px));
     display: flex;
     flex-direction: column;
-    gap: var(--drum-add-section-gap);
-    -webkit-overflow-scrolling: touch;
+    gap: 8px;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.18);
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
 }
 
 .drum-add-sheet-handle {
-    width: 42px;
-    height: 5px;
+    width: 40px;
+    height: 4px;
     border-radius: 999px;
-    background: #d5dbe7;
-    margin: 0 auto 2px;
+    background: #d4d4d4;
+    margin: 0 auto;
 }
 
 .drum-add-sheet-title {
-    font-size: 16px;
+    font-size: 13px;
     font-weight: 800;
-    color: #111;
-    line-height: 1.3;
+    color: #222;
 }
 
-.drum-add-sheet-group {
+.drum-add-sheet-body {
+    flex: 0 0 auto;
+    height: calc(
+        var(--drum-add-sheet-height)
+        - var(--drum-add-sheet-header-height)
+        - var(--drum-add-sheet-footer-height)
+        - var(--drum-add-sheet-vertical-padding)
+        - env(safe-area-inset-bottom, 0px)
+    );
+    min-height: 0;
+    max-height: calc(
+        var(--drum-add-sheet-height)
+        - var(--drum-add-sheet-header-height)
+        - var(--drum-add-sheet-footer-height)
+        - var(--drum-add-sheet-vertical-padding)
+        - env(safe-area-inset-bottom, 0px)
+    );
+    overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
-    gap: var(--drum-add-row-gap);
+    gap: var(--drum-add-section-gap);
+    padding-right: 2px;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
 }
 
-.drum-add-sheet-group-title {
-    margin: 0;
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    color: #6b7380;
-}
-
-.drum-add-sheet-list {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--drum-add-row-gap);
-}
-
-.drum-add-sheet-item,
-.drum-add-sheet-close {
-    min-height: var(--drum-add-action-height);
-    padding: 10px 14px;
-    border: 1px solid #d9e0ee;
-    border-radius: var(--drum-add-button-radius);
-    background: #fff;
-    color: #111;
-    font-size: 13px;
-    font-weight: 700;
-    line-height: 1.2;
-    touch-action: manipulation;
-}
-
-.drum-add-sheet-item {
+.drum-add-sheet-actions {
     display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    text-align: left;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    justify-content: flex-end;
+    gap: 8px;
 }
 
 .drum-add-sheet-close {
-    margin-top: 2px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: #f6f8fc;
+    min-height: 34px;
+    padding: 0 12px;
+    border: 1px solid #e5e5e5;
+    border-radius: var(--drum-add-panel-radius);
+    background: #fff;
+    color: #666;
+    font-size: 11px;
+    font-weight: 700;
 }
 
-@media (min-width: 400px) {
-    .drum-add-sheet-list {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
+.drum-add-panel-empty {
+    flex: 0 0 auto;
+}
+
+.drum-add-sheet-close:active {
+    opacity: 0.72;
 }

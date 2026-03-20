@@ -229,40 +229,72 @@ test('webkit mobile smoke check', async ({ page }) => {
   });
   await page.locator('#trackModeBtn').click();
   await expect(page.locator('.drum-add-panel')).toBeVisible();
-  await expect(page.locator('.drum-add-panel-title')).toHaveText('音源を追加');
+  await expect(page.locator('.drum-add-panel-trigger')).toHaveText('音源を追加');
   await expect(page.locator('.drum-key')).toHaveCount(4);
+  await page.locator('.drum-add-panel-trigger').click();
+  await expect(page.locator('.drum-add-sheet')).toBeVisible();
   const drumPanelSummary = await page.evaluate(() => {
-    const panelRect = document.querySelector('.drum-add-panel')?.getBoundingClientRect();
-    const gridRect = document.querySelector('.timeline-grid')?.getBoundingClientRect();
+    const sheetRect = document.querySelector('.drum-add-sheet')?.getBoundingClientRect();
     return {
       viewportWidth: window.innerWidth,
-      panelTop: panelRect?.top ?? null,
-      panelRight: panelRect?.right ?? null,
-      gridBottom: gridRect?.bottom ?? null,
-      groups: Array.from(document.querySelectorAll('.drum-add-group')).map((group) => ({
+      viewportHeight: window.innerHeight,
+      sheetTop: sheetRect?.top ?? null,
+      sheetBottom: sheetRect?.bottom ?? null,
+      sheetRight: sheetRect?.right ?? null,
+      groups: Array.from(document.querySelectorAll('.drum-add-sheet .drum-add-group')).map((group) => ({
         title: group.querySelector('.drum-add-group-summary')?.textContent?.trim() ?? '',
         open: group.open,
         itemCount: group.querySelectorAll('.drum-add-row').length,
       })),
       firstGroupActions: Array.from(
-        document.querySelectorAll('.drum-add-group:first-of-type .drum-add-row:first-of-type button')
+        document.querySelectorAll('.drum-add-sheet .drum-add-group:first-of-type .drum-add-row:first-of-type button')
       ).map((button) => button.textContent?.trim() ?? ''),
     };
   });
-  expect(drumPanelSummary.panelTop).toBeGreaterThanOrEqual(drumPanelSummary.gridBottom - 1);
-  expect(drumPanelSummary.panelRight).toBeLessThanOrEqual(drumPanelSummary.viewportWidth);
+  expect(drumPanelSummary.sheetTop).toBeGreaterThanOrEqual(0);
+  expect(drumPanelSummary.sheetBottom).toBeLessThanOrEqual(drumPanelSummary.viewportHeight + 1);
+  expect(drumPanelSummary.sheetRight).toBeLessThanOrEqual(drumPanelSummary.viewportWidth);
   expect(drumPanelSummary.groups).toEqual([
-    { title: 'DEFAULT', open: true, itemCount: 2 },
+    { title: 'DEFAULT', open: false, itemCount: 2 },
     { title: 'HIPHOP1', open: false, itemCount: 6 },
     { title: 'HIPHOP2', open: false, itemCount: 6 },
     { title: 'HIPHOP3', open: false, itemCount: 6 },
   ]);
-  expect(drumPanelSummary.firstGroupActions).toEqual(['再生', '追加']);
-  await expect(page.locator('.drum-add-group').first().locator('.drum-add-row-label')).toHaveText(['Tom2', 'Tom3']);
-  await page.locator('.drum-add-group').first().locator('.drum-add-row').first().getByRole('button', { name: '追加' }).click();
+  expect(drumPanelSummary.firstGroupActions).toEqual(['▶︎', '→']);
+  const drumPanelScrollMetrics = await page.evaluate(() => {
+    document.querySelectorAll('.drum-add-sheet .drum-add-group').forEach((group) => {
+      group.open = true;
+    });
+    const body = document.querySelector('.drum-add-sheet-body');
+    if (!body) return null;
+    const before = {
+      clientHeight: body.clientHeight,
+      scrollHeight: body.scrollHeight,
+      scrollTop: body.scrollTop,
+    };
+    body.scrollTop = 180;
+    const after = {
+      scrollTop: body.scrollTop,
+    };
+    return { before, after };
+  });
+  expect(drumPanelScrollMetrics).not.toBeNull();
+  expect(drumPanelScrollMetrics.before.scrollHeight).toBeGreaterThan(drumPanelScrollMetrics.before.clientHeight);
+  expect(drumPanelScrollMetrics.after.scrollTop).toBeGreaterThan(0);
+  await page.evaluate(() => {
+    const body = document.querySelector('.drum-add-sheet-body');
+    if (body) body.scrollTop = 0;
+    document.querySelector('.drum-add-sheet .drum-add-group')?.removeAttribute('open');
+  });
+  await page.locator('.drum-add-sheet .drum-add-group').first().click();
+  await expect(page.locator('.drum-add-sheet .drum-add-group').first().locator('.drum-add-row-label')).toHaveText(['Tom2', 'Tom3']);
+  await page.locator('.drum-add-sheet .drum-add-group').first().locator('.drum-add-row').first().getByRole('button', { name: '追加' }).click();
   await expect(page.locator('.drum-key')).toHaveCount(5);
   await expect(page.locator('.drum-key').nth(4)).toHaveText('Tom2');
-  await expect(page.locator('.drum-add-group').first().locator('.drum-add-row-label')).toHaveText(['Tom3']);
+  const closeSheetBtn = page.locator('.drum-add-sheet-close');
+  if (await closeSheetBtn.count()) {
+    await closeSheetBtn.click();
+  }
 
   await page.locator('.timeline-row[data-row-label="Kick"]').click({ position: { x: 14, y: 10 } });
   await expect(page.locator('.timeline-row[data-row-label="Kick"] .timeline-note')).toHaveCount(1);

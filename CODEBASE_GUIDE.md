@@ -8,6 +8,7 @@
 2. `src/main.js`
 3. 変更対象に対応する以下のファイル
 4. スマホ開発運用を見る時は `docs/mobile-dev.md`
+5. 実装ルールの確認は `docs/coding-rules.md`
 
 ## ディレクトリ構成
 
@@ -23,6 +24,9 @@
 - `docs/mobile-dev.md`
   - スマホ開発の入口
   - `src/` を正本として、`ios/` / `android/` を wrapper として扱う運用ルールをまとめる
+- `docs/coding-rules.md`
+  - 今後の実装で責務混線を防ぐルール集
+  - bridge、再生、ファイル分割、サブエージェント前提の境界ルールをまとめる
 - `ios/`
   - Capacitor が生成する Xcode プロジェクト
   - `npm run mobile:sync:ios` 後に Xcode で開いてビルドする
@@ -116,6 +120,9 @@
   - 各トラックを再生用スコアへ変換
   - 再生ボタン、再生範囲、playhead 更新を変える時はここ
   - 将来のトラックEQ追加では event に `trackId` を流す入口になる
+- `src/features/playback/score-builder.js`
+  - トラック配列から再生 score と再生開始/終了 window を組み立てる
+  - 再生開始UIではなく、音イベントの正規化だけを変えたい時はここ
 - `src/features/playback/score-serializer.js`
   - step 配列の score を native plugin 向け payload と音源 manifest に正規化する
   - iOS / Android の native 再生へ渡す契約を変える時はここ

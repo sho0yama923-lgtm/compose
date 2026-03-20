@@ -8,7 +8,8 @@
 1. `PROGRESS.md`
 2. `CODEBASE_GUIDE.md`
 3. `src/main.js`
-4. 変更対象に対応する実装ファイル
+4. `docs/coding-rules.md`
+5. 変更対象に対応する実装ファイル
 
 - セッション開始時や指示が曖昧な時は、まず `PROGRESS.md` を読んで状態復帰すること。
 - 構成を変えたら `PROGRESS.md` と `CODEBASE_GUIDE.md` も必要に応じて更新すること。
@@ -112,9 +113,10 @@
   - `src/editors/preview/preview-song-settings.js`
   - `src/editors/melodic-editor.js`
 - 再生タイミングや音作り変更:
-  - `src/features/playback/playback-controller.js`
-  - `src/features/playback/scheduler.js`
-  - `src/features/tracks/instruments/`
+- `src/features/playback/playback-controller.js`
+- `src/features/playback/scheduler.js`
+- `src/features/playback/score-builder.js`
+- `src/features/tracks/instruments/`
 - 繰り返しUI変更:
   - `src/editors/preview/preview-repeat.js`
   - `src/ui/bottom-bar.js`

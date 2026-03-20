@@ -93,13 +93,23 @@ export function serializeScoreForNativePlayback(score, {
 
 export function buildNativePlaybackManifest(tracks = []) {
     const seenInstrumentIds = new Set();
-    const manifests = [];
+    const instrumentIds = [];
 
     tracks.forEach((track) => {
         collectTrackInstrumentIds(track).forEach((instrumentId) => {
             if (seenInstrumentIds.has(instrumentId)) return;
             seenInstrumentIds.add(instrumentId);
+            instrumentIds.push(instrumentId);
+        });
+    });
 
+    return buildNativePlaybackManifestForInstrumentIds(instrumentIds);
+}
+
+export function buildNativePlaybackManifestForInstrumentIds(instrumentIds = []) {
+    const manifests = instrumentIds
+        .filter(Boolean)
+        .map((instrumentId) => {
             const config = INSTRUMENT_CONFIG_MAP[instrumentId];
             const sampleMap = getInstrumentUrls(config);
             const sampleEntries = Object.entries(sampleMap)
@@ -110,14 +120,14 @@ export function buildNativePlaybackManifest(tracks = []) {
                 .filter(Boolean)
                 .sort((left, right) => left[0].localeCompare(right[0]));
 
-            if (sampleEntries.length === 0) return;
+            if (sampleEntries.length === 0) return null;
 
-            manifests.push({
+            return {
                 instrumentId,
                 samples: Object.fromEntries(sampleEntries),
-            });
-        });
-    });
+            };
+        })
+        .filter(Boolean);
 
     return manifests.sort((left, right) => left.instrumentId.localeCompare(right.instrumentId));
 }

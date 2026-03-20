@@ -7,14 +7,33 @@ const PROJECT_FILE = `${PROJECT_DIR}/compose-save.json`;
 let hasEnsuredNativeProjectDir = false;
 let ensureNativeProjectDirPromise = null;
 
+function isMissingEntryError(error) {
+    const message = String(error?.message || error?.errorMessage || '');
+    const code = String(error?.code || '');
+    return code === 'OS-PLUG-FILE-0008'
+        || code === 'NOT_FOUND_ERR'
+        || /does not exist/i.test(message)
+        || /not found/i.test(message);
+}
+
 async function ensureNativeProjectDir() {
     if (!isNativeApp() || hasEnsuredNativeProjectDir) return;
     if (!ensureNativeProjectDirPromise) {
-        ensureNativeProjectDirPromise = Filesystem.mkdir({
-            path: PROJECT_DIR,
-            directory: Directory.Library,
-            recursive: true,
-        }).catch(() => {}).finally(() => {
+        ensureNativeProjectDirPromise = (async () => {
+            try {
+                await Filesystem.stat({
+                    path: PROJECT_DIR,
+                    directory: Directory.Library,
+                });
+            } catch (error) {
+                if (!isMissingEntryError(error)) throw error;
+                await Filesystem.mkdir({
+                    path: PROJECT_DIR,
+                    directory: Directory.Library,
+                    recursive: true,
+                });
+            }
+        })().catch(() => {}).finally(() => {
             hasEnsuredNativeProjectDir = true;
             ensureNativeProjectDirPromise = null;
         });
