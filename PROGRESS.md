@@ -11,6 +11,24 @@
 
 ## 今回の整理内容
 
+- トラック配列の中にも `viewBase / activeOctave / melodyScrollTop / selectedChordRoot / selectedChordType / selectedChordOctave / selectedDivPos / selectedDrumRows` などのエディタ一時状態が混ざっていたため、`storage-helpers.js` に `serializeTrackForSave()` を追加して保存対象を「曲データとトラック設定」だけに絞った
+- タスクキル後の復元内容を確認したところ、`isPlaying / playheadStep / playRange / previewMode` などの再生状態は保存していなかった一方で、`currentMeasure / activeTrackId / lastTouchedTrackId / selectedDuration / dottedMode` などの画面・編集状態は保存対象だった。`storage-helpers.js` からそれらの保存を外し、復元時も毎回 `先頭小節 / 最初のトラック / 通常16分 / プレビュー画面` に戻すよう整理した
+- 起動直後の待機が見かけだけで効かない経路を潰すため、native plugin の `getStatus()` に `ready / readyAtMs` を追加し、`prepareAudioPlayback()` は `warmup()` 完了だけでなく native ready が true になるまで待つようにした。あわせて下部シークバーの再生ボタンも描画時に `appState.isBooting` を反映するよう修正した
+- タスクキル後の再起動で native `warmup()` が即完了しても再生を急がせないよう、`src/main.js` の boot / visible 復帰で最小待機ロックを追加した。起動直後は 1200ms、前面復帰直後は 800ms だけ `isBooting` を維持し、再生ボタン解禁を遅らせる
+- `NativePlaybackPlugin.swift` では各ノートごとに fresh な `AVAudioPlayerNode` を engine 起動後に attach/connect していたため、`voice.player.play()` の瞬間に graph へ反映しきれず `player started when in a disconnected state` が出る経路が残っていた。voice は `play()` 前に route ごとの pool としてまとめて接続し、再生中は接続済み node を checkout / return する構成へ戻した
+- `NativePlaybackPlugin.swift` の `play()` では毎回 `AVAudioPlayerNode` を attach/connect して即 `play(at:)` していたため、`player started when in a disconnected state` が出る経路があった。再生前に track+instrument ごとの voice pool を先に接続しておき、再生中は接続済み node だけを checkout / return する方式へ変更した。あわせて event 開始は `player.play(at:)` ではなく `scheduleBuffer(at:) + play()` に寄せた
+- `warmup()` で起動した `AVAudioEngine` を `play()` 冒頭の `stopLocked()` が毎回 `pause()` していたため、warmup 直後に graph を組み直す無駄が残っていた。停止時も engine 自体は生かしたまま、voice / timer / mixer 出力だけをリセットする形へ変更した
+- `NativePlaybackPlugin.swift` で複数 voice を `trackMixer` へ `connect(... to: mixer ...)` の簡易 API でつないでいたため、同じ input bus を奪い合って先に作った voice が暗黙に切断されていた。各 voice に `trackMixer` の専用 input bus を割り当てる形へ変更した
+- `AVAudioPlayerNode` は buffer 未予約の idle 状態で先に `play()` すると `disconnected state` 例外を起こす経路が残っていたため、voice pool の事前 start をやめた。native 再生は `player -> rate -> mainMixer` の単純経路に戻し、各ノートで buffer を積んだ瞬間だけ `play()` する形へ整理した
+- native warmup は engine start だけでは不十分だったため、`NativePlaybackPlugin.swift` の `warmup()` で無音バッファを 1 回流し切ってから完了を返すようにした
+- boot/復帰の warmup は sample preload だけでは不十分だったため、`NativePlaybackPlugin.swift` に `warmup()` を追加し、`AVAudioEngine` 起動自体も先に済ませるようにした
+- タスクキル後の再起動でも同じ初回高速再生バグが出ないよう、`pageshow` と `visibilitychange` の visible 復帰ごとに audio warmup を再実行し、その完了まで再生をロックするようにした
+- 起動直後の初回再生バグを避けるため、boot 中に native 音源 manifest を先読みし、起動完了までは再生ボタンを無効化するようにした
+- 起動直後の初回再生だけ速くなる件は、native 側で `renderBaseHostTime` を `audioEngine.start()` 前に計算していたことが原因候補だったため、開始基準時刻を engine 起動後に取り直すよう修正した
+- 再生線は `playScore()` 応答待ち後に初めて動き出していたため、再生要求直後に provisional animation を開始し、native 応答後に時刻だけ補正する形へ変更した
+- iOS の数値入力起点で BPM が `120` へフォールバックして速くなる経路を避けるため、`src/core/bpm.js` を追加し、再生と保存で同じ BPM 正規化を使うようにした
+- ドラムエディタ左端の楽器名をタップ / Enter / Space で試聴できるようにし、メロディ左鍵盤と同じ導線に寄せた
+- 全体エディタのメロディカードは 1 オクターブ詳細表示をやめ、`viewBase` 起点の 3 オクターブ分を 3 音ずつ束ねた 12 段の要約ドット表示へ変更した
 - 長押し時の青い選択帯を減らすため、`layout.css` と `drum.css` で編集領域 / 下部ドック / 固定シートに `user-select: none` と `-webkit-touch-callout: none` を寄せ、`input/select/textarea` だけは選択可能に戻した
 - `playback-controller.js` からトラック配列 -> 再生 score 変換を `score-builder.js` へ切り出し、再生開始UIとスコア構築の責務を分離した
 - `playScore` 呼び出しで未使用だった `beatConfig / numMeasures` を落とし、再生経路の引数を実使用分だけに整理した

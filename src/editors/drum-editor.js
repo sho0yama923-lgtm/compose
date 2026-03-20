@@ -88,6 +88,27 @@ export function renderDrumEditor(track, editorEl) {
         const keyEl = document.createElement('div');
         keyEl.className = 'piano-key white-key drum-key';
         keyEl.textContent = row.label;
+        keyEl.setAttribute('role', 'button');
+        keyEl.tabIndex = 0;
+        keyEl.setAttribute('aria-label', `${row.label} を試聴`);
+        keyEl.title = `${row.label} を試聴`;
+        const previewRowSample = () => {
+            if (!row.sampleId) return false;
+            return previewDrumSample({
+                sampleInstrumentId: row.sampleInstrumentId || 'drums_default',
+                sampleId: row.sampleId,
+                trackId: track.id,
+            });
+        };
+        keyEl.addEventListener('click', (event) => {
+            event.preventDefault();
+            void previewRowSample();
+        });
+        keyEl.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            void previewRowSample();
+        });
         keysEl.appendChild(keyEl);
 
         const rowEl = document.createElement('div');

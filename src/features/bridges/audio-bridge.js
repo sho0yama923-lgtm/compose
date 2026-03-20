@@ -14,6 +14,8 @@ const NativePlayback = registerPlugin('NativePlayback');
 
 let preparedManifestKey = null;
 let nativePlaybackStateErrorLogged = false;
+const NATIVE_READY_POLL_INTERVAL_MS = 60;
+const NATIVE_READY_TIMEOUT_MS = 2500;
 
 function normalizeStartDelayMs(value) {
     const parsed = Number(value);
@@ -41,10 +43,41 @@ function getManifestCacheKey(manifests) {
 async function prepareNativePlaybackManifests(manifests = []) {
     if (!canUseNativePlayback()) return true;
     const manifestKey = getManifestCacheKey(manifests);
-    if (manifestKey === preparedManifestKey) return true;
-    await NativePlayback.preload({ instruments: manifests });
-    preparedManifestKey = manifestKey;
+    if (manifestKey !== preparedManifestKey) {
+        await NativePlayback.preload({ instruments: manifests });
+        preparedManifestKey = manifestKey;
+    }
+    await NativePlayback.warmup();
+    await waitForNativePlaybackReady();
     return true;
+}
+
+function wait(ms) {
+    if (ms <= 0) return Promise.resolve();
+    return new Promise((resolve) => {
+        window.setTimeout(resolve, ms);
+    });
+}
+
+async function waitForNativePlaybackReady({
+    timeoutMs = NATIVE_READY_TIMEOUT_MS,
+    intervalMs = NATIVE_READY_POLL_INTERVAL_MS,
+} = {}) {
+    if (!canUseNativePlayback()) return true;
+
+    const start = performance.now();
+    while (performance.now() - start < timeoutMs) {
+        const status = await NativePlayback.getStatus();
+        if (status?.ready === true) return true;
+
+        const readyAtMs = Number(status?.readyAtMs);
+        const waitMs = Number.isFinite(readyAtMs)
+            ? Math.max(intervalMs, Math.min(readyAtMs - Date.now(), 200))
+            : intervalMs;
+        await wait(waitMs);
+    }
+
+    return false;
 }
 
 export async function prepareAudioPlayback(tracks = []) {
@@ -90,6 +123,8 @@ export async function getNativePlaybackState() {
         const result = await NativePlayback.getStatus();
         return {
             playing: result?.playing === true,
+            ready: result?.ready === true,
+            readyAtMs: normalizeStartedAtMs(result?.readyAtMs),
             loop: result?.loop !== false,
             startStep: Number.isFinite(Number(result?.startStep)) ? Number(result.startStep) : null,
             endStepExclusive: Number.isFinite(Number(result?.endStepExclusive)) ? Number(result.endStepExclusive) : null,

@@ -69,6 +69,7 @@ export function buildSeekBar(renderEditor) {
     playToggleBtn.setAttribute('aria-pressed', String(appState.isPlaying));
     playToggleBtn.textContent = appState.isPlaying ? '||' : '▶';
     playToggleBtn.classList.toggle('is-playing', appState.isPlaying);
+    playToggleBtn.disabled = appState.isBooting;
 
     const seekSlider = document.createElement('input');
     seekSlider.type = 'range';

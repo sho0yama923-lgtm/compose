@@ -9,6 +9,13 @@ import { initModal } from './ui/instrument-modal.js';
 import { initOnboarding } from './ui/onboarding.js';
 import { syncViewToggleButton } from './ui/topbar.js';
 import { saveState, loadState, initSaveLoad } from './features/project/project-storage.js';
+import { prepareAudioPlayback } from './features/bridges/audio-bridge.js';
+
+let audioWarmupPromise = null;
+let audioWarmupUnlockAt = 0;
+
+const AUDIO_BOOT_MIN_LOCK_MS = 1200;
+const AUDIO_RESUME_MIN_LOCK_MS = 800;
 
 // 循環依存を回避するコールバック登録（自動保存フック付き）
 callbacks.renderEditor = (...args) => {
@@ -37,12 +44,64 @@ function showBootError(error) {
     }
 }
 
+function refreshPlaybackAvailabilityUi() {
+    callbacks.renderSidebar?.();
+    callbacks.renderEditor?.();
+}
+
+function wait(ms) {
+    if (ms <= 0) return Promise.resolve();
+    return new Promise((resolve) => {
+        window.setTimeout(resolve, ms);
+    });
+}
+
+async function warmupAudioForPlayback({ minimumLockMs = AUDIO_BOOT_MIN_LOCK_MS } = {}) {
+    audioWarmupUnlockAt = Math.max(audioWarmupUnlockAt, performance.now() + minimumLockMs);
+    if (audioWarmupPromise) return audioWarmupPromise;
+
+    appState.isBooting = true;
+    refreshPlaybackAvailabilityUi();
+
+    audioWarmupPromise = (async () => {
+        try {
+            await prepareAudioPlayback(appState.tracks);
+        } catch (error) {
+            console.warn('[Audio] playback warmup failed:', error);
+        } finally {
+            await wait(audioWarmupUnlockAt - performance.now());
+            appState.isBooting = false;
+            audioWarmupPromise = null;
+            audioWarmupUnlockAt = 0;
+            refreshPlaybackAvailabilityUi();
+        }
+    })();
+
+    return audioWarmupPromise;
+}
+
+function setupPlaybackWarmupLifecycle() {
+    window.addEventListener('pageshow', () => {
+        void warmupAudioForPlayback({
+            minimumLockMs: AUDIO_RESUME_MIN_LOCK_MS,
+        });
+    });
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'visible') return;
+        void warmupAudioForPlayback({
+            minimumLockMs: AUDIO_RESUME_MIN_LOCK_MS,
+        });
+    });
+}
+
 async function boot() {
     // 各モジュール初期化
     initSidebar();
     initPlayback();
     initModal();
     initSaveLoad();
+    setupPlaybackWarmupLifecycle();
 
     document.getElementById('trackModeBtn').addEventListener('click', () => {
         if (appState.activeTrackId === null) return;
@@ -73,6 +132,10 @@ async function boot() {
         addTrack('piano');
     }
 
+    await warmupAudioForPlayback({
+        minimumLockMs: AUDIO_BOOT_MIN_LOCK_MS,
+    });
+
     // ローディング表示を解除し、本来のempty-stateメッセージに切替
     const emptyIcon = document.getElementById('emptyStateIcon');
     const emptyText = document.getElementById('emptyStateText');
@@ -88,5 +151,7 @@ async function boot() {
 }
 
 boot().catch((error) => {
+    appState.isBooting = false;
+    audioWarmupPromise = null;
     showBootError(error);
 });

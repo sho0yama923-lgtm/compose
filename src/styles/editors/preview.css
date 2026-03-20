@@ -657,6 +657,9 @@
     grid-template-columns: repeat(48, minmax(0, 1fr));
     gap: 1px;
 }
+.preview-row-track.melody-summary {
+    min-height: 6px;
+}
 .preview-chord-zone-grid {
     display: grid;
     gap: 1px;
@@ -669,6 +672,19 @@
 }
 .preview-cell.on {
     background: #333;
+}
+.preview-row-track.melody-summary .preview-cell {
+    max-height: 6px;
+    background: #e6ecf7;
+}
+.preview-row-track.melody-summary .preview-cell.is-density-1 {
+    background: #8fb6ff;
+}
+.preview-row-track.melody-summary .preview-cell.is-density-2 {
+    background: #4f8dff;
+}
+.preview-row-track.melody-summary .preview-cell.is-density-3 {
+    background: #1d4ed8;
 }
 .preview-cell.beat-start {
     box-shadow: inset 1px 0 0 #b5b5b5;

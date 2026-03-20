@@ -4,6 +4,7 @@ export const STEPS_PER_BEAT = 12;
 export const STEPS_PER_MEASURE = STEPS_PER_BEAT * 4;
 
 export const appState = {
+    isBooting: true,
     tracks: [],
     nextId: 0,
     activeTrackId: null,

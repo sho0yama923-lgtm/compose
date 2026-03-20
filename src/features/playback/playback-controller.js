@@ -1,6 +1,7 @@
 // playback.js — 再生/停止 + スコア構築
 
 import { appState, STEPS_PER_MEASURE, totalSteps, callbacks, getNormalizedPlayRangeMeasures } from '../../core/state.js';
+import { getCurrentBpm } from '../../core/bpm.js';
 import { getNativePlaybackState, playScore, stopScorePlayback } from '../bridges/audio-bridge.js';
 import { serializeScoreForNativePlayback } from './score-serializer.js';
 import { buildPlaybackScore, resolvePlaybackWindow } from './score-builder.js';
@@ -24,6 +25,23 @@ function primePlaybackStartUi(step) {
     });
 }
 
+function computePlaybackAnchorAtMs({
+    nowPerformance = performance.now(),
+    nowWallClock = Date.now(),
+    startDelayMs = 0,
+    startedAtMs = null,
+}) {
+    const useNativeStartTime = typeof startedAtMs === 'number' && Number.isFinite(startedAtMs);
+    const elapsedSinceNativeStartMs = useNativeStartTime
+        ? Math.max(0, nowWallClock - startedAtMs)
+        : 0;
+    const computedAnchorAtMs = useNativeStartTime
+        ? nowPerformance - elapsedSinceNativeStartMs
+        : nowPerformance + Math.max(0, startDelayMs);
+
+    return Math.min(nowPerformance, computedAnchorAtMs);
+}
+
 export function initPlayback() {
     setPlaybackButtonState();
     document.addEventListener('click', async (event) => {
@@ -31,12 +49,13 @@ export function initPlayback() {
         if (!(target instanceof Element)) return;
         const playToggleBtn = target.closest('[data-play-toggle="true"]');
         if (!playToggleBtn) return;
+        if (appState.isBooting) return;
         if (appState.isPlaying) {
             stopPlayback();
             return;
         }
 
-        const bpm   = Number(document.getElementById('bpmInput').value) || 120;
+        const bpm   = getCurrentBpm();
         const ts    = totalSteps();
         const playRange = getNormalizedPlayRangeMeasures();
         const score = buildPlaybackScore(appState.tracks, ts);
@@ -62,10 +81,19 @@ export function initPlayback() {
             loop: true,
         });
 
+        const requestId = ++playbackRequestId;
         appState.isPlaying = true;
         setPlaybackButtonState();
-        primePlaybackStartUi(startStep);
-        const requestId = ++playbackRequestId;
+        beginPlaybackAnimation({
+            mode: 'pending',
+            bpm,
+            startStep,
+            endStepExclusive,
+            playbackRequestId: requestId,
+            startDelayMs: 0,
+            startedAtMs: null,
+            loop: true,
+        });
         const playbackResult = await playScore({
             score,
             nativePayload,
@@ -157,20 +185,16 @@ function beginPlaybackAnimation({
     startedAtMs = null,
     loop = true,
 }) {
-    stopPlaybackAnimation();
     const nowPerformance = performance.now();
-    const nowWallClock = Date.now();
-    const useNativeStartTime = typeof startedAtMs === 'number' && Number.isFinite(startedAtMs);
-    const elapsedSinceNativeStartMs = useNativeStartTime
-        ? Math.max(0, nowWallClock - startedAtMs)
-        : 0;
-    const anchorAtMs = useNativeStartTime
-        ? nowPerformance - elapsedSinceNativeStartMs
-        : nowPerformance + Math.max(0, startDelayMs);
-    playheadAnimationState = {
+    const nextState = {
         mode,
         playbackRequestId: requestId,
-        anchorAtMs,
+        anchorAtMs: computePlaybackAnchorAtMs({
+            nowPerformance,
+            nowWallClock: Date.now(),
+            startDelayMs,
+            startedAtMs,
+        }),
         anchorStepPosition: startStep,
         msPerStep: (60_000 / Math.max(1, bpm)) / 12,
         startStep,
@@ -178,12 +202,24 @@ function beginPlaybackAnimation({
         cycleSteps: Math.max(1, endStepExclusive - startStep),
         loop,
     };
+
+    const shouldRestartLoop = !playheadAnimationState || playheadAnimationState.playbackRequestId !== requestId;
+    if (shouldRestartLoop) {
+        stopPlaybackAnimation();
+    }
+    playheadAnimationState = nextState;
     primePlaybackStartUi(startStep);
     applyPlaybackUi(startStep, startStep);
+    if (mode === 'pending') {
+        playheadAnimationFrameId = null;
+        return;
+    }
     if (mode === 'native') {
         scheduleNativePlaybackStateSync(requestId);
     }
-    tickPlaybackAnimation();
+    if (shouldRestartLoop || playheadAnimationFrameId === null) {
+        tickPlaybackAnimation();
+    }
 }
 
 function stopPlaybackAnimation() {
@@ -306,5 +342,6 @@ function setPlaybackButtonState() {
         playToggleBtn.setAttribute('aria-label', appState.isPlaying ? '停止' : '再生');
         playToggleBtn.setAttribute('aria-pressed', String(appState.isPlaying));
         playToggleBtn.classList.toggle('is-playing', appState.isPlaying);
+        playToggleBtn.disabled = appState.isBooting;
     });
 }

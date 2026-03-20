@@ -18,6 +18,7 @@ import {
     normalizeChordCustomNotes,
     normalizeSongSettings,
 } from '../../../core/constants.js';
+import { normalizeBpmValue, getCurrentBpm } from '../../../core/bpm.js';
 
 export const STORAGE_KEY = 'compose_save';
 export const DATA_VERSION = 10;
@@ -283,15 +284,63 @@ function normalizeRepeatStates(repeatStates, validTrackIds) {
     );
 }
 
+function serializeTrackForSave(track) {
+    const base = {
+        id: track.id,
+        instrument: track.instrument,
+        muted: track.muted === true,
+        volume: typeof track.volume === 'number'
+            ? Math.max(0, Math.min(1, track.volume))
+            : 1,
+        eq: normalizeTrackEq(track.eq, track.instrument),
+        tone: normalizeTrackTone(track.tone),
+    };
+
+    const type = INST_TYPE[track.instrument];
+    if (type === 'rhythm') {
+        return {
+            ...base,
+            rows: Array.isArray(track.rows)
+                ? track.rows.map((row) => ({
+                    label: row.label,
+                    note: row.note,
+                    steps: Array.isArray(row.steps) ? [...row.steps] : [],
+                    sampleInstrumentId: row.sampleInstrumentId || 'drums_default',
+                    sampleId: row.sampleId || getDrumSampleIdFromNote(row.note) || 'kick',
+                }))
+                : [],
+        };
+    }
+
+    if (type === 'chord') {
+        return {
+            ...base,
+            playbackInstrument: track.playbackInstrument || 'piano',
+            chordMap: Array.isArray(track.chordMap) ? [...track.chordMap] : [],
+            soundSteps: Array.isArray(track.soundSteps) ? [...track.soundSteps] : [],
+            dividers: Array.isArray(track.dividers) ? [...track.dividers] : [0, STEPS_PER_MEASURE / 2],
+        };
+    }
+
+    return {
+        ...base,
+        stepsMap: track.stepsMap && typeof track.stepsMap === 'object'
+            ? Object.fromEntries(
+                Object.entries(track.stepsMap).map(([note, steps]) => [
+                    note,
+                    Array.isArray(steps) ? [...steps] : [],
+                ])
+            )
+            : {},
+    };
+}
+
 export function createSaveData() {
     return {
         version: DATA_VERSION,
-        bpm: Number(document.getElementById('bpmInput').value) || 120,
+        bpm: getCurrentBpm(),
         numMeasures: appState.numMeasures,
         nextId: appState.nextId,
-        currentMeasure: appState.currentMeasure,
-        activeTrackId: appState.activeTrackId,
-        lastTouchedTrackId: appState.lastTouchedTrackId,
         drumHintDismissed: appState.drumHintDismissed,
         chordHintDismissed: appState.chordHintDismissed,
         melodicHintDismissed: appState.melodicHintDismissed,
@@ -300,19 +349,9 @@ export function createSaveData() {
         songHarmony: appState.songHarmony,
         songScaleFamily: appState.songScaleFamily,
         editorGridMode: appState.editorGridMode,
-        selectedDuration: appState.selectedDuration,
-        lastNormalDuration: appState.lastNormalDuration,
-        lastTripletDuration: appState.lastTripletDuration,
-        dottedMode: appState.dottedMode,
         beatConfig: appState.beatConfig,
         repeatStates: serializeRepeatStates(),
-        tracks: appState.tracks.map((track) => {
-            const clone = { ...track };
-            if (clone.selectedDrumRows instanceof Set) {
-                clone.selectedDrumRows = [...clone.selectedDrumRows];
-            }
-            return clone;
-        }),
+        tracks: appState.tracks.map((track) => serializeTrackForSave(track)),
     };
 }
 
@@ -325,13 +364,15 @@ export function restoreFromData(data, options = {}) {
 
     appState.numMeasures = data.numMeasures ?? 4;
     appState.nextId = data.nextId ?? 0;
-    appState.currentMeasure = data.currentMeasure ?? 0;
-    appState.activeTrackId = data.activeTrackId ?? null;
-    appState.lastTouchedTrackId = data.lastTouchedTrackId ?? data.activeTrackId ?? null;
+    appState.currentMeasure = 0;
+    appState.activeTrackId = null;
+    appState.lastTouchedTrackId = null;
     appState.playheadStep = null;
     appState.isPlaying = false;
     appState.playRangeStartMeasure = null;
     appState.playRangeEndMeasure = null;
+    appState.previewMode = true;
+    appState.previewScrollTop = 0;
     appState.previewActionTrackId = null;
     appState.previewActionMenuOpen = false;
     appState.previewToneTrackId = null;
@@ -353,25 +394,11 @@ export function restoreFromData(data, options = {}) {
     appState.songRoot = songSettings.root;
     appState.songHarmony = songSettings.harmony;
     appState.songScaleFamily = songSettings.scaleFamily;
-    appState.editorGridMode = data.editorGridMode === 'triplet' ? 'triplet' : 'normal';
-    appState.selectedDuration = VALID_DURATIONS.has(data.selectedDuration)
-        ? data.selectedDuration
-        : '16n';
-    appState.lastNormalDuration = VALID_DURATIONS.has(data.lastNormalDuration) && !data.lastNormalDuration.endsWith('t')
-        ? data.lastNormalDuration
-        : '16n';
-    appState.lastTripletDuration = VALID_DURATIONS.has(data.lastTripletDuration) && data.lastTripletDuration.endsWith('t')
-        ? data.lastTripletDuration
-        : '8t';
-    if (appState.editorGridMode === 'triplet' && !appState.selectedDuration.endsWith('t')) {
-        appState.selectedDuration = appState.lastTripletDuration;
-    }
-    if (appState.editorGridMode === 'normal' && appState.selectedDuration.endsWith('t')) {
-        appState.selectedDuration = appState.lastNormalDuration;
-    }
-    appState.dottedMode = appState.editorGridMode === 'normal'
-        && ['8n', '4n', '2n'].includes(appState.selectedDuration)
-        && data.dottedMode === true;
+    appState.editorGridMode = 'normal';
+    appState.selectedDuration = '16n';
+    appState.lastNormalDuration = '16n';
+    appState.lastTripletDuration = '8t';
+    appState.dottedMode = false;
     appState.beatConfig = normalizeBeatConfig(appState.numMeasures, data.beatConfig);
 
     const length = totalSteps();
@@ -380,15 +407,11 @@ export function restoreFromData(data, options = {}) {
         data.repeatStates,
         appState.tracks.map((track) => track.id)
     );
-    if (!appState.tracks.some((track) => track.id === appState.activeTrackId)) {
-        appState.activeTrackId = appState.tracks[0]?.id ?? null;
-    }
-    if (!appState.tracks.some((track) => track.id === appState.lastTouchedTrackId)) {
-        appState.lastTouchedTrackId = appState.activeTrackId;
-    }
+    appState.activeTrackId = appState.tracks[0]?.id ?? null;
+    appState.lastTouchedTrackId = appState.activeTrackId;
 
-    if (data.bpm) {
-        document.getElementById('bpmInput').value = data.bpm;
+    if (data.bpm !== undefined && data.bpm !== null) {
+        document.getElementById('bpmInput').value = String(normalizeBpmValue(data.bpm));
     }
 
     return true;

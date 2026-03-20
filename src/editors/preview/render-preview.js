@@ -8,7 +8,6 @@ import {
     getTrackDisplayLabel,
 } from '../../features/tracks/instrument-map.js';
 import {
-    CHROMATIC,
     ROOT_COLORS,
 } from '../../core/constants.js';
 import { selectTrack } from '../../features/tracks/tracks-controller.js';
@@ -18,7 +17,7 @@ import { buildPreviewActionMenu, attachPreviewCardLongPress, closePreviewActions
 import { buildRepeatSelectionRail, getRepeatCardStateClass, getRepeatGridStateClass, shouldShowRepeatEndRail, shouldShowRepeatStartRail } from './preview-repeat.js';
 import { buildTrackToneSheet } from './preview-tone-sheet.js';
 import { buildSongSettingsCard } from './preview-song-settings.js';
-import { buildPreviewRow } from './preview-row.js';
+import { buildMelodyPreviewSummaryRows, buildPreviewRow } from './preview-row.js';
 
 export function renderPreview(containerEl) {
     const measureIndex = appState.currentMeasure;
@@ -121,10 +120,8 @@ export function renderPreview(containerEl) {
             gridEl.appendChild(zoneGrid);
             gridEl.appendChild(buildPreviewRow(cells, offset, track.soundSteps, 'chord'));
         } else {
-            const oct = track.activeOctave ?? (track.viewBase + 1);
-            [...CHROMATIC].reverse().forEach((noteName) => {
-                const steps = track.stepsMap?.[`${noteName}${oct}`];
-                gridEl.appendChild(buildPreviewRow(cells, offset, steps, 'melody', `${noteName}${oct}`));
+            buildMelodyPreviewSummaryRows(cells, offset, track).forEach((rowEl) => {
+                gridEl.appendChild(rowEl);
             });
         }
 
