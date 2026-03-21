@@ -84,10 +84,10 @@ private final class NativePlaybackEngine {
     private let schedulerHorizonMaximumSeconds = 0.9
     private let schedulerHorizonCycles = 1
     private let schedulerLateGraceSeconds = 0.04
-    private let voiceCleanupTailSeconds = 0.05
-    private let voiceFadeStepDurationSeconds = 0.004
     private let drumSampleTailCapSeconds = 0.16
-    private let pitchedSampleTailCapSeconds = 0.07
+    private let drumFadeOutDurationSeconds = 0.008
+    private let pitchedFadeOutDurationSeconds = 0.012
+    private let minimumFadeOutDurationSeconds = 0.004
 
     private let audioEngine = AVAudioEngine()
     private let engineQueue = DispatchQueue(label: "NativePlaybackEngine.queue")
@@ -345,13 +345,27 @@ private final class NativePlaybackEngine {
             : pooledVoiceCountPerPitchedRoute
     }
 
-    private func sampleTailCapSeconds(
+    private func audibleDurationSeconds(
         trackId: Int,
-        payload: NativePlaybackPayload
+        payload: NativePlaybackPayload,
+        noteDurationSeconds: Double,
+        sampleDurationSeconds: Double
     ) -> Double {
-        trackType(for: trackId, payload: payload) == "drums"
-            ? drumSampleTailCapSeconds
-            : pitchedSampleTailCapSeconds
+        if trackType(for: trackId, payload: payload) == "drums" {
+            return min(sampleDurationSeconds, noteDurationSeconds + drumSampleTailCapSeconds)
+        }
+        return noteDurationSeconds
+    }
+
+    private func fadeOutDurationSeconds(
+        trackId: Int,
+        payload: NativePlaybackPayload,
+        audibleDurationSeconds: Double
+    ) -> Double {
+        let baseDuration = trackType(for: trackId, payload: payload) == "drums"
+            ? drumFadeOutDurationSeconds
+            : pitchedFadeOutDurationSeconds
+        return max(minimumFadeOutDurationSeconds, min(baseDuration, audibleDurationSeconds * 0.35))
     }
 
     private func prepareVoicePoolsLocked(payload: NativePlaybackPayload) throws {
@@ -510,27 +524,30 @@ private final class NativePlaybackEngine {
                 Double(sample.buffer.frameLength)
                 / max(1, sample.buffer.format.sampleRate)
             ) / playbackRate
-            let cappedSampleDurationSeconds = min(
-                sampleDurationSeconds,
-                durationSeconds + sampleTailCapSeconds(trackId: event.trackId, payload: payload)
+            let audibleSeconds = audibleDurationSeconds(
+                trackId: event.trackId,
+                payload: payload,
+                noteDurationSeconds: durationSeconds,
+                sampleDurationSeconds: sampleDurationSeconds
             )
-            let cleanupDelaySeconds = max(
-                durationSeconds + voiceCleanupTailSeconds,
-                cappedSampleDurationSeconds
+            let fadeDurationSeconds = fadeOutDurationSeconds(
+                trackId: event.trackId,
+                payload: payload,
+                audibleDurationSeconds: audibleSeconds
             )
-
+            let fadeStartDelaySeconds = max(0, audibleSeconds - fadeDurationSeconds)
             scheduleWorkItem(
                 sessionId: sessionId,
-                hostTime: hostTime + AVAudioTime.hostTime(forSeconds: cleanupDelaySeconds)
+                hostTime: hostTime + AVAudioTime.hostTime(forSeconds: fadeStartDelaySeconds)
             ) { [self] in
-                self.finishVoice(voiceId)
+                self.finishVoice(voiceId, fadeDurationSeconds: fadeDurationSeconds)
             }
         }
     }
 
-    private func finishVoice(_ voiceId: UUID) {
+    private func finishVoice(_ voiceId: UUID, fadeDurationSeconds: Double? = nil) {
         guard let voice = activeVoices[voiceId] else { return }
-        stopVoice(voice) { [self] in
+        stopVoice(voice, fadeDurationSeconds: fadeDurationSeconds) { [self] in
             guard let stoppedVoice = self.activeVoices.removeValue(forKey: voiceId) else { return }
             self.availableVoicesByKey[stoppedVoice.poolKey, default: []].append(stoppedVoice)
         }
@@ -539,10 +556,15 @@ private final class NativePlaybackEngine {
     private func stopVoice(
         _ voice: PlaybackVoice,
         immediate: Bool = false,
+        fadeDurationSeconds: Double? = nil,
         completion: (() -> Void)? = nil
     ) {
         voice.fadeSequence += 1
         let fadeSequence = voice.fadeSequence
+        let resolvedFadeDurationSeconds = max(
+            0,
+            fadeDurationSeconds ?? pitchedFadeOutDurationSeconds
+        )
         let finalize = {
             guard voice.fadeSequence == fadeSequence else { return }
             voice.player.stop()
@@ -555,7 +577,7 @@ private final class NativePlaybackEngine {
             completion?()
         }
 
-        if immediate || !voice.player.isPlaying {
+        if immediate || !voice.player.isPlaying || resolvedFadeDurationSeconds <= 0 {
             finalize()
             return
         }
@@ -563,13 +585,14 @@ private final class NativePlaybackEngine {
 
         voice.isFadingOut = true
         let fadeLevels: [Float] = [0.7, 0.35, 0]
+        let fadeStepDurationSeconds = resolvedFadeDurationSeconds / Double(fadeLevels.count)
         for (index, level) in fadeLevels.enumerated() {
-            let delaySeconds = voiceFadeStepDurationSeconds * Double(index)
+            let delaySeconds = fadeStepDurationSeconds * Double(index)
             engineQueue.asyncAfter(deadline: .now() + delaySeconds) {
                 guard voice.isFadingOut, voice.fadeSequence == fadeSequence else { return }
                 voice.gainMixer.outputVolume = level
                 if index == fadeLevels.count - 1 {
-                    self.engineQueue.asyncAfter(deadline: .now() + self.voiceFadeStepDurationSeconds) {
+                    self.engineQueue.asyncAfter(deadline: .now() + fadeStepDurationSeconds) {
                         guard voice.isFadingOut, voice.fadeSequence == fadeSequence else { return }
                         finalize()
                     }

@@ -12,7 +12,9 @@
 ## 今回の整理内容
 
 - ドラムエディタは、行数が増えた時に下部の再生ドックを潰さないよう、`.drum-editor` 自体を縦スクロール可能な flex 領域へ戻した。`responsive.css` で `flex: 1 1 auto / min-height: 0 / overflow-y: auto` に整理し、下端は `--drum-editor-scroll-bottom-gap = 12px` の逃がしを持たせた
-- 音の長さが少し残りすぎる件は drums だけでなく pitched 側でも目立っていたため、`NativePlaybackPlugin.swift` の native cleanup 定数を詰めた。`voiceCleanupTailSeconds = 0.05s`、`drumSampleTailCapSeconds = 0.16s`、`pitchedSampleTailCapSeconds = 0.07s` として、16分主体のメロディでも尾が残りにくい方向へ調整した
+- 音の長さが少し残りすぎる件は drums だけでなく pitched 側でも目立っていたため、`NativePlaybackPlugin.swift` の native note end を調整した。drums は `drumSampleTailCapSeconds = 0.16s` を残しつつ、pitched は sample tail を可聴長へ足さず、`pitchedFadeOutDurationSeconds = 0.012s` の短い fade-out で規定長へ寄せる形に整理した
+- 音価確認のために一時追加していた per-note の timing log は、Xcode の debugger 接続中だけ音に悪影響を出す可能性が高いため外した。`scheduleEvent` の高頻度 `print` と web fallback の `console.debug` は常時出さない状態へ戻した
+- native の note end は、pitched を「規定長まで鳴らし、終了直前だけ短い fade-out」で切る形へ組み替えた。drums は従来どおり sample tail を少し残せる一方、pitched は `sample tail` を可聴長へ足さず、`audibleSeconds` と `fadeSeconds` を分けて扱う
 - タスクキル後の再起動でドラムだけ消える件は、native 本体だけでなく fallback 側も確認したところ、`playback-chains.js` が `track.id = 0` を falsy 扱いして chain 生成を落とす経路があった。最初のドラムトラックが `id=0` の時に Tone.js fallback / warmup が失敗しうるため、`track?.id == null` 判定へ修正した
 - `UIScene lifecycle will soon be required` 警告に対応するため、`Info.plist` に `UIApplicationSceneManifest` を追加し、`AppDelegate.swift` を `UIWindowSceneDelegate` 兼用にした。custom plugin 登録も scene 経由で `CAPBridgeViewController` を解決できるよう整理した
 - 再生中に note cleanup の `stop()` が急に入ると iOS でプツッという切れ音が出やすかったため、`NativePlaybackPlugin.swift` の各 voice に `AVAudioMixerNode` を足し、pool 返却前に数 ms の短いフェードアウトを挟んでから reset するようにした
