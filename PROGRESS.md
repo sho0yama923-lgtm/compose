@@ -11,6 +11,9 @@
 
 ## 今回の整理内容
 
+- ドラムエディタは、行数が増えた時に下部の再生ドックを潰さないよう、`.drum-editor` 自体を縦スクロール可能な flex 領域へ戻した。`responsive.css` で `flex: 1 1 auto / min-height: 0 / overflow-y: auto` に整理し、下端は `--drum-editor-scroll-bottom-gap = 12px` の逃がしを持たせた
+- 音の長さが少し残りすぎる件は drums だけでなく pitched 側でも目立っていたため、`NativePlaybackPlugin.swift` の native cleanup 定数を詰めた。`voiceCleanupTailSeconds = 0.05s`、`drumSampleTailCapSeconds = 0.16s`、`pitchedSampleTailCapSeconds = 0.07s` として、16分主体のメロディでも尾が残りにくい方向へ調整した
+- タスクキル後の再起動でドラムだけ消える件は、native 本体だけでなく fallback 側も確認したところ、`playback-chains.js` が `track.id = 0` を falsy 扱いして chain 生成を落とす経路があった。最初のドラムトラックが `id=0` の時に Tone.js fallback / warmup が失敗しうるため、`track?.id == null` 判定へ修正した
 - `UIScene lifecycle will soon be required` 警告に対応するため、`Info.plist` に `UIApplicationSceneManifest` を追加し、`AppDelegate.swift` を `UIWindowSceneDelegate` 兼用にした。custom plugin 登録も scene 経由で `CAPBridgeViewController` を解決できるよう整理した
 - 再生中に note cleanup の `stop()` が急に入ると iOS でプツッという切れ音が出やすかったため、`NativePlaybackPlugin.swift` の各 voice に `AVAudioMixerNode` を足し、pool 返却前に数 ms の短いフェードアウトを挟んでから reset するようにした
 - フェードアウト後の pool 返却が遅延クロージャ経由になったことで、古い stop/fade が後から走って voice 状態へ触る危険があったため、`NativePlaybackPlugin.swift` の voice に `fadeSequence` を持たせて世代不一致の古い closure を無効化した。頻出する `finishVoice / scheduleWorkItem` まわりの weak capture も外し、weak reference 警告が出にくい形へ整理した

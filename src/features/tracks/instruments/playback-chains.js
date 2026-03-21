@@ -250,7 +250,7 @@ function createPlaybackChain(track, playbackInstrumentId) {
 }
 
 function ensurePlaybackChain(track, playbackInstrumentId) {
-    if (!track?.id || !playbackInstrumentId) return null;
+    if (track?.id == null || !playbackInstrumentId) return null;
 
     const config = INSTRUMENT_CONFIG_MAP[playbackInstrumentId];
     if (!config?.sampleType) return null;
@@ -296,6 +296,7 @@ export function getTrackPlaybackInstrument(trackId, instrumentId) {
 }
 
 export async function prepareTrackPlaybackInstrument(track, playbackInstrumentId) {
+    if (track?.id == null || !playbackInstrumentId) return null;
     const chain = ensurePlaybackChain(track, playbackInstrumentId);
     if (!chain?.sampler) return null;
     if (typeof ToneLib?.loaded === 'function') {

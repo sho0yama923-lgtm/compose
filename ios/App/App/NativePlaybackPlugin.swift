@@ -84,10 +84,10 @@ private final class NativePlaybackEngine {
     private let schedulerHorizonMaximumSeconds = 0.9
     private let schedulerHorizonCycles = 1
     private let schedulerLateGraceSeconds = 0.04
-    private let voiceCleanupTailSeconds = 0.08
+    private let voiceCleanupTailSeconds = 0.05
     private let voiceFadeStepDurationSeconds = 0.004
-    private let drumSampleTailCapSeconds = 0.24
-    private let pitchedSampleTailCapSeconds = 0.18
+    private let drumSampleTailCapSeconds = 0.16
+    private let pitchedSampleTailCapSeconds = 0.07
 
     private let audioEngine = AVAudioEngine()
     private let engineQueue = DispatchQueue(label: "NativePlaybackEngine.queue")

@@ -13,6 +13,7 @@
     --drum-add-sheet-footer-height: 42px;
     --drum-add-sheet-vertical-padding: 22px;
     --drum-editor-inline-gap: 8px;
+    --drum-editor-scroll-bottom-gap: 12px;
 }
 
 .drum-track-editor .drum-editor,
