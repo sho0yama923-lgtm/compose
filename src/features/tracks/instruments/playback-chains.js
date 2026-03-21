@@ -213,6 +213,7 @@ function createPlaybackChain(track, playbackInstrumentId) {
     const sampler = new ToneLib.Sampler({
         urls,
         baseUrl,
+        release: 0.08,
         onload: () => {
             console.info(`[Audio] ${playbackInstrumentId} の音源ロードが完了しました。`);
         },
