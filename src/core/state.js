@@ -29,6 +29,7 @@ export const appState = {
     chordDetailTrackId: null,
     chordDetailStep: null,
     drumAddTrackId: null,
+    drumAddOpenGroups: {},
     drumHintDismissed: false,
     chordHintDismissed: false,
     melodicHintDismissed: false,

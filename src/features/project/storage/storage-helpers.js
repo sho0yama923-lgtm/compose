@@ -379,6 +379,7 @@ export function restoreFromData(data, options = {}) {
     appState.chordDetailTrackId = null;
     appState.chordDetailStep = null;
     appState.drumAddTrackId = null;
+    appState.drumAddOpenGroups = {};
     appState.pendingDeleteNoteId = null;
     appState.noteDrag = null;
     appState.suppressNextNoteClick = false;

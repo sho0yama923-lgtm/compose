@@ -31,6 +31,8 @@
     font-weight: bold;
     flex-shrink: 0;
     user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
 }
 /* 白鍵: 全幅・黒文字 */
 .piano-key.white-key {
@@ -41,9 +43,28 @@
 }
 /* ドラムラベル */
 .piano-key.drum-key {
-    width: 48px;
-    font-size: 9px;
-    justify-content: flex-end;
+    width: var(--drum-key-width, 28px);
+    min-width: var(--drum-key-width, 28px);
+    align-items: center;
+    justify-content: center;
+    padding: 0 1px;
+    text-align: center;
+    line-height: 1;
+    gap: 0;
+    flex-direction: column;
+}
+.piano-key.drum-key .drum-key-line {
+    display: block;
+    width: 100%;
+    font-size: 7px;
+    line-height: 1;
+    white-space: nowrap;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: clip;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
 }
 
 /* 黒鍵: 短く・白文字 */

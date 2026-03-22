@@ -16,6 +16,7 @@ import { DURATION_CELLS, ROOT_COLORS } from '../../core/constants.js';
 import { clearNote, placeNote, toggleStep, isStepHead, isStepTie } from '../../core/duration.js';
 import { getCurrentDuration } from '../duration-toolbar.js';
 import { createPlayheadBar } from './chord-shared.js';
+import { beginNoteDragInteraction } from '../note-drag-session.js';
 
 const NOTE_DRAG_HOLD_MS = 380;
 
@@ -96,6 +97,7 @@ export function buildTimingSection(track, offset, mEnd, cells, majorGroup, optio
                 event,
                 track,
                 soundCells,
+                sourceEl: btn,
                 cells,
                 mEnd,
                 sourceIndex: si,
@@ -133,11 +135,13 @@ function isChordDragOrigin(trackId, sourceIndex) {
         && drag.sourceIndex === sourceIndex;
 }
 
-function startChordNoteDrag({ event, track, soundCells, cells, mEnd, sourceIndex, duration }) {
+function startChordNoteDrag({ event, track, soundCells, sourceEl, cells, mEnd, sourceIndex, duration }) {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
 
     let holdTimer = null;
     let dragStarted = false;
+    let releaseInteraction = null;
+    let previewEl = null;
     const startX = event.clientX;
     const startY = event.clientY;
     const pointerId = event.pointerId;
@@ -156,6 +160,29 @@ function startChordNoteDrag({ event, track, soundCells, cells, mEnd, sourceIndex
         holdTimer = null;
     };
 
+    const syncPreview = (targetIndex) => {
+        const nextTargetIndex = targetIndex ?? sourceIndex;
+        if (!(soundCells instanceof HTMLElement)) return;
+        if (!previewEl) {
+            previewEl = document.createElement('div');
+            previewEl.className = 'timeline-note chord-note is-note-drag-preview';
+            const color = dragColor ?? '#111';
+            previewEl.style.background = color;
+            previewEl.style.borderColor = color;
+            soundCells.appendChild(previewEl);
+        }
+        previewEl.style.left = `calc(${((nextTargetIndex % STEPS_PER_MEASURE) / STEPS_PER_MEASURE) * 100}% + 1px)`;
+        previewEl.style.width = `calc(${((DURATION_CELLS[duration] || 1) / STEPS_PER_MEASURE) * 100}% - 3px)`;
+    };
+
+    const clearPreview = () => {
+        previewEl?.remove();
+        previewEl = null;
+        if (sourceEl instanceof HTMLElement) {
+            sourceEl.style.visibility = '';
+        }
+    };
+
     const updateTargetFromEvent = (moveEvent) => {
         const activeGridEl = document.querySelector('.chord-timing-grid');
         if (!(activeGridEl instanceof HTMLElement)) return;
@@ -168,7 +195,7 @@ function startChordNoteDrag({ event, track, soundCells, cells, mEnd, sourceIndex
         if (!drag || drag.type !== 'chord') return;
         if (drag.targetIndex === targetIndex) return;
         setNoteDrag({ ...drag, targetIndex });
-        callbacks.renderEditor();
+        syncPreview(targetIndex);
     };
 
     const handlePointerMove = (moveEvent) => {
@@ -187,6 +214,9 @@ function startChordNoteDrag({ event, track, soundCells, cells, mEnd, sourceIndex
         if (endEvent.pointerId !== pointerId) return;
         clearHoldTimer();
         clearListeners();
+        releaseInteraction?.();
+        releaseInteraction = null;
+        clearPreview();
         if (!dragStarted) return;
 
         endEvent.preventDefault();
@@ -205,6 +235,7 @@ function startChordNoteDrag({ event, track, soundCells, cells, mEnd, sourceIndex
 
     holdTimer = window.setTimeout(() => {
         dragStarted = true;
+        releaseInteraction = beginNoteDragInteraction({ sourceEl, pointerId });
         clearPendingDeleteNote();
         setNoteDrag({
             type: 'chord',
@@ -214,7 +245,10 @@ function startChordNoteDrag({ event, track, soundCells, cells, mEnd, sourceIndex
             duration,
             color: dragColor,
         });
-        callbacks.renderEditor();
+        if (sourceEl instanceof HTMLElement) {
+            sourceEl.style.visibility = 'hidden';
+        }
+        syncPreview(sourceIndex);
     }, NOTE_DRAG_HOLD_MS);
 
     window.addEventListener('pointermove', handlePointerMove);

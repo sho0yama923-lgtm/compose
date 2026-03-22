@@ -22,6 +22,7 @@ import {
     getMeasureStart,
 } from '../core/rhythm-grid.js';
 import { previewTrackNote } from '../features/bridges/audio-bridge.js';
+import { beginNoteDragInteraction } from './note-drag-session.js';
 
 const NOTE_DRAG_HOLD_MS = 380;
 
@@ -223,6 +224,7 @@ export function renderMelodicEditor(track, editorEl) {
                         track,
                         scrollEl,
                         rowEl,
+                        sourceEl: noteEl,
                         cells,
                         maxIndex,
                         fullNote,
@@ -338,6 +340,7 @@ function startMelodyNoteDrag({
     track,
     scrollEl,
     rowEl,
+    sourceEl,
     cells,
     maxIndex,
     fullNote,
@@ -350,6 +353,10 @@ function startMelodyNoteDrag({
 
     let holdTimer = null;
     let dragStarted = false;
+    let releaseInteraction = null;
+    let previewEl = null;
+    let previewRowEl = null;
+    let lastResolvedTarget = null;
     const startX = event.clientX;
     const startY = event.clientY;
     const pointerId = event.pointerId;
@@ -366,22 +373,51 @@ function startMelodyNoteDrag({
         holdTimer = null;
     };
 
+    const syncPreview = (target) => {
+        const nextTargetIndex = target?.targetIndex ?? sourceIndex;
+        const nextTargetRow = target?.targetRow ?? rowEl;
+        if (!(nextTargetRow instanceof HTMLElement)) return;
+        if (!previewEl) {
+            previewEl = document.createElement('div');
+            previewEl.className = 'melody-grid-note is-note-drag-preview';
+        }
+        if (previewRowEl !== nextTargetRow) {
+            previewEl.remove();
+            nextTargetRow.appendChild(previewEl);
+            previewRowEl = nextTargetRow;
+        }
+        previewEl.style.left = `${((nextTargetIndex % STEPS_PER_MEASURE) / STEPS_PER_MEASURE) * 100}%`;
+        previewEl.style.width = `${((DURATION_CELLS[duration] || 1) / STEPS_PER_MEASURE) * 100}%`;
+    };
+
+    const clearPreview = () => {
+        previewEl?.remove();
+        previewEl = null;
+        previewRowEl = null;
+        if (sourceEl instanceof HTMLElement) {
+            sourceEl.style.visibility = '';
+        }
+    };
+
     const resolveTarget = (moveEvent) => {
         const hoveredEl = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
         const targetRow = hoveredEl?.closest('.melody-grid-row');
-        if (!(targetRow instanceof HTMLElement)) return null;
+        const resolvedRow = targetRow instanceof HTMLElement ? targetRow : lastResolvedTarget?.targetRow;
+        if (!(resolvedRow instanceof HTMLElement)) return null;
 
-        const targetNoteName = targetRow.dataset.noteName;
-        const targetOctave = targetRow.dataset.octave;
+        const targetNoteName = resolvedRow.dataset.noteName;
+        const targetOctave = resolvedRow.dataset.octave;
         if (!targetNoteName || !targetOctave) return null;
 
-        const rect = targetRow.getBoundingClientRect();
+        const rect = resolvedRow.getBoundingClientRect();
         const x = Math.max(0, Math.min(rect.width - 1, moveEvent.clientX - rect.left));
         const column = Math.floor((x / rect.width) * cells.length);
         const cellInfo = cells[Math.max(0, Math.min(cells.length - 1, column))];
         const targetIndex = getMeasureStart(appState.currentMeasure) + cellInfo.localStep;
         const targetFullNote = `${targetNoteName}${targetOctave}`;
-        return { targetIndex, targetFullNote };
+        const nextTarget = { targetIndex, targetFullNote, targetRow: resolvedRow };
+        lastResolvedTarget = nextTarget;
+        return nextTarget;
     };
 
     const updateTargetFromEvent = (moveEvent) => {
@@ -392,7 +428,7 @@ function startMelodyNoteDrag({
         const targetFullNote = nextTarget?.targetFullNote ?? drag.sourceFullNote;
         if (drag.targetIndex === targetIndex && drag.targetFullNote === targetFullNote) return;
         setNoteDrag({ ...drag, targetIndex, targetFullNote });
-        callbacks.renderEditor();
+        syncPreview(nextTarget);
     };
 
     const handlePointerMove = (moveEvent) => {
@@ -411,6 +447,9 @@ function startMelodyNoteDrag({
         if (endEvent.pointerId !== pointerId) return;
         clearHoldTimer();
         clearListeners();
+        releaseInteraction?.();
+        releaseInteraction = null;
+        clearPreview();
         if (!dragStarted) return;
 
         endEvent.preventDefault();
@@ -437,7 +476,13 @@ function startMelodyNoteDrag({
 
     holdTimer = window.setTimeout(() => {
         dragStarted = true;
+        releaseInteraction = beginNoteDragInteraction({ sourceEl, pointerId });
         clearPendingDeleteNote();
+        lastResolvedTarget = {
+            targetIndex: sourceIndex,
+            targetFullNote: fullNote,
+            targetRow: rowEl,
+        };
         setNoteDrag({
             type: 'melody',
             trackId: track.id,
@@ -447,7 +492,14 @@ function startMelodyNoteDrag({
             targetIndex: sourceIndex,
             duration,
         });
-        callbacks.renderEditor();
+        if (sourceEl instanceof HTMLElement) {
+            sourceEl.style.visibility = 'hidden';
+        }
+        syncPreview({
+            targetIndex: sourceIndex,
+            targetFullNote: fullNote,
+            targetRow: rowEl,
+        });
     }, NOTE_DRAG_HOLD_MS);
 
     window.addEventListener('pointermove', handlePointerMove);

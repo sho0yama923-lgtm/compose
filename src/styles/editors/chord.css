@@ -1003,6 +1003,9 @@
 #trackEditor.melodic-track-editor {
     margin-inline: -12px;
 }
+#trackEditor.drum-track-editor {
+    margin-inline: -12px;
+}
 #trackEditor.melodic-track-editor .editor-header {
     padding-inline: 12px;
 }
