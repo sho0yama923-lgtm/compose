@@ -1,4 +1,5 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
+import { normalizeFiniteNumber, normalizeUnitValue } from '../../core/number-utils.js';
 import { appState } from '../../core/state.js';
 import {
     play as playSchedulerScore,
@@ -19,18 +20,17 @@ const NATIVE_READY_POLL_INTERVAL_MS = 60;
 const NATIVE_READY_TIMEOUT_MS = 2500;
 
 function normalizeStartDelayMs(value) {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+    const parsed = normalizeFiniteNumber(value, 0);
+    return parsed > 0 ? parsed : 0;
 }
 
 function normalizeStartedAtMs(value) {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+    const parsed = normalizeFiniteNumber(value, null);
+    return parsed !== null && parsed > 0 ? parsed : null;
 }
 
 function normalizePositionStep(value) {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : null;
+    return normalizeFiniteNumber(value, null);
 }
 
 function canUseNativePlayback() {
@@ -154,9 +154,9 @@ export async function getNativePlaybackState() {
             ready: result?.ready === true,
             readyAtMs: normalizeStartedAtMs(result?.readyAtMs),
             loop: result?.loop !== false,
-            startStep: Number.isFinite(Number(result?.startStep)) ? Number(result.startStep) : null,
-            endStepExclusive: Number.isFinite(Number(result?.endStepExclusive)) ? Number(result.endStepExclusive) : null,
-            currentStep: Number.isFinite(Number(result?.currentStep)) ? Number(result.currentStep) : null,
+            startStep: normalizeFiniteNumber(result?.startStep, null),
+            endStepExclusive: normalizeFiniteNumber(result?.endStepExclusive, null),
+            currentStep: normalizeFiniteNumber(result?.currentStep, null),
             positionStep: normalizePositionStep(result?.positionStep),
             startedAtMs: normalizeStartedAtMs(result?.startedAtMs),
         };
@@ -194,9 +194,7 @@ export async function previewDrumSample({
                     instrumentId: sampleInstrumentId,
                     note,
                     durationSeconds: 0.35,
-                    volume: typeof track?.volume === 'number'
-                        ? Math.max(0, Math.min(1, track.volume))
-                        : 1,
+                    volume: normalizeUnitValue(track?.volume),
                 });
                 if (result?.started !== false) return true;
             }
@@ -233,9 +231,7 @@ export async function previewTrackNote({
                 instrumentId: playbackInstrumentId,
                 note,
                 durationSeconds,
-                volume: typeof track?.volume === 'number'
-                    ? Math.max(0, Math.min(1, track.volume))
-                    : 1,
+                volume: normalizeUnitValue(track?.volume),
             });
             if (result?.started !== false) return true;
         } catch (error) {

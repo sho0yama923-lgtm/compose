@@ -41,90 +41,120 @@ function computePlaybackAnchorAtMs({
 
 export function initPlayback() {
     setPlaybackButtonState();
-    document.addEventListener('click', async (event) => {
+    document.addEventListener('click', (event) => {
         const target = event.target;
         if (!(target instanceof Element)) return;
         const playToggleBtn = target.closest('[data-play-toggle="true"]');
         if (!playToggleBtn) return;
         if (appState.isBooting) return;
-        if (appState.isPlaying) {
-            stopPlayback();
-            return;
-        }
+        void togglePlayback();
+    });
+}
 
-        const bpm   = getCurrentBpm();
-        const ts    = totalSteps();
-        const playRange = getNormalizedPlayRangeMeasures();
-        const score = buildPlaybackScore(appState.tracks, ts);
-        const { startStep, endStepExclusive } = resolvePlaybackWindow({
-            totalStepCount: ts,
-            playRange,
-        });
+async function togglePlayback() {
+    if (appState.isPlaying) {
+        stopPlayback();
+        return;
+    }
 
-        const playbackStartMeasure = Math.floor(startStep / STEPS_PER_MEASURE);
-        if (appState.currentMeasure !== playbackStartMeasure) {
-            appState.isPlaying = true;
-            syncPreviewScrollTop();
-            appState.currentMeasure = playbackStartMeasure;
-            callbacks.renderEditor();
-            appState.isPlaying = false;
-        }
+    await startPlayback();
+}
 
-        const nativePayload = serializeScoreForNativePlayback(score, {
-            bpm,
-            tracks: appState.tracks,
-            startStep,
-            endStepExclusive,
-            loop: true,
-        });
+function buildPlaybackContext() {
+    const bpm = getCurrentBpm();
+    const totalStepCount = totalSteps();
+    const score = buildPlaybackScore(appState.tracks, totalStepCount);
+    const { startStep, endStepExclusive } = resolvePlaybackWindow({
+        totalStepCount,
+        playRange: getNormalizedPlayRangeMeasures(),
+    });
+    const nativePayload = serializeScoreForNativePlayback(score, {
+        bpm,
+        tracks: appState.tracks,
+        startStep,
+        endStepExclusive,
+        loop: true,
+    });
 
-        const requestId = ++playbackRequestId;
-        appState.isPlaying = true;
-        setPlaybackButtonState();
+    return {
+        bpm,
+        score,
+        nativePayload,
+        startStep,
+        endStepExclusive,
+    };
+}
+
+function moveEditorToPlaybackStart(startStep) {
+    const playbackStartMeasure = Math.floor(startStep / STEPS_PER_MEASURE);
+    if (appState.currentMeasure === playbackStartMeasure) return;
+
+    appState.isPlaying = true;
+    syncPreviewScrollTop();
+    appState.currentMeasure = playbackStartMeasure;
+    callbacks.renderEditor();
+    appState.isPlaying = false;
+}
+
+async function startPlayback() {
+    const {
+        bpm,
+        score,
+        nativePayload,
+        startStep,
+        endStepExclusive,
+    } = buildPlaybackContext();
+
+    moveEditorToPlaybackStart(startStep);
+
+    const requestId = ++playbackRequestId;
+    appState.isPlaying = true;
+    setPlaybackButtonState();
+    beginPlaybackAnimation({
+        mode: 'pending',
+        bpm,
+        startStep,
+        endStepExclusive,
+        playbackRequestId: requestId,
+        startDelayMs: 0,
+        startedAtMs: null,
+        loop: true,
+    });
+
+    const playbackResult = await playScore({
+        score,
+        nativePayload,
+    }, {
+        bpm,
+        loop: true,
+        tracks: appState.tracks,
+        startStep,
+        endStepExclusive,
+    });
+    if (requestId !== playbackRequestId) {
+        stopPlaybackAnimation();
+        return;
+    }
+
+    const started = typeof playbackResult === 'object'
+        ? !!playbackResult?.started
+        : !!playbackResult;
+    appState.isPlaying = started;
+    if (started) {
         beginPlaybackAnimation({
-            mode: 'pending',
+            mode: playbackResult?.mode || 'web',
             bpm,
             startStep,
             endStepExclusive,
             playbackRequestId: requestId,
-            startDelayMs: 0,
-            startedAtMs: null,
+            startDelayMs: Number(playbackResult?.startDelayMs) || 0,
+            startedAtMs: Number(playbackResult?.startedAtMs) || null,
             loop: true,
         });
-        const playbackResult = await playScore({
-            score,
-            nativePayload,
-        }, {
-            bpm,
-            loop: true,
-            tracks: appState.tracks,
-            startStep,
-            endStepExclusive,
-        });
-        if (requestId !== playbackRequestId) {
-            stopPlaybackAnimation();
-            return;
-        }
-        const started = typeof playbackResult === 'object'
-            ? !!playbackResult?.started
-            : !!playbackResult;
-        appState.isPlaying = started;
-        if (started) {
-            beginPlaybackAnimation({
-                mode: playbackResult?.mode || 'web',
-                bpm,
-                startStep,
-                endStepExclusive,
-                playbackRequestId: requestId,
-                startDelayMs: Number(playbackResult?.startDelayMs) || 0,
-                startedAtMs: Number(playbackResult?.startedAtMs) || null,
-                loop: true,
-            });
-        } else {
-            stopPlaybackAnimation();
-        }
-        setPlaybackButtonState();
-    });
+    } else {
+        stopPlaybackAnimation();
+    }
+    setPlaybackButtonState();
 }
 
 function updatePlayheadIndicators(globalStepPosition) {

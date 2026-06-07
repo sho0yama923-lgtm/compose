@@ -1,12 +1,11 @@
 import { STEPS_PER_MEASURE } from '../../core/state.js';
 import { getResolvedChordNotes } from '../../core/constants.js';
 import { isStepHead } from '../../core/duration.js';
+import { normalizeUnitValue } from '../../core/number-utils.js';
 import { INST_TYPE } from '../tracks/instrument-map.js';
 
 function clampTrackVolume(track) {
-    return typeof track?.volume === 'number'
-        ? Math.max(0, Math.min(1, track.volume))
-        : 1;
+    return normalizeUnitValue(track?.volume);
 }
 
 function appendRhythmTrackEvents(score, track) {

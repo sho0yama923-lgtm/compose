@@ -45,6 +45,9 @@
 
 ## 変更履歴
 
+- 2026-06-07: リリース前のため旧保存形式の互換 migration を削除し、保存 version を 11 に上げ、復元を現行 48 step / `songRoot + songHarmony + songScaleFamily` 形式へ単純化した
+- 2026-06-07: 再生まわりの音量 clamp / 数値正規化を `src/core/number-utils.js` に集約し、native payload 生成の track lookup を Map 化した
+- 2026-06-07: `playback-controller.js` の再生 click handler を `buildPlaybackContext` / `startPlayback` へ分け、イベント登録と再生開始処理の責務を整理した
 - 2026-06-07: iOS release hygiene として `PrivacyInfo.xcprivacy` を App target の Resources に追加し、built `.app/PrivacyInfo.xcprivacy` に入ることを確認した。manifest は追跡なし、収集データなし、file timestamp `C617.1`
 - 2026-06-07: `docs/ios-build.md` に App Store 提出前チェック、実機 acceptance flow、privacy manifest 更新条件を追加した
 - 2026-06-07: `npm run mobile:doctor`、`npm run mobile:sync:ios`、XcodeBuildMCP の iPhone 17 simulator build が Debug / Release ともに成功した

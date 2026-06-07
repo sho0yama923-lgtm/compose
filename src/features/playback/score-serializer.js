@@ -1,4 +1,5 @@
 import { DURATION_CELLS } from '../../core/constants.js';
+import { normalizeUnitValue } from '../../core/number-utils.js';
 import { STEPS_PER_BEAT, STEPS_PER_MEASURE } from '../../core/state.js';
 import { INSTRUMENT_CONFIG_MAP, getInstrumentUrls } from '../tracks/instruments/instrument-config.js';
 
@@ -53,9 +54,10 @@ export function serializeScoreForNativePlayback(score, {
         trackId: track.id,
         instrument: track.instrument,
         playbackInstrument: track.instrument === 'chord' ? (track.playbackInstrument || 'piano') : null,
-        volume: typeof track.volume === 'number' ? Math.max(0, Math.min(1, track.volume)) : 1,
+        volume: normalizeUnitValue(track.volume),
         muted: !!track.muted,
     }));
+    const trackPayloadById = new Map(trackPayload.map((track) => [track.trackId, track]));
 
     const events = [];
     for (let step = normalizedStart; step < normalizedEnd; step += 1) {
@@ -70,11 +72,11 @@ export function serializeScoreForNativePlayback(score, {
                 trackId: event.trackId,
                 instrument: event.instrument,
                 playbackInstrument: event.instrument === 'chord'
-                    ? (trackPayload.find((track) => track.trackId === event.trackId)?.playbackInstrument || 'piano')
+                    ? (trackPayloadById.get(event.trackId)?.playbackInstrument || 'piano')
                     : null,
                 notes,
                 durationSteps: resolveDurationSteps(event.duration),
-                volume: typeof event.volume === 'number' ? Math.max(0, Math.min(1, event.volume)) : 1,
+                volume: normalizeUnitValue(event.volume),
             });
         });
     }

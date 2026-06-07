@@ -13,35 +13,15 @@ import {
     CHROMATIC,
     DURATION_CELLS,
     DEFAULT_SONG_SETTINGS,
-    HARMONY_TYPE_MAP,
-    SCALE_FAMILY_MAP,
     normalizeChordCustomNotes,
     normalizeSongSettings,
 } from '../../../core/constants.js';
 import { normalizeBpmValue, getCurrentBpm } from '../../../core/bpm.js';
+import { normalizeUnitValue } from '../../../core/number-utils.js';
 
 export const STORAGE_KEY = 'compose_save';
-export const DATA_VERSION = 10;
+export const DATA_VERSION = 11;
 export const VALID_DURATIONS = new Set(Object.keys(DURATION_CELLS));
-
-function migrateV1toV2(data) {
-    data.tracks.forEach((track) => {
-        if (track.rows) {
-            track.rows.forEach((row) => {
-                row.steps = row.steps.map((value) => value === true ? '16n' : (value === false ? null : value));
-            });
-        }
-        if (track.stepsMap) {
-            Object.keys(track.stepsMap).forEach((key) => {
-                track.stepsMap[key] = track.stepsMap[key].map((value) => value === true ? '16n' : (value === false ? null : value));
-            });
-        }
-        if (track.soundSteps) {
-            track.soundSteps = track.soundSteps.map((value) => value === true ? '16n' : (value === false ? null : value));
-        }
-    });
-    data.version = 2;
-}
 
 function normalizeStepArray(steps, length) {
     if (Array.isArray(steps) && steps.length !== length) {
@@ -61,6 +41,10 @@ function normalizeStepArray(steps, length) {
     return normalized;
 }
 
+function normalizeStepsOrEmpty(steps, length) {
+    return normalizeStepArray(steps, length) ?? Array(length).fill(null);
+}
+
 function normalizeBeatConfig(numMeasures, beatConfig) {
     const normalized = Array.isArray(beatConfig) ? beatConfig.slice(0, numMeasures) : [];
     while (normalized.length < numMeasures) {
@@ -73,68 +57,10 @@ function normalizeBeatConfig(numMeasures, beatConfig) {
     });
 }
 
-function toDurationValue(value) {
-    if (value === true) return '16n';
-    if (value === false || value === undefined) return null;
-    return value;
-}
-
-function legacyStepOffset(beatConfig, measure, beat, slot) {
-    const subs = beatConfig[measure]?.[beat] === 3 ? 3 : 4;
-    if (subs === 3) {
-        if (slot > 2) return null;
-        return [0, 4, 8][slot];
-    }
-    return [0, 3, 6, 9][slot] ?? null;
-}
-
-function expandLegacyStepArray(steps, numMeasures, beatConfig, fillTies = true) {
-    if (!Array.isArray(steps) || steps.length !== numMeasures * 16) return null;
-
-    const expanded = Array(numMeasures * STEPS_PER_MEASURE).fill(null);
-
-    steps.forEach((rawValue, legacyIndex) => {
-        const value = toDurationValue(rawValue);
-        if (!value || value === '_tie') return;
-
-        const measure = Math.floor(legacyIndex / 16);
-        const local = legacyIndex % 16;
-        const beat = Math.floor(local / 4);
-        const slot = local % 4;
-        const offset = legacyStepOffset(beatConfig, measure, beat, slot);
-        if (offset === null) return;
-
-        const start = measure * STEPS_PER_MEASURE + beat * 12 + offset;
-        expanded[start] = value;
-
-        if (fillTies) {
-            const span = DURATION_CELLS[value] || DURATION_CELLS['16n'];
-            for (let i = 1; i < span && start + i < expanded.length; i++) {
-                expanded[start + i] = '_tie';
-            }
-        }
-    });
-
-    return expanded;
-}
-
-function convertLegacyDivider(divider, numMeasures, beatConfig) {
-    if (typeof divider !== 'number') return null;
-    const measure = Math.floor(divider / 16);
-    const local = divider % 16;
-    const beat = Math.floor(local / 4);
-    const slot = local % 4;
-    const offset = legacyStepOffset(beatConfig, measure, beat, slot);
-    if (offset === null) return null;
-    return measure * STEPS_PER_MEASURE + beat * 12 + offset;
-}
-
 function normalizeTrack(track, length) {
     const type = INST_TYPE[track.instrument];
     track.muted = track.muted === true;
-    track.volume = typeof track.volume === 'number'
-        ? Math.max(0, Math.min(1, track.volume))
-        : 1;
+    track.volume = normalizeUnitValue(track.volume);
     track.eq = normalizeTrackEq(track.eq, track.instrument);
     track.tone = normalizeTrackTone(track.tone);
 
@@ -148,20 +74,16 @@ function normalizeTrack(track, length) {
             const sampleId = row.sampleId || getDrumSampleIdFromNote(note) || fallback?.sampleId || 'kick';
             const sampleDefinition = getDrumSampleDefinition(sampleId);
             const sampleInstrumentId = row.sampleInstrumentId || 'drums_default';
-            const normalizedSteps = normalizeStepArray(row.steps, length)
-                ?? expandLegacyStepArray(row.steps, appState.numMeasures, appState.beatConfig)
-                ?? Array(length).fill(null);
             return createDrumRow(sampleInstrumentId, sampleId, {
                 label: row.label ?? fallback?.label ?? sampleDefinition?.label ?? `Row ${idx + 1}`,
-                steps: normalizedSteps,
+                steps: normalizeStepsOrEmpty(row.steps, length),
             });
         });
         return track;
     }
 
     if (type === 'chord') {
-        const isLegacyResolution = Array.isArray(track.chordMap) && track.chordMap.length === appState.numMeasures * 16;
-        track.chordMap = normalizeStepArray(track.chordMap, length) ?? expandLegacyStepArray(track.chordMap, appState.numMeasures, appState.beatConfig, false) ?? Array(length).fill(null);
+        track.chordMap = normalizeStepsOrEmpty(track.chordMap, length);
         track.chordMap = track.chordMap.map((entry) => {
             if (!entry || typeof entry !== 'object') return null;
             return {
@@ -171,7 +93,7 @@ function normalizeTrack(track, length) {
                 customNotes: normalizeChordCustomNotes(entry.customNotes),
             };
         });
-        track.soundSteps = normalizeStepArray(track.soundSteps, length) ?? expandLegacyStepArray(track.soundSteps, appState.numMeasures, appState.beatConfig) ?? Array(length).fill(null);
+        track.soundSteps = normalizeStepsOrEmpty(track.soundSteps, length);
         track.playbackInstrument = INST_TYPE[track.playbackInstrument] === 'melody'
             ? track.playbackInstrument
             : 'piano';
@@ -180,16 +102,11 @@ function normalizeTrack(track, length) {
         track.selectedChordOctave = track.selectedChordOctave ?? 4;
         if (Array.isArray(track.dividers) && track.dividers.length > 0) {
             track.dividers = track.dividers
-                .map((divider) => isLegacyResolution
-                    ? convertLegacyDivider(divider, appState.numMeasures, appState.beatConfig)
-                    : divider)
-                .filter((divider) => divider !== null);
+                .filter((divider) => typeof divider === 'number');
         } else {
             track.dividers = [0, STEPS_PER_MEASURE / 2];
         }
-        track.selectedDivPos = isLegacyResolution
-            ? convertLegacyDivider(track.selectedDivPos, appState.numMeasures, appState.beatConfig)
-            : (track.selectedDivPos ?? null);
+        track.selectedDivPos = track.selectedDivPos ?? null;
         track.selectedDrumRows = new Set(Array.isArray(track.selectedDrumRows) ? track.selectedDrumRows : []);
         return track;
     }
@@ -201,42 +118,11 @@ function normalizeTrack(track, length) {
     for (let oct = 1; oct <= 7; oct++) {
         CHROMATIC.forEach((note) => {
             const key = `${note}${oct}`;
-            stepsMap[key] = normalizeStepArray(stepsMap[key], length)
-                ?? expandLegacyStepArray(stepsMap[key], appState.numMeasures, appState.beatConfig)
-                ?? Array(length).fill(null);
+            stepsMap[key] = normalizeStepsOrEmpty(stepsMap[key], length);
         });
     }
     track.stepsMap = stepsMap;
     return track;
-}
-
-function migrateLegacyScaleSelection(data) {
-    const root = data.songRoot ?? data.songKeyRoot ?? DEFAULT_SONG_SETTINGS.root;
-    const legacyScaleType = data.songScaleType;
-    if (SCALE_FAMILY_MAP[data.songScaleFamily] && HARMONY_TYPE_MAP[data.songHarmony]) {
-        return normalizeSongSettings(root, data.songHarmony, data.songScaleFamily);
-    }
-    switch (legacyScaleType) {
-        case 'major':
-            return normalizeSongSettings(root, 'major', 'diatonic');
-        case 'harmonic_minor':
-            return normalizeSongSettings(root, 'minor', 'harmonic');
-        case 'melodic_minor':
-            return normalizeSongSettings(root, 'minor', 'melodic');
-        case 'blues':
-            return normalizeSongSettings(root, 'minor', 'blues');
-        case 'dorian':
-            return normalizeSongSettings(root, 'minor', 'dorian');
-        case 'mixolydian':
-            return normalizeSongSettings(root, 'major', 'mixolydian');
-        case 'minor_pentatonic':
-            return normalizeSongSettings(root, 'minor', 'pentatonic');
-        default:
-            if (data.songKeyMode === 'minor') {
-                return normalizeSongSettings(root, 'minor', 'harmonic');
-            }
-            return normalizeSongSettings(root, DEFAULT_SONG_SETTINGS.harmony, DEFAULT_SONG_SETTINGS.scaleFamily);
-    }
 }
 
 function serializeRepeatStates() {
@@ -289,9 +175,7 @@ function serializeTrackForSave(track) {
         id: track.id,
         instrument: track.instrument,
         muted: track.muted === true,
-        volume: typeof track.volume === 'number'
-            ? Math.max(0, Math.min(1, track.volume))
-            : 1,
+        volume: normalizeUnitValue(track.volume),
         eq: normalizeTrackEq(track.eq, track.instrument),
         tone: normalizeTrackTone(track.tone),
     };
@@ -357,10 +241,7 @@ export function createSaveData() {
 
 export function restoreFromData(data, options = {}) {
     if (!data || !Array.isArray(data.tracks)) return false;
-
-    if (data.version === 1 || !data.version) {
-        migrateV1toV2(data);
-    }
+    if (data.version !== DATA_VERSION) return false;
 
     appState.numMeasures = data.numMeasures ?? 4;
     appState.nextId = data.nextId ?? 0;
@@ -391,7 +272,11 @@ export function restoreFromData(data, options = {}) {
     appState.chordHintDismissed = data.chordHintDismissed === true;
     appState.melodicHintDismissed = data.melodicHintDismissed === true;
     appState.previewHintDismissed = data.previewHintDismissed === true;
-    const songSettings = migrateLegacyScaleSelection(data);
+    const songSettings = normalizeSongSettings(
+        data.songRoot ?? DEFAULT_SONG_SETTINGS.root,
+        data.songHarmony ?? DEFAULT_SONG_SETTINGS.harmony,
+        data.songScaleFamily ?? DEFAULT_SONG_SETTINGS.scaleFamily
+    );
     appState.songRoot = songSettings.root;
     appState.songHarmony = songSettings.harmony;
     appState.songScaleFamily = songSettings.scaleFamily;

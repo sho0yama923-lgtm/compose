@@ -1,6 +1,7 @@
 // player.js
 // Tone.js はグローバル変数として使用（HTMLでCDN読み込み済み）
 import { appState, STEPS_PER_BEAT, STEPS_PER_MEASURE } from '../../core/state.js';
+import { normalizeUnitValue } from '../../core/number-utils.js';
 import { getTrackPlaybackInstrument, syncTrackPlaybackChains } from '../tracks/instrument-map.js';
 import { getDrumSampleDefinition } from '../tracks/instruments/instrument-config.js';
 import { prepareTrackPlaybackInstrument } from '../tracks/instruments/playback-chains.js';
@@ -198,9 +199,7 @@ export async function previewDrumSample({
         return false;
     }
 
-    const previewVolume = typeof sourceTrack?.volume === 'number'
-        ? Math.max(0, Math.min(1, sourceTrack.volume))
-        : 1;
+    const previewVolume = normalizeUnitValue(sourceTrack?.volume);
     sampler.triggerAttackRelease(
         sampleDefinition.note,
         DRUM_PREVIEW_DURATION_SECONDS,
@@ -245,9 +244,7 @@ export async function previewTrackNote({
         return false;
     }
 
-    const previewVolume = typeof track.volume === 'number'
-        ? Math.max(0, Math.min(1, track.volume))
-        : 1;
+    const previewVolume = normalizeUnitValue(track.volume);
     sampler.triggerAttackRelease(note, durationSeconds, Tone.now(), previewVolume);
     return true;
 }

@@ -522,15 +522,13 @@ test('webkit mobile smoke check', async ({ page }) => {
   await expect(page.locator('.preview-tone-band-chip.high .preview-tone-band-chip-value')).toHaveText(initialHighSummary);
 });
 
-test('legacy songScaleType migrates on load', async ({ page }) => {
+test('current song settings restore on load', async ({ page }) => {
   await page.goto('/');
   await page.evaluate(() => {
     const current = JSON.parse(localStorage.getItem('compose_save'));
-    current.songKeyRoot = 'C';
-    current.songScaleType = 'minor_pentatonic';
-    delete current.songRoot;
-    delete current.songHarmony;
-    delete current.songScaleFamily;
+    current.songRoot = 'D';
+    current.songHarmony = 'minor';
+    current.songScaleFamily = 'pentatonic';
     localStorage.setItem('compose_save', JSON.stringify(current));
   });
   await page.reload();
@@ -540,7 +538,7 @@ test('legacy songScaleType migrates on load', async ({ page }) => {
     await restartBtn.click();
   }
 
-  await expect(page.locator('.preview-song-root-select')).toHaveValue('C');
+  await expect(page.locator('.preview-song-root-select')).toHaveValue('D');
   await expect(page.locator('.preview-song-family-select')).toHaveValue('pentatonic');
   await expect(page.locator('.preview-harmony-btn.selected')).toContainText('m');
 });

@@ -5,6 +5,7 @@ import {
     getInstrumentBufferUrls,
     getInstrumentUrls,
 } from './instrument-config.js';
+import { clampNumber } from '../../../core/number-utils.js';
 import { TRACK_TONE_DEFAULTS, normalizeEqValue, normalizeTrackTone } from './track-tone.js';
 
 const ToneLib = globalThis.Tone;
@@ -52,7 +53,7 @@ const MASTER_BUS_CONFIG = {
 };
 
 function getCompressionSettings(amount) {
-    const normalized = Math.max(0, Math.min(100, amount)) / 100;
+    const normalized = clampNumber(amount, 0, 100) / 100;
     return {
         threshold: -10 - normalized * 20,
         ratio: 1 + normalized * 3.75,

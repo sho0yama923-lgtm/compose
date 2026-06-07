@@ -2,6 +2,7 @@ import {
     appState,
     getNormalizedPlayRangeMeasures,
 } from '../core/state.js';
+import { clampNumber } from '../core/number-utils.js';
 import { addMeasure, clearTrackMeasure, removeMeasure } from '../features/tracks/tracks-controller.js';
 
 export function buildSeekBar(renderEditor) {
@@ -224,7 +225,7 @@ function startRangeDrag({ event, type, rail, refreshTimeline, renderEditor }) {
     const onMove = (moveEvent) => {
         const rect = rail.getBoundingClientRect();
         if (!rect.width) return;
-        const ratio = Math.max(0, Math.min(1, (moveEvent.clientX - rect.left) / rect.width));
+        const ratio = clampNumber((moveEvent.clientX - rect.left) / rect.width, 0, 1);
         if (type === 'start') {
             const nextStart = clampMeasure(Math.floor(ratio * appState.numMeasures));
             appState.playRangeStartMeasure = Math.min(nextStart, appState.playRangeEndMeasure ?? nextStart);
@@ -257,7 +258,7 @@ function startHeadDrag({ event, rail, refreshTimeline, renderEditor }) {
     const onMove = (moveEvent) => {
         const rect = rail.getBoundingClientRect();
         if (!rect.width) return;
-        const ratio = Math.max(0, Math.min(1, (moveEvent.clientX - rect.left) / rect.width));
+        const ratio = clampNumber((moveEvent.clientX - rect.left) / rect.width, 0, 1);
         const nextMeasure = clampMeasure(Math.round(ratio * Math.max(0, appState.numMeasures - 1)));
         appState.currentMeasure = nextMeasure;
         appState.playheadStep = nextMeasure * 48;
