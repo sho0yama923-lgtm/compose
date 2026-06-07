@@ -1,12 +1,38 @@
 # coding-rules.md
 
-このファイルは、今後の実装で責務の混線や再生まわりの不安定化を防ぐためのルール集です。
+このファイルは、今後の実装でディレクトリ構成の煩雑化、責務の混線、再生まわりの不安定化を防ぐためのルール集です。
 
 ## 目的
 
 - サブエージェントごとに安全に担当ファイルを分けられるようにする
+- 新しいディレクトリやファイルを増やす前に、置き場所と依存方向を判断できるようにする
 - 再生や保存のような不安定になりやすい経路で、責務重複を増やさない
 - 一時しのぎの分岐や引数追加で巨大ファイルを延命しない
+
+## ディレクトリ設計ルール
+
+- `src/` はアプリ本体の正本とする
+- `src/main.js` は初期化、モジュール接続、起動時の最小フローだけを持つ
+- `src/core/` は UI を知らない純粋寄りロジック、共有 state、定数、変換処理だけを置く
+- `src/editors/` は編集画面の描画、DOM イベント、画面固有の UI 状態だけを置く
+- `src/features/` は保存、再生、トラック管理、bridge などの振る舞い単位のロジックを置く
+- `src/ui/` はアプリ外枠の UI だけを置き、個別 editor の詳細ロジックを持たない
+- `src/styles/` は CSS の正本とし、入口は `src/styles/editor.css` に固定する
+- `ios/` と `android/` は native 固有コードと wrapper のみを置く
+- Web / native の差分は `src/features/bridges/` で吸収し、editor から native API を直接呼ばない
+- 新しいトップレベルディレクトリは原則追加しない。必要な場合は `CODEBASE_GUIDE.md` とこのファイルを同時に更新する
+- `shared/`、`common/`、`misc/`、`utils/` のような曖昧な広域置き場は作らない
+- 生成物、依存物、互換ファイルを現行実装の入口にしない
+
+## 依存方向
+
+- `main -> ui/editors/features -> core`
+- `editors -> features/core`
+- `features -> core`
+- `ui -> features/core`
+- `core` から `editors`、`features`、`ui`、native へ依存しない
+- `features` から editor の DOM 構造へ依存しない
+- `bridges` 以外から Capacitor / native API を直接呼ばない
 
 ## 境界ルール
 
@@ -15,6 +41,8 @@
 - `src/features/` は振る舞い単位のロジックだけを持つ
 - `src/core/` は純粋計算、共有 state、定数だけを持つ
 - `src/features/bridges/` は Web / native 差分の吸収だけを持つ
+- 現行コード、レガシー/互換、生成物の区分は `CODEBASE_GUIDE.md` に従う
+- レガシー/互換ファイルを新しい実装の入口にしない
 
 ## 再生ルール
 

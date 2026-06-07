@@ -36,9 +36,33 @@
 ## Xcode で確認すること
 
 - `Signing & Capabilities` の Team 設定
+- `General` の Bundle Identifier が `com.yamaoxiogo.compose` で、App Store Connect の登録と一致していること
+- `General` の Version / Build が提出予定の値になっていること
 - iPhone Simulator で起動すること
 - 実機で音が鳴ること
 - 保存と再読込が期待どおり動くこと
+- `PrivacyInfo.xcprivacy` が App target の Resources に含まれ、archive 後の `.app/PrivacyInfo.xcprivacy` に入ること
+
+## App Store 提出前チェック
+
+1. `npm run mobile:doctor`
+2. `npm run mobile:sync:ios`
+3. Xcode で `Any iOS Device` または実機を選び、`Product > Archive`
+4. Organizer で Validate App を通す
+5. App Store Connect の Privacy Nutrition Labels と `ios/App/PrivacyInfo.xcprivacy` の内容を一致させる
+
+現在の privacy manifest は、追跡なし、収集データなし、required reason API は file timestamp の `C617.1` として管理する。
+アプリ機能や SDK を増やしてデータ収集、UserDefaults、Disk Space、System Boot Time などの required reason API が増えた場合は、`ios/App/PrivacyInfo.xcprivacy` も更新する。
+
+## iOS 実機 acceptance flow
+
+- 新規プロジェクト作成後に保存できること
+- 保存済みプロジェクトを再読込できること
+- ドラム、コード、メロディをそれぞれ追加、編集、削除できること
+- 再生、停止、ループ、試聴が安定して動くこと
+- サイレントスイッチ ON でも音が鳴ること
+- 共有操作が iOS share sheet まで到達すること
+- アプリを終了して再起動しても保存済み状態が復元されること
 
 ## このアプリで特に見る点
 

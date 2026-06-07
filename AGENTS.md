@@ -1,18 +1,45 @@
 # AGENTS.md
 
-このファイルは、このリポジトリで実装作業を行うエージェント向けの共通ルール集です。
-既存の `CLAUDE.md` `PROGRESS.md` `CODEBASE_GUIDE.md` `DESIGN.md` `docs/architecture.md` に散っていた実装時ルールと参照方針を集約しています。
+このファイルは、このリポジトリで実装作業を行うエージェント向けの最初の入口です。
+人間向けの詳細メモを全部読み込ませるのではなく、Codex が安全に動くための優先順位、境界、確認コマンドをここに集約します。
+
+## 使い方
+
+- このファイルを最上位の作業契約として扱う。
+- さらに詳しい配置表は `CODEBASE_GUIDE.md`、一時的な状況復帰は `PROGRESS.md`、責務境界の詳細は `docs/coding-rules.md` を読む。
+- 現行コード、レガシー/互換、生成物の区別と、作業タイプ別に触る入口は `CODEBASE_GUIDE.md` を確認する。
+- `CLAUDE.md` は互換用の短い案内だけにし、実装ルールの正本として扱わない。
 
 ## 最初に確認するもの
 
 1. `PROGRESS.md`
 2. `CODEBASE_GUIDE.md`
-3. `src/main.js`
-4. `docs/coding-rules.md`
-5. 変更対象に対応する実装ファイル
+3. 変更対象に対応する実装ファイル
+4. ディレクトリ設計や責務分離が関係する時だけ `docs/coding-rules.md`
 
 - セッション開始時や指示が曖昧な時は、まず `PROGRESS.md` を読んで状態復帰すること。
 - 構成を変えたら `PROGRESS.md` と `CODEBASE_GUIDE.md` も必要に応じて更新すること。
+
+## よく使うコマンド
+
+- 開発サーバー: `npm run dev`
+- Web ビルド: `npm run build`
+- iOS 同期: `npm run mobile:sync:ios`
+- Android 同期: `npm run mobile:sync:android`
+- iOS プロジェクトを開く: `npm run mobile:open:ios`
+- Android プロジェクトを開く: `npm run mobile:open:android`
+- モバイル環境確認: `npm run mobile:doctor`
+- WebKit smoke: `npm run test:e2e:webkit`
+
+## ドキュメントの役割
+
+- `AGENTS.md`: エージェント向けの作業契約、優先順位、禁止事項
+- `PROGRESS.md`: 現在の状況、直近の変更、次に触る時の復帰メモ
+- `CODEBASE_GUIDE.md`: 作業タイプ別の入口、現行/レガシー/生成物の区分、ディレクトリ責務
+- `docs/coding-rules.md`: ディレクトリ設計、責務分離、再生、保存、bridge の詳細ルール
+- `docs/mobile-dev.md`: Capacitor / iOS / Android の日常運用
+- `docs/ios-build.md`: iOS ビルド runbook
+- `docs/android-build.md`: Android ビルド runbook
 
 ## プロダクト方針
 
@@ -33,7 +60,18 @@
 - 使っていないサブエージェントは閉じて空きを作り、枠を埋めたまま放置しない。
 - 新規サブエージェントは、本当に別責務として独立して進められる時だけ追加する。
 - 1つの不具合に対して複数の筋で修正を試す場合は、別の筋へ切り替える時点で、効果がなかった修正は戻してから次の筋を試す。
-- 作業の区切りやセッション終了前には `PROGRESS.md` を更新する。
+- 作業の区切り、構成変更、目標や次作業予定が変わった時は `PROGRESS.md` を更新する。
+- `PROGRESS.md` は `大目標`、`中目標`、`次の作業予定`、`変更履歴` の形を保つ。
+
+## 編集してよい場所と避ける場所
+
+- アプリ本体の正本は `src/`。
+- 現行コードとレガシー/互換ファイルの区分は `CODEBASE_GUIDE.md` を正本にする。
+- Web / native の境界は `src/features/bridges/`。
+- iOS native 固有コードは `ios/App/App/` の Swift / plist など必要箇所だけ。
+- Android native 固有コードは `android/` の設定や platform 固有実装だけ。
+- `ios/App/App/public/`、`ios/App/App/capacitor.config.json`、`android/app/src/main/assets/public/`、`android/app/src/main/assets/capacitor*.json` は sync 生成物なので手編集しない。
+- 生成物を変えたい時は `src/` または native 固有コードを直してから `npm run mobile:sync:*` を使う。
 
 ## UI変更フロー
 
@@ -119,10 +157,12 @@
   - `src/editors/preview/preview-song-settings.js`
   - `src/editors/melodic-editor.js`
 - 再生タイミングや音作り変更:
-- `src/features/playback/playback-controller.js`
-- `src/features/playback/scheduler.js`
-- `src/features/playback/score-builder.js`
-- `src/features/tracks/instruments/`
+  - `src/features/playback/playback-controller.js`
+  - `src/features/playback/scheduler.js`
+  - `src/features/playback/score-builder.js`
+  - `src/features/playback/score-serializer.js`
+  - `src/features/bridges/audio-bridge.js`
+  - `src/features/tracks/instruments/`
 - 繰り返しUI変更:
   - `src/editors/preview/preview-repeat.js`
   - `src/ui/bottom-bar.js`
