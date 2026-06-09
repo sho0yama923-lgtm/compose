@@ -42,9 +42,9 @@
     <div class="sidebar-footer">
         <button class="btn-add-track" id="addTrackBtn">＋ トラック追加</button>
         <div class="sidebar-actions">
-            <button class="btn-sidebar-action" id="exportBtn">↓ 保存</button>
+            <button class="btn-sidebar-action" id="resetBtn">一覧</button>
+            <button class="btn-sidebar-action" id="exportBtn">書出</button>
             <button class="btn-sidebar-action" id="importBtn">↑ 読込</button>
-            <button class="btn-sidebar-action" id="resetBtn">✕ 新規</button>
         </div>
         <input type="file" id="importFile" accept=".json" style="display:none">
     </div>
@@ -52,6 +52,7 @@
 
 <!-- ======= メインエリア ======= -->
 <main class="main" id="main">
+    <section class="project-home" id="projectHome" hidden></section>
     <div class="empty-state" id="emptyState">
         <div class="empty-state-icon loading" id="emptyStateIcon">🎹</div>
         <div class="empty-state-text" id="emptyStateText">

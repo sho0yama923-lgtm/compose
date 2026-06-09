@@ -3,6 +3,11 @@
 import { appState } from '../core/state.js';
 import { DURATION_LIST } from '../core/constants.js';
 import { getEffectiveDuration } from '../core/duration.js';
+import wholeNoteIconUrl from '../assets/全音符.svg';
+import halfNoteIconUrl from '../assets/二分音符.svg';
+import quarterNoteIconUrl from '../assets/四分音符.svg';
+import eighthNoteIconUrl from '../assets/八分音符.svg';
+import sixteenthNoteIconUrl from '../assets/十六分音符.svg';
 
 /**
  * デュレーションツールバーを生成してコンテナに追加
@@ -15,11 +20,6 @@ export function renderDurationToolbar(containerEl, onUpdate) {
 
     const modeRow = document.createElement('div');
     modeRow.className = 'duration-mode-row';
-
-    const modeLabel = document.createElement('span');
-    modeLabel.className = 'duration-row-label';
-    modeLabel.textContent = '編集線';
-    modeRow.appendChild(modeLabel);
 
     const modeTabs = document.createElement('div');
     modeTabs.className = 'grid-mode-tabs';
@@ -51,11 +51,6 @@ export function renderDurationToolbar(containerEl, onUpdate) {
 
     const valueRow = document.createElement('div');
     valueRow.className = 'duration-value-row';
-
-    const valueLabel = document.createElement('span');
-    valueLabel.className = 'duration-row-label';
-    valueLabel.textContent = '長さ';
-    valueRow.appendChild(valueLabel);
 
     const valueButtons = document.createElement('div');
     valueButtons.className = 'duration-value-buttons';
@@ -99,18 +94,19 @@ export function renderDurationToolbar(containerEl, onUpdate) {
 
     // --- 付点ボタン ---
     const canDot = appState.editorGridMode === 'normal' && ['8n', '4n', '2n'].includes(appState.selectedDuration);
-    const dotBtn = document.createElement('button');
-    dotBtn.className = 'dur-btn dotted' + (appState.dottedMode ? ' selected' : '');
-    dotBtn.type = 'button';
-    dotBtn.title = '付点';
-    dotBtn.setAttribute('aria-label', '付点');
-    dotBtn.innerHTML = '<span class="dur-icon-wrap"><span class="dur-icon">.</span></span>';
-    dotBtn.disabled = !canDot;
-    dotBtn.addEventListener('click', () => {
-        appState.dottedMode = !appState.dottedMode;
-        if (onUpdate) onUpdate();
-    });
-    valueButtons.appendChild(dotBtn);
+    if (canDot) {
+        const dotBtn = document.createElement('button');
+        dotBtn.className = 'dur-btn dotted' + (appState.dottedMode ? ' selected' : '');
+        dotBtn.type = 'button';
+        dotBtn.title = '付点';
+        dotBtn.setAttribute('aria-label', '付点');
+        dotBtn.innerHTML = '<span class="dur-icon-wrap"><span class="dur-icon">.</span></span>';
+        dotBtn.addEventListener('click', () => {
+            appState.dottedMode = !appState.dottedMode;
+            if (onUpdate) onUpdate();
+        });
+        valueButtons.appendChild(dotBtn);
+    }
 
     valueRow.appendChild(valueButtons);
     toolbar.appendChild(valueRow);
@@ -148,30 +144,21 @@ function getDurationButtonMeta(value) {
 }
 
 function buildDurationIcon(meta) {
-    const el = document.createElement('span');
-    el.className = `dur-icon css-note-icon ${meta.kind || 'eighth'}-note-icon`;
+    const iconEl = document.createElement('img');
+    iconEl.className = `dur-icon note-svg-icon ${meta.kind || 'eighth'}-note-icon`;
+    iconEl.src = getDurationIconUrl(meta.kind);
+    iconEl.alt = '';
+    iconEl.setAttribute('aria-hidden', 'true');
+    return iconEl;
+}
 
-    const headEl = document.createElement('span');
-    headEl.className = 'note-head';
-    el.appendChild(headEl);
-
-    if (meta.kind !== 'whole') {
-        const stemEl = document.createElement('span');
-        stemEl.className = 'note-stem';
-        el.appendChild(stemEl);
-    }
-
-    if (meta.kind === 'eighth' || meta.kind === 'sixteenth') {
-        const flagEl = document.createElement('span');
-        flagEl.className = 'note-flag note-flag-1';
-        el.appendChild(flagEl);
-    }
-
-    if (meta.kind === 'sixteenth') {
-        const flagEl = document.createElement('span');
-        flagEl.className = 'note-flag note-flag-2';
-        el.appendChild(flagEl);
-    }
-
-    return el;
+function getDurationIconUrl(kind = 'eighth') {
+    const map = {
+        whole: wholeNoteIconUrl,
+        half: halfNoteIconUrl,
+        quarter: quarterNoteIconUrl,
+        eighth: eighthNoteIconUrl,
+        sixteenth: sixteenthNoteIconUrl,
+    };
+    return map[kind] ?? eighthNoteIconUrl;
 }

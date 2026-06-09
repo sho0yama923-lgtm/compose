@@ -29,7 +29,7 @@
 .melody-topbar .oct-range-label {
     color: #334155;
     font-size: 10px;
-    padding-inline: 1px;
+    padding-inline: 0;
 }
 .melody-topbar .measure-actions {
     padding: 1px;
@@ -128,4 +128,3 @@
 .oct-mini-cell.on {
     background: #fff;
 }
-

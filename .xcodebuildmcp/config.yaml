@@ -1,0 +1,9 @@
+schemaVersion: 1
+sessionDefaults:
+  projectPath: /Users/yamaoxiogo/Desktop/GitHub/compose/ios/App/App.xcodeproj
+  scheme: App
+  configuration: Debug
+  simulatorName: iPhone 17
+  simulatorId: 650BD6F5-97D3-4370-84FB-72DC3C65999E
+  useLatestOS: true
+  simulatorPlatform: iOS Simulator

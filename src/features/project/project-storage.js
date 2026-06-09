@@ -1,4 +1,10 @@
 export {
+    initProjectStorage,
+    createProject,
+    openProject,
+    renameProject,
+    deleteProject,
+    showProjectList,
     saveState,
     loadState,
     exportJSON,

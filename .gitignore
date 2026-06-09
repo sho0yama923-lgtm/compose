@@ -3,6 +3,7 @@ node_modules/
 dist/
 playwright-report/
 test-results/
+.tmp/
 ios/**/xcuserdata/
 ios/**/*.xcuserstate
 ios/App/App/public/

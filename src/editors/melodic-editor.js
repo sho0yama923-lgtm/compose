@@ -81,7 +81,7 @@ export function renderMelodicEditor(track, editorEl) {
 
     const rangeLabel = document.createElement('span');
     rangeLabel.className = 'oct-range-label';
-    rangeLabel.textContent = `表示 ${track.viewBase} - ${Math.min(track.viewBase + 2, 7)}`;
+    rangeLabel.textContent = `表示 ${track.viewBase}オクターブ - ${Math.min(track.viewBase + 2, 7)}オクターブ`;
 
     const upBtn = document.createElement('button');
     upBtn.className = 'oct-range-btn';
@@ -278,18 +278,11 @@ function rebuildMelodyToolbar(toolbarEl, octCtrlEl) {
     const primaryRow = document.createElement('div');
     primaryRow.className = 'melody-toolbar-primary';
 
-    const divider = document.createElement('span');
-    divider.className = 'melody-toolbar-divider';
-    divider.textContent = '|';
-
     const octRow = document.createElement('div');
     octRow.className = 'melody-oct-row';
-    const octLabel = document.createElement('span');
-    octLabel.className = 'duration-row-label';
-    octLabel.textContent = 'oct';
-    octRow.append(octLabel, octCtrlEl);
+    octRow.appendChild(octCtrlEl);
 
-    primaryRow.append(modeRow, divider, octRow);
+    primaryRow.append(modeRow, octRow);
     toolbarEl.replaceChildren(primaryRow, valueRow);
 }
 

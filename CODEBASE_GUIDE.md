@@ -39,6 +39,12 @@
   - Capacitor root 設定
 - `playwright.config.js`、`tests/`
   - WebKit smoke の確認基盤
+- `.codex/environments/environment.toml`
+  - Codex app の project actions。Run / Build / WebKit smoke / iOS sync などの共有導線
+- `.xcodebuildmcp/config.yaml`
+  - XcodeBuildMCP の iOS Simulator session defaults。Codex から `build_run_sim` する時の正本
+- `scripts/run-ios-simulator.mjs`
+  - Terminal / Codex action から iOS Simulator へ sync、build、install、launch する補助 script
 
 ### レガシー / 互換 / 参照のみ
 
@@ -82,7 +88,7 @@
 - `src/features/bridges/`
   - audio / storage / file-share / device の Web / native 境界
 - `src/ui/`
-  - トップバー、下部バー、トラックドロワー、モーダル、オンボーディング
+  - プロジェクト一覧、トップバー、下部バー、トラックドロワー、モーダル、オンボーディング
 - `src/styles/`
   - CSS の正本。入口は `src/styles/editor.css`
 - `docs/`
@@ -94,6 +100,7 @@
 
 - `src/main.js`
 - `src/core/state.js`
+- `src/ui/project-home.js`
 - `src/ui/topbar.js`
 - `src/ui/track-drawer.js`
 - `src/editors/editor-router.js`
@@ -144,9 +151,12 @@
 - `src/features/project/project-storage.js`
 - `src/features/project/storage/storage-core.js`
 - `src/features/project/storage/storage-helpers.js`
+- `src/features/bridges/storage-bridge.js`
+- `src/ui/project-home.js`
 - `src/core/state.js`
 
 保存対象を増やす時は serialize / normalize / migrate を必ず同時に確認してください。
+プロジェクト一覧は `projectIndex` 相当のメタ情報と `project:{id}` 相当の本体保存を分け、編集画面の上書き保存は active project に対して行います。
 
 ### 再生タイミング / 音作り
 
@@ -178,9 +188,12 @@
 
 ### WebKit / ブラウザ確認
 
+- `.codex/environments/environment.toml`
 - `playwright.config.js`
 - `tests/webkit-smoke.spec.js`
 - `package.json`
+
+Codex app では `Run` action または `npm run dev -- --host 127.0.0.1` で dev server を起動し、in-app Browser / Browser plugin でローカル URL を確認する。ユーザーが別URLを指定していなければ、既定で `http://127.0.0.1:5173` を開く。具体手順は `docs/codex-workflow.md` の「UI 確認」を参照する。
 
 ### iPhone アプリ
 
@@ -188,6 +201,8 @@
 - `docs/ios-build.md`
 - `capacitor.config.json`
 - `package.json`
+- `.xcodebuildmcp/config.yaml`
+- `scripts/run-ios-simulator.mjs`
 - `ios/App/App/NativePlaybackPlugin.swift`
 - `ios/App/App/AppDelegate.swift`
 - `ios/App/App/Info.plist`

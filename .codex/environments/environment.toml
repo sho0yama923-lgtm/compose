@@ -1,0 +1,36 @@
+# Shared Codex app actions for this project.
+version = 1
+name = "Compose"
+
+[setup]
+script = ""
+
+[[actions]]
+name = "Run"
+icon = "run"
+command = "npm run dev -- --host 127.0.0.1"
+
+[[actions]]
+name = "Build"
+icon = "check"
+command = "npm run build"
+
+[[actions]]
+name = "WebKit Smoke"
+icon = "test"
+command = "npm run test:e2e:webkit"
+
+[[actions]]
+name = "iOS Sync"
+icon = "phone"
+command = "npm run mobile:sync:ios"
+
+[[actions]]
+name = "iOS Simulator"
+icon = "phone"
+command = "npm run mobile:run:ios:sim"
+
+[[actions]]
+name = "Mobile Doctor"
+icon = "stethoscope"
+command = "npm run mobile:doctor"

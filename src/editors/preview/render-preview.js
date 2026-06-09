@@ -13,7 +13,7 @@ import {
 import { selectTrack } from '../../features/tracks/tracks-controller.js';
 import { getMeasureStart } from '../../core/rhythm-grid.js';
 import { bindPreviewScroll } from './preview-shared.js';
-import { buildPreviewActionMenu, attachPreviewCardLongPress, closePreviewActions, buildTrackControls } from './preview-actions.js';
+import { buildPreviewActionMenu, closePreviewActions, buildTrackControls, buildTrackMuteToggle } from './preview-actions.js';
 import { buildRepeatSelectionRail, getRepeatCardStateClass, getRepeatGridStateClass, shouldShowRepeatEndRail, shouldShowRepeatStartRail } from './preview-repeat.js';
 import { buildTrackToneSheet } from './preview-tone-sheet.js';
 import { buildSongSettingsCard } from './preview-song-settings.js';
@@ -43,10 +43,10 @@ export function renderPreview(containerEl) {
         const card = document.createElement('div');
         card.className = 'preview-card'
             + getRepeatCardStateClass(track.id)
+            + getCopyRangeStateClass(track.id)
             + (track.muted ? ' is-muted' : '');
         card.dataset.trackId = String(track.id);
         card.dataset.instrument = track.instrument;
-        attachPreviewCardLongPress(card, track.id);
         if (shouldShowRepeatStartRail(track.id)) {
             card.appendChild(buildRepeatSelectionRail(track, 'start'));
         }
@@ -54,7 +54,7 @@ export function renderPreview(containerEl) {
         const headerEl = document.createElement('div');
         headerEl.className = 'preview-card-header';
         headerEl.addEventListener('click', (event) => {
-            if (event.target.closest('.preview-card-actions, .preview-track-controls')) return;
+            if (event.target.closest('.preview-card-actions, .preview-track-controls, .preview-track-toggle')) return;
             if (appState.previewActionMenuOpen && appState.previewActionTrackId === track.id) {
                 closePreviewActions(true);
                 return;
@@ -62,10 +62,15 @@ export function renderPreview(containerEl) {
             selectTrack(track.id);
         });
 
+        const titleGroupEl = document.createElement('div');
+        titleGroupEl.className = 'preview-card-title-group';
+        titleGroupEl.appendChild(buildTrackMuteToggle(track));
+
         const titleEl = document.createElement('span');
         titleEl.className = 'preview-card-title';
         titleEl.textContent = getTrackDisplayLabel(track, { showChordPlaybackInstrument: true });
-        headerEl.appendChild(titleEl);
+        titleGroupEl.appendChild(titleEl);
+        headerEl.appendChild(titleGroupEl);
 
         headerEl.appendChild(buildTrackControls(track));
         card.appendChild(headerEl);
@@ -77,7 +82,9 @@ export function renderPreview(containerEl) {
         }
 
         const gridEl = document.createElement('div');
-        gridEl.className = 'preview-grid' + getRepeatGridStateClass(track.id);
+        gridEl.className = 'preview-grid'
+            + getRepeatGridStateClass(track.id)
+            + getCopyRangeStateClass(track.id);
 
         const type = INST_TYPE[track.instrument];
         if (type === 'rhythm') {
@@ -135,4 +142,14 @@ export function renderPreview(containerEl) {
     if (toneTrack) {
         containerEl.appendChild(buildTrackToneSheet(toneTrack));
     }
+}
+
+function getCopyRangeStateClass(trackId) {
+    if (appState.previewRangeMode !== 'copy') return '';
+    if (appState.previewActionTrackId !== trackId) return '';
+    const startMeasure = appState.previewRangeStartMeasure ?? appState.currentMeasure;
+    const endMeasure = Math.max(startMeasure, appState.previewRangeEndMeasure ?? startMeasure);
+    return appState.currentMeasure >= startMeasure && appState.currentMeasure <= endMeasure
+        ? ' copy-range'
+        : '';
 }

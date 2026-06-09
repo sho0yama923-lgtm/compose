@@ -5,6 +5,9 @@ export const STEPS_PER_MEASURE = STEPS_PER_BEAT * 4;
 
 export const appState = {
     isBooting: true,
+    projectHomeVisible: true,
+    projectList: [],
+    activeProjectId: null,
     tracks: [],
     nextId: 0,
     activeTrackId: null,
@@ -133,4 +136,7 @@ export const callbacks = {
     renderSidebar: null,
     closeSidebar: null,
     saveState: null,
+    renderProjectHome: null,
+    showProjectHome: null,
+    showProjectEditor: null,
 };

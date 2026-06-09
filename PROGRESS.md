@@ -1,6 +1,6 @@
 # PROGRESS.md
 
-最終更新: 2026-06-07
+最終更新: 2026-06-09
 
 ## 進捗ルール
 
@@ -45,6 +45,35 @@
 
 ## 変更履歴
 
+- 2026-06-09: 音価ツールバーの3連バッジ位置を `top: 1px` に下げ、付点ボタンは使用可能な通常音価の時だけ表示するようにした。3連時の不要な空枠を削除し、`npm run build` が成功した
+- 2026-06-09: プレビューカードの繰り返しボタンに提供SVG `src/assets/repeat_loop_icon.svg` を採用した。ボタンは `30px`、アイコン表示は `22px` のまま、`npm run build` が成功した
+- 2026-06-09: プレビューカード右上の繰り返し / オプションボタンを `20px`、内側アイコン / 記号を `15px` に変更した。寸法は `--preview-header-small-button-size` / `--preview-header-small-icon-size` に集約し、`npm run build` が成功した
+- 2026-06-09: プレビューカード黒帯の右側余白を `8px` にしてボタンと音量を右詰めにし、繰り返しONボタン背景を緑に変更した。寸法と色は `--preview-header-right-gap` / `--preview-repeat-active-bg` / `--preview-repeat-active-border` に集約し、`npm run build` が成功した
+- 2026-06-09: プレビューカード黒帯の左側余白も `8px` にしてチェックと楽器名を左詰めにし、繰り返しボタンの緑表示を反映済み範囲の解除操作時だけに限定した。`npm run build` が成功した
+- 2026-06-09: プレビューカードの繰り返しボタンを常時表示にし、範囲未指定時は直前 `1` 小節を型範囲として現在小節へ繰り返す既定動作を追加した。1小節目など実行できない状態は disabled にし、`npm run build` が成功した
+- 2026-06-09: プレビューカードの3点リーダーをメニュー入口にし、音作り / コピー / ペーストを1段ずつ縦に並べた。コピー/ペーストの長押し起点は削除し、`npm run build` が成功した
+- 2026-06-09: コピー操作を専用パネル表示に変更し、選択トラック名、終点の `B小節`、`コピー範囲: A小節からB小節まで`、既存の前後/実行/中止操作を表示するようにした。`npm run build` が成功した
+- 2026-06-09: コピー範囲指定中は対象トラックの範囲内小節を青表示にし、繰り返しの黄/緑より優先されるようにした。コピー中止は3点メニュー自体を閉じる動作に変更し、`npm run build` が成功した
+- 2026-06-09: コピー範囲指定中の色を赤に統一し、カード範囲表示と下部小節バーに赤いコピー範囲ハイライトを表示するようにした。`npm run build` が成功した
+- 2026-06-09: 3点メニューのクリップボード説明チップを削除し、ペーストボタン押下後に「A小節からB小節をコピー中」/ ペースト / キャンセルの確認パネルを挟むようにした。`npm run build` が成功した
+- 2026-06-09: コピー/ペーストの範囲文言を1小節だけの時は `A小節` と表示するようにし、コピー範囲指定中は下部小節バーの移動操作を無効化した。`npm run build` が成功した
+- 2026-06-09: コピー範囲の終点選択をコピー専用パネル内の小型 `< >` から下部の既存小節移動ボタンへ移し、コピー中の赤枠を疑似要素で左右の繰り返しバーより上位レイヤーに表示するようにした。`npm run build` が成功した
+- 2026-06-09: 音価ツールバーのCSS描画音符を `src/assets/全音符.svg` / `二分音符.svg` / `四分音符.svg` / `八分音符.svg` / `十六分音符.svg` に置き換えた。選択中はCSS filterで白表示にし、`npm run build` が成功した
+- 2026-06-09: 音価ツールバーのSVG音符サイズを調整し、全音符は `18px`、二分/四分/八分/十六分音符は `26px`、アイコン枠は `26px` にした。`npm run build` が成功した
+- 2026-06-09: メロディ/コード系上部ツールバーから `編集線` / `長さ` / `oct` / 区切り線テキストを削除し、オクターブ範囲表示を `表示 3オクターブ - 5オクターブ` 形式に変更した。`npm run build` が成功した
+- 2026-06-08: テスト/確認方針を更新し、UI の見た目や WebView 内で完結する操作は Web / in-app Browser、内部ロジック、保存 bridge、native 再生、share sheet、iOS 固有挙動は iOS Simulator で確認する運用に整理した
+- 2026-06-08: テストは変更リスクに見合う最小限に留め、手動確認や局所的なブラウザ確認で十分な時は WebKit smoke や Simulator 起動まで広げない方針を明文化した
+- 2026-06-08: 新規プロジェクト作成時にプロジェクト名入力ダイアログを表示するようにした。入力欄高さは `48px`、操作ボタンは `44px` 以上、空欄時は作成ボタンを disabled にする。Web / in-app Browser で入力フローを確認し、`npm run build` が成功した
+- 2026-06-08: Mac 内 iOS Simulator 確認環境を構築した。`.xcodebuildmcp/config.yaml` に `ios/App/App.xcodeproj` / scheme `App` / `iPhone 17` を設定し、XcodeBuildMCP `build_run_sim` が成功、screenshot で起動画面を確認した
+- 2026-06-08: `npm run mobile:run:ios:sim` を追加し、Capacitor sync、Simulator boot、Xcode build、install、launch を一括実行できるようにした。DerivedData は `/tmp/compose-ios-sim-derived/`、bundle id は `com.yamaoxiogo.compose`
+- 2026-06-08: iOS Simulator 実機相当表示でプロジェクト一覧を確認し、プロジェクトがある時に空状態が残る CSS bug を `.project-home-empty[hidden]` で修正した。`npm run build` / `npm run test:e2e:webkit` / `npm run mobile:run:ios:sim` が成功
+- 2026-06-08: iOS 前提の保存体験として起動時にプロジェクト一覧を表示し、選択した active project へ基本上書き保存する構成に変更した。一覧 UI は左右 `20px`、カード高さ `94px`、名前変更/削除アイコン `44px`、下部アクション `48px`
+- 2026-06-08: 保存 bridge を project index / active project / project body の複数保存に対応させ、Web は localStorage、native は Library 配下の app 内部ファイルへ保存する形にした。Files app は JSON 読込/書出の共有・バックアップ導線として残す
+- 2026-06-08: `npm run build` と `npm run test:e2e:webkit` が成功し、Codex in-app Browser で一覧表示、新規作成、リロード後の一覧から再オープン、主要寸法、コンソールエラーなしを確認した
+- 2026-06-07: プレビューカードの発音チェックをカード左上のタイトル横へ移動し、「発音」テキストを削除した。チェックの見た目は `20px`、タップ領域は `44px`、右上ボタンは `28px`
+- 2026-06-08: プレビューカード右上の繰り返し / 音作りアイコンは円背景と枠を外し、タップ領域 `44px`、記号サイズ `28px` のアイコン単体表示へ変更した
+- 2026-06-07: Codex app / GPT-5.5 前提の運用に合わせ、`.codex/environments/environment.toml` に Run / Build / WebKit Smoke / iOS Sync / Mobile Doctor actions を追加した
+- 2026-06-07: `AGENTS.md`、`CODEBASE_GUIDE.md`、`docs/mobile-dev.md` に in-app Browser / Browser plugin で UI 確認する導線を追加し、`docs/codex-workflow.md` を新設した
 - 2026-06-07: リリース前のため旧保存形式の互換 migration を削除し、保存 version を 11 に上げ、復元を現行 48 step / `songRoot + songHarmony + songScaleFamily` 形式へ単純化した
 - 2026-06-07: 再生まわりの音量 clamp / 数値正規化を `src/core/number-utils.js` に集約し、native payload 生成の track lookup を Map 化した
 - 2026-06-07: `playback-controller.js` の再生 click handler を `buildPlaybackContext` / `startPlayback` へ分け、イベント登録と再生開始処理の責務を整理した

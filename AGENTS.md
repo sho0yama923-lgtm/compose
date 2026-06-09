@@ -27,9 +27,21 @@
 - iOS 同期: `npm run mobile:sync:ios`
 - Android 同期: `npm run mobile:sync:android`
 - iOS プロジェクトを開く: `npm run mobile:open:ios`
+- iOS Simulator 起動: `npm run mobile:run:ios:sim`
 - Android プロジェクトを開く: `npm run mobile:open:android`
 - モバイル環境確認: `npm run mobile:doctor`
 - WebKit smoke: `npm run test:e2e:webkit`
+
+## Codex / GPT-5.5 前提の運用
+
+- Codex app の project actions は `.codex/environments/environment.toml` を正本にする。
+- Codex app 上では `Run` action で Vite dev server を起動し、in-app Browser / Browser plugin で `http://127.0.0.1:5173` などのローカル表示を確認できる。
+- このリポジトリで in-app Browser / Browser plugin を使う時、ユーザーが別URLを指定していなければ既定で `http://127.0.0.1:5173` を開く。
+- ブラウザの具体的な開き方は `docs/codex-workflow.md` の「UI 確認」を正本にし、毎回調査し直さずその手順に従う。
+- UI 実装後の見た目確認は、Web で十分なら Codex 内の in-app Browser で行い、必要に応じてスクリーンショット、DOM 状態、コンソールエラーを確認する。
+- 内部ロジック、保存 bridge、native 再生、share sheet、iOS 固有の挙動を確認する時は iOS Simulator / 実機を使い、Build iOS Apps / XcodeBuildMCP を優先する。
+- Appshots は、Xcode や Simulator など Codex の通常ツールで読みにくい画面状態を共有する時に使う。
+- モデル選択はセッションや Codex 設定側の責務とし、リポジトリ内に特定モデルを固定しない。
 
 ## ドキュメントの役割
 
@@ -40,6 +52,7 @@
 - `docs/mobile-dev.md`: Capacitor / iOS / Android の日常運用
 - `docs/ios-build.md`: iOS ビルド runbook
 - `docs/android-build.md`: Android ビルド runbook
+- `docs/codex-workflow.md`: Codex app actions、in-app Browser、Appshots を使った確認導線
 
 ## プロダクト方針
 
@@ -86,9 +99,17 @@
 ## テストと確認
 
 - 基本方針として、仕様通り動くかの最終確認はユーザーの手動確認を前提とする。
-- 不要なテストコード追加や、自律的なブラウザ確認を前提にしない。
+- テストはなるべく複雑にせず、変更のリスクに見合う最小限に留める。
+- まずは小さな手動確認、ブラウザ確認、既存コマンドの順に選び、広い smoke や Simulator 確認は必要な時だけ使う。
+- UI 変更や表示崩れだけの確認は、Web 表示で十分なら Codex app の in-app Browser / Browser plugin を優先する。
+- 内部ロジック、保存、再生、bridge、Capacitor plugin、iOS 権限や共有など、Web だけでは判断できない確認は iOS Simulator を使う。
+- 不要なテストコード追加は避ける。新規テストは、手動確認や既存確認だけでは再発防止が弱い時に限る。
+- Web UI / DOM 回帰は、ブラウザ確認で足りる場合はそこで止め、既存 smoke は回帰リスクがある時だけ使う。
 - ただし既存の確認基盤が必要な変更では、既存の `playwright` / スモークテスト資産を読む。
+- WebKit smoke は Web 回帰の確認に使い、iOS 内部ロジックや native 挙動の代替にはしない。
 - 実ブラウザや WebKit 確認が必要になった場合は、`playwright.config.js` `tests/webkit-smoke.spec.js` `start.command` を参照する。
+- Codex 内 Browser 確認の基本手順は、`npm run dev -- --host 127.0.0.1` を起動し、in-app Browser でローカル URL を開いて対象画面を操作する。
+- iOS Simulator 確認の基本手順は、`npm run mobile:run:ios:sim` または XcodeBuildMCP `build_run_sim` でアプリを起動し、必要に応じて screenshot / logs を確認する。
 
 ## モバイルUI制約
 

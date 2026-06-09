@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="146.04968mm"
+   height="88.899811mm"
+   viewBox="0 0 146.04968 88.899811"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4.4 (dcaf3e7, 2026-05-05)"
+   sodipodi:docname="全音符.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="0.23578927"
+     inkscape:cx="413.50482"
+     inkscape:cy="288.39311"
+     inkscape:window-width="1277"
+     inkscape:window-height="661"
+     inkscape:window-x="0"
+     inkscape:window-y="30"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-35.00027,-100.00008)">
+    <path
+       d="m 35.00027,144.09721 q 0,-13.05275 9.524979,-22.9305 9.52498,-9.87776 25.752722,-15.52219 16.580519,-5.64444 36.336029,-5.64444 20.10829,0 37.04159,5.64444 16.93329,5.29165 27.16383,15.16941 10.23053,9.87775 10.23053,23.28328 0,13.7583 -9.87775,23.98884 -9.87776,9.87775 -26.45828,15.52219 -16.22774,5.29165 -35.98326,5.29165 -19.755508,0 -36.688804,-5.29165 Q 55.461337,178.31658 45.230803,168.43882 35.00027,158.20829 35.00027,144.09721 Z m 81.13871,37.74714 q 11.99442,0 16.22774,-8.81942 4.58611,-8.81943 4.58611,-20.81385 0,-12.34719 -5.29166,-22.57773 -4.93888,-10.23053 -13.40553,-16.22774 -8.46664,-6.34998 -19.049954,-6.34998 -11.994419,0 -16.227743,8.81942 -3.880547,8.81943 -3.880547,20.81384 0,11.99442 4.938878,22.22496 4.938878,10.23053 13.052749,16.58051 8.466647,6.34999 19.049957,6.34999 z"
+       id="text1"
+       style="font-size:352.777px;font-family:'Noto Music';-inkscape-font-specification:'Noto Music';stroke-width:0.264583"
+       aria-label="𝅝" />
+  </g>
+</svg>

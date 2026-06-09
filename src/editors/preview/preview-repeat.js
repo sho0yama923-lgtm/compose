@@ -104,6 +104,23 @@ function extendRepeatByOneMeasure(track) {
     );
 }
 
+function repeatPreviousMeasure(track) {
+    if (!isDefaultPreviousRepeatReady(track.id)) return;
+    const sourceMeasure = appState.currentMeasure - 1;
+    const targetMeasure = appState.currentMeasure;
+    const repeatState = ensureRepeatState(track.id);
+    repeatState.sourceStartMeasure = sourceMeasure;
+    repeatState.sourceEndMeasure = sourceMeasure;
+    repeatState.targetEndMeasure = sourceMeasure;
+    repeatState.modeStep = 'ready';
+    repeatState.restoreMeasures = {};
+    repeatState.sourceSnapshot = copyTrackMeasureRange(track, sourceMeasure, sourceMeasure);
+    saveRepeatMeasureSnapshot(track, repeatState, targetMeasure);
+    repeatTrackMeasureRange(track, sourceMeasure, sourceMeasure, targetMeasure);
+    repeatState.targetEndMeasure = targetMeasure;
+    repeatState.sourceSnapshot = copyTrackMeasureRange(track, sourceMeasure, sourceMeasure);
+}
+
 export function shouldShowRepeatEndRail(trackId) {
     const repeatState = getRepeatState(trackId);
     if (!repeatState || repeatState.sourceStartMeasure === null) return false;
@@ -147,6 +164,12 @@ function isRepeatClearReady(trackId) {
     return appState.currentMeasure > sourceEnd && appState.currentMeasure <= targetEnd;
 }
 
+function isDefaultPreviousRepeatReady(trackId) {
+    const repeatState = getRepeatState(trackId);
+    return appState.currentMeasure > 0
+        && (!repeatState || repeatState.sourceStartMeasure === null);
+}
+
 function isRepeatRailActive(trackId, side) {
     const repeatState = getRepeatState(trackId);
     if (!repeatState || repeatState.sourceStartMeasure === null) return false;
@@ -157,19 +180,32 @@ function isRepeatRailActive(trackId, side) {
 }
 
 export function shouldShowRepeatButton(trackId) {
-    return isRepeatAppendReady(trackId) || isRepeatClearReady(trackId);
+    return true;
+}
+
+export function isRepeatButtonActive(trackId) {
+    return isRepeatClearReady(trackId);
+}
+
+export function isRepeatButtonDisabled(trackId) {
+    return !isRepeatAppendReady(trackId)
+        && !isRepeatClearReady(trackId)
+        && !isDefaultPreviousRepeatReady(trackId);
 }
 
 export function handleRepeatButton(track) {
     appState.lastTouchedTrackId = track.id;
-    const repeatState = getRepeatState(track.id);
-    if (!repeatState) return;
     if (isRepeatAppendReady(track.id)) {
         extendRepeatByOneMeasure(track);
         return;
     }
+    const repeatState = getRepeatState(track.id);
     if (isRepeatClearReady(track.id)) {
         restoreRepeatedMeasuresFrom(track, repeatState, appState.currentMeasure);
+        return;
+    }
+    if (isDefaultPreviousRepeatReady(track.id)) {
+        repeatPreviousMeasure(track);
     }
 }
 

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="104.77477mm"
+   height="356.30478mm"
+   viewBox="0 0 104.77477 356.30478"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4.4 (dcaf3e7, 2026-05-05)"
+   sodipodi:docname="二分音符.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="0.023162177"
+     inkscape:cx="2633.6039"
+     inkscape:cy="2892.6469"
+     inkscape:window-width="1274"
+     inkscape:window-height="617"
+     inkscape:window-x="0"
+     inkscape:window-y="30"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(599.20728,618.68278)">
+    <path
+       d="m -502.89916,-618.68278 h 8.46665 v 296.33269 q 0,11.28887 -5.99721,22.22495 -5.64443,10.58331 -15.52219,19.04996 -9.87775,8.46665 -21.51939,13.7583 -11.64164,4.93888 -23.28329,4.93888 -16.93329,0 -27.86938,-7.76109 -10.58331,-8.11387 -10.58331,-24.34161 0,-17.99163 9.87776,-32.10271 10.23053,-14.46386 26.45827,-22.57773 16.22774,-8.46665 34.57215,-8.46665 15.52219,0 25.39994,7.7611 z m -86.78314,332.66872 q 0,3.52777 2.46944,6.34999 2.82221,2.82222 7.40832,2.82222 12.34719,0 30.6916,-10.23054 12.34719,-7.05554 22.22495,-15.52219 10.23053,-8.81942 16.22774,-17.28607 5.99721,-8.81942 5.99721,-14.81663 0,-3.88055 -2.11666,-6.34999 -1.76389,-2.82222 -6.70277,-2.82222 -6.70276,0 -16.22774,4.23333 -9.52498,4.23332 -20.10829,10.93609 -10.23053,6.70276 -19.40273,14.81663 -9.17221,7.76109 -14.81664,15.16941 -5.64443,7.40832 -5.64443,12.69997 z"
+       id="text1"
+       style="font-size:352.777px;font-family:'Noto Music';-inkscape-font-specification:'Noto Music';stroke-width:0.264583"
+       aria-label="𝅗𝅥" />
+  </g>
+</svg>

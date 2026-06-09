@@ -84,6 +84,12 @@ async function clickChordDetailKey(page, note) {
   });
 }
 
+async function createNewProject(page, name) {
+  await page.locator('[data-project-new="true"]').last().click();
+  await page.locator('[data-project-create-name="true"]').fill(name);
+  await page.locator('[data-project-create-submit="true"]').click();
+}
+
 async function storeChordDetailSheetReference(page) {
   await page.evaluate(() => {
     window.__chordDetailSheetRef = document.querySelector('.chord-detail-sheet');
@@ -167,6 +173,8 @@ test('webkit mobile smoke check', async ({ page }) => {
   });
   await page.reload();
 
+  await expect(page.locator('#projectHome')).toBeVisible();
+  await createNewProject(page, 'Smoke Project');
   await expect(page.locator('#trackList li')).toHaveCount(3);
   await expect(page.locator('#trackModeBtn')).toContainText('Piano');
   await expect(page.locator('#viewToggleBtn')).toContainText('全体');
@@ -479,6 +487,9 @@ test('webkit mobile smoke check', async ({ page }) => {
 
   await page.reload();
 
+  await expect(page.locator('#projectHome')).toBeVisible();
+  await page.locator('.project-home-card').first().click();
+
   const restartBtn = page.getByRole('button', { name: 'はじめる' });
   if (await restartBtn.isVisible().catch(() => false)) {
     await restartBtn.click();
@@ -524,14 +535,19 @@ test('webkit mobile smoke check', async ({ page }) => {
 
 test('current song settings restore on load', async ({ page }) => {
   await page.goto('/');
+  await createNewProject(page, 'Settings Project');
+  await expect(page.locator('.preview-song-root-select')).toHaveValue('C');
   await page.evaluate(() => {
-    const current = JSON.parse(localStorage.getItem('compose_save'));
+    const activeProjectId = localStorage.getItem('compose_active_project_id');
+    const current = JSON.parse(localStorage.getItem(`compose_project:${activeProjectId}`));
     current.songRoot = 'D';
     current.songHarmony = 'minor';
     current.songScaleFamily = 'pentatonic';
-    localStorage.setItem('compose_save', JSON.stringify(current));
+    localStorage.setItem(`compose_project:${activeProjectId}`, JSON.stringify(current));
   });
   await page.reload();
+  await expect(page.locator('#projectHome')).toBeVisible();
+  await page.locator('.project-home-card').first().click();
 
   const restartBtn = page.getByRole('button', { name: 'はじめる' });
   if (await restartBtn.isVisible().catch(() => false)) {

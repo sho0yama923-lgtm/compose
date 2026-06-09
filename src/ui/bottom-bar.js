@@ -64,10 +64,14 @@ export function syncMeasureSeekUI() {
         rail.style.setProperty('--measure-current-left', `${getCurrentHeadMeasureRatio() * 100}%`);
     }
     document.querySelectorAll('.mb-nav-btn[data-direction="-1"]').forEach((btn) => {
-        btn.disabled = appState.currentMeasure <= 0;
+        btn.disabled = isCopyRangeEditing()
+            ? !canMoveCopyRangeEnd(-1)
+            : appState.currentMeasure <= 0;
     });
     document.querySelectorAll('.mb-nav-btn[data-direction="1"]').forEach((btn) => {
-        btn.disabled = appState.currentMeasure >= appState.numMeasures - 1;
+        btn.disabled = isCopyRangeEditing()
+            ? !canMoveCopyRangeEnd(1)
+            : appState.currentMeasure >= appState.numMeasures - 1;
     });
 }
 
@@ -142,6 +146,10 @@ function buildRangeTimeline(renderEditor, seekLabel) {
     rangeBand.className = 'measure-range-highlight';
     rail.appendChild(rangeBand);
 
+    const copyRangeBand = document.createElement('div');
+    copyRangeBand.className = 'measure-copy-range-highlight';
+    rail.appendChild(copyRangeBand);
+
     const currentMarker = document.createElement('div');
     currentMarker.className = 'measure-current-marker';
     rail.appendChild(currentMarker);
@@ -165,6 +173,7 @@ function buildRangeTimeline(renderEditor, seekLabel) {
         rail.style.setProperty('--measure-range-left', `${left}%`);
         rail.style.setProperty('--measure-range-width', `${width}%`);
         rail.style.setProperty('--measure-current-left', `${current}%`);
+        updateCopyRangeBand(rail, copyRangeBand);
         startMarker.style.left = `${left}%`;
         endMarker.style.left = `${((playRange.endMeasure + 1) / appState.numMeasures) * 100}%`;
         startMarker.title = `再生開始: ${playRange.startMeasure + 1}小節目`;
@@ -173,6 +182,7 @@ function buildRangeTimeline(renderEditor, seekLabel) {
     };
 
     const onRailPointerDown = (event) => {
+        if (isCopyRangeEditing()) return;
         if (event.target.closest('.measure-point-marker')) return;
         if (event.target.closest('.measure-current-marker')) return;
         const rect = rail.getBoundingClientRect();
@@ -187,6 +197,7 @@ function buildRangeTimeline(renderEditor, seekLabel) {
     rail.addEventListener('pointerdown', onRailPointerDown);
 
     startMarker.addEventListener('pointerdown', (event) => {
+        if (isCopyRangeEditing()) return;
         startRangeDrag({
             event,
             type: 'start',
@@ -196,6 +207,7 @@ function buildRangeTimeline(renderEditor, seekLabel) {
         });
     });
     endMarker.addEventListener('pointerdown', (event) => {
+        if (isCopyRangeEditing()) return;
         startRangeDrag({
             event,
             type: 'end',
@@ -205,6 +217,7 @@ function buildRangeTimeline(renderEditor, seekLabel) {
         });
     });
     currentMarker.addEventListener('pointerdown', (event) => {
+        if (isCopyRangeEditing()) return;
         startHeadDrag({
             event,
             rail,
@@ -215,6 +228,21 @@ function buildRangeTimeline(renderEditor, seekLabel) {
 
     refreshTimeline();
     return timelineSection;
+}
+
+function updateCopyRangeBand(rail, copyRangeBand) {
+    const hasCopyRange = appState.previewRangeMode === 'copy'
+        && appState.previewRangeStartMeasure !== null
+        && appState.previewRangeEndMeasure !== null;
+    copyRangeBand.hidden = !hasCopyRange;
+    rail.classList.toggle('has-copy-range', hasCopyRange);
+    if (!hasCopyRange) return;
+    const startMeasure = appState.previewRangeStartMeasure;
+    const endMeasure = Math.max(startMeasure, appState.previewRangeEndMeasure);
+    const left = (startMeasure / appState.numMeasures) * 100;
+    const width = ((endMeasure - startMeasure + 1) / appState.numMeasures) * 100;
+    rail.style.setProperty('--measure-copy-range-left', `${left}%`);
+    rail.style.setProperty('--measure-copy-range-width', `${width}%`);
 }
 
 function startRangeDrag({ event, type, rail, refreshTimeline, renderEditor }) {
@@ -382,9 +410,11 @@ function buildSeekNavButton({ direction, icon, label, renderEditor }) {
     button.className = 'mb-btn mb-nav-btn';
     button.dataset.direction = String(direction);
     button.innerHTML = `${icon}<span class="mb-btn-guide">${label}</span>`;
-    button.disabled = direction < 0
+    button.disabled = isCopyRangeEditing()
+        ? !canMoveCopyRangeEnd(direction)
+        : (direction < 0
         ? appState.currentMeasure <= 0
-        : appState.currentMeasure >= appState.numMeasures - 1;
+        : appState.currentMeasure >= appState.numMeasures - 1);
     button.addEventListener('click', () => {
         moveCurrentMeasure(direction, renderEditor);
     });
@@ -412,10 +442,36 @@ function buildSeekNavButton({ direction, icon, label, renderEditor }) {
 }
 
 function moveCurrentMeasure(direction, renderEditor) {
+    if (isCopyRangeEditing()) {
+        return moveCopyRangeEnd(direction, renderEditor);
+    }
     const nextMeasure = clampMeasure(appState.currentMeasure + direction);
     if (nextMeasure === appState.currentMeasure) return false;
     appState.currentMeasure = nextMeasure;
     appState.playheadStep = nextMeasure * 48;
+    renderEditor();
+    return true;
+}
+
+function isCopyRangeEditing() {
+    return appState.previewRangeMode === 'copy';
+}
+
+function canMoveCopyRangeEnd(direction) {
+    if (!isCopyRangeEditing()) return false;
+    const startMeasure = appState.previewRangeStartMeasure ?? appState.currentMeasure;
+    const endMeasure = appState.previewRangeEndMeasure ?? startMeasure;
+    const nextEnd = endMeasure + direction;
+    return nextEnd >= startMeasure && nextEnd < appState.numMeasures;
+}
+
+function moveCopyRangeEnd(direction, renderEditor) {
+    if (!canMoveCopyRangeEnd(direction)) return false;
+    const startMeasure = appState.previewRangeStartMeasure ?? appState.currentMeasure;
+    const nextEnd = Math.max(startMeasure, Math.min(appState.numMeasures - 1, (appState.previewRangeEndMeasure ?? startMeasure) + direction));
+    appState.previewRangeEndMeasure = nextEnd;
+    appState.currentMeasure = nextEnd;
+    appState.playheadStep = nextEnd * 48;
     renderEditor();
     return true;
 }

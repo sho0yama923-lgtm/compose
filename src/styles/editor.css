@@ -3,6 +3,7 @@
 @import "./base/common-editor.css";
 @import "./editors/melodic.css";
 @import "./components/modal.css";
+@import "./components/project-home.css";
 @import "./base/responsive.css";
 @import "./editors/chord.css";
 @import "./components/measure-controls.css";

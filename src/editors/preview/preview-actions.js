@@ -1,19 +1,38 @@
 import { appState, callbacks, clearPreviewCopyState } from '../../core/state.js';
-import { INST_TYPE } from '../../features/tracks/instrument-map.js';
+import { INST_TYPE, getTrackDisplayLabel } from '../../features/tracks/instrument-map.js';
 import { copyTrackMeasureRange, pasteTrackMeasureRange } from '../../features/tracks/tracks-controller.js';
-import { LONG_PRESS_MS } from './preview-shared.js';
-import { handleRepeatButton, shouldShowRepeatButton } from './preview-repeat.js';
+import repeatLoopIconUrl from '../../assets/repeat_loop_icon.svg';
+import { handleRepeatButton, isRepeatButtonActive, isRepeatButtonDisabled, shouldShowRepeatButton } from './preview-repeat.js';
 
 export function buildPreviewActionMenu(track) {
     const menuEl = document.createElement('div');
     menuEl.className = 'preview-card-actions';
     menuEl.addEventListener('click', (event) => event.stopPropagation());
 
+    if (appState.previewRangeMode === 'copy') {
+        menuEl.appendChild(buildPreviewRangePicker(track));
+        return menuEl;
+    }
+
+    if (appState.previewRangeMode === 'paste-confirm') {
+        menuEl.appendChild(buildPreviewPasteConfirm(track));
+        return menuEl;
+    }
+
     const sameTypeClipboard = appState.clipboard
         && appState.clipboard.trackType === INST_TYPE[track.instrument];
 
     const actionRow = document.createElement('div');
     actionRow.className = 'preview-card-action-row';
+
+    const toneBtn = document.createElement('button');
+    toneBtn.type = 'button';
+    toneBtn.className = 'preview-card-action-btn';
+    toneBtn.textContent = '音作り';
+    toneBtn.addEventListener('click', () => {
+        appState.previewToneTrackId = track.id;
+        closePreviewActions(true);
+    });
 
     const copyBtn = document.createElement('button');
     copyBtn.type = 'button';
@@ -33,20 +52,12 @@ export function buildPreviewActionMenu(track) {
     pasteBtn.disabled = !sameTypeClipboard;
     pasteBtn.addEventListener('click', () => {
         if (!sameTypeClipboard) return;
-        pasteTrackMeasureRange(track, appState.currentMeasure, appState.clipboard);
-        closePreviewActions(true);
+        appState.previewRangeMode = 'paste-confirm';
+        callbacks.renderEditor?.();
     });
 
-    actionRow.append(copyBtn, pasteBtn);
+    actionRow.append(toneBtn, copyBtn, pasteBtn);
     menuEl.appendChild(actionRow);
-
-    if (appState.clipboard?.trackType === INST_TYPE[track.instrument]) {
-        menuEl.appendChild(buildClipboardSummary());
-    }
-
-    if (appState.previewRangeMode === 'copy') {
-        menuEl.appendChild(buildPreviewRangePicker(track));
-    }
 
     return menuEl;
 }
@@ -59,46 +70,21 @@ function buildPreviewRangePicker(track) {
 
     const titleEl = document.createElement('div');
     titleEl.className = 'preview-range-title';
-    titleEl.textContent = 'コピー範囲';
+    titleEl.textContent = getTrackDisplayLabel(track, { showChordPlaybackInstrument: true });
     pickerEl.appendChild(titleEl);
 
     const statusEl = document.createElement('div');
     statusEl.className = 'preview-range-status';
-    statusEl.textContent = `コピー元 ${startMeasure + 1} → ${endMeasure + 1}小節`;
+    statusEl.textContent = `${endMeasure + 1}小節`;
     pickerEl.appendChild(statusEl);
 
     const currentEl = document.createElement('div');
     currentEl.className = 'preview-range-current';
-    currentEl.textContent = endMeasure > appState.numMeasures - 1
-        ? `選択中 ${endMeasure + 1}小節（未作成）`
-        : `表示中 ${appState.currentMeasure + 1}小節`;
+    currentEl.textContent = `コピー範囲: ${formatMeasureRange(startMeasure, endMeasure)}`;
     pickerEl.appendChild(currentEl);
 
     const rangeRow = document.createElement('div');
     rangeRow.className = 'preview-range-controls';
-
-    const prevBtn = document.createElement('button');
-    prevBtn.type = 'button';
-    prevBtn.className = 'preview-card-action-btn compact';
-    prevBtn.textContent = '‹';
-    prevBtn.disabled = endMeasure <= startMeasure;
-    prevBtn.addEventListener('click', () => {
-        appState.previewRangeEndMeasure = Math.max(startMeasure, endMeasure - 1);
-        appState.currentMeasure = Math.min(appState.previewRangeEndMeasure, appState.numMeasures - 1);
-        callbacks.renderEditor?.();
-    });
-
-    const nextBtn = document.createElement('button');
-    nextBtn.type = 'button';
-    nextBtn.className = 'preview-card-action-btn compact';
-    nextBtn.textContent = '›';
-    const maxEndMeasure = appState.numMeasures - 1;
-    nextBtn.disabled = endMeasure >= maxEndMeasure;
-    nextBtn.addEventListener('click', () => {
-        appState.previewRangeEndMeasure = Math.min(maxEndMeasure, endMeasure + 1);
-        appState.currentMeasure = Math.min(appState.previewRangeEndMeasure, appState.numMeasures - 1);
-        callbacks.renderEditor?.();
-    });
 
     const confirmBtn = document.createElement('button');
     confirmBtn.type = 'button';
@@ -114,79 +100,57 @@ function buildPreviewRangePicker(track) {
     cancelBtn.className = 'preview-card-action-btn compact';
     cancelBtn.textContent = '中止';
     cancelBtn.addEventListener('click', () => {
-        clearPreviewCopyState();
-        callbacks.renderEditor?.();
+        closePreviewActions(true);
     });
 
-    rangeRow.append(prevBtn, nextBtn, confirmBtn, cancelBtn);
+    rangeRow.append(confirmBtn, cancelBtn);
     pickerEl.appendChild(rangeRow);
     return pickerEl;
 }
 
-function buildClipboardSummary() {
-    const infoEl = document.createElement('div');
-    infoEl.className = 'preview-clipboard-summary';
+function buildPreviewPasteConfirm(track) {
+    const confirmEl = document.createElement('div');
+    confirmEl.className = 'preview-paste-confirm';
 
-    const typeEl = document.createElement('span');
-    typeEl.className = 'preview-clipboard-chip source';
-    typeEl.textContent = `型 ${appState.clipboard.sourceStartMeasure + 1}→${appState.clipboard.sourceEndMeasure + 1}`;
+    const clipboard = appState.clipboard;
+    const sourceStart = (clipboard?.sourceStartMeasure ?? 0) + 1;
+    const sourceEnd = (clipboard?.sourceEndMeasure ?? clipboard?.sourceStartMeasure ?? 0) + 1;
 
-    const descEl = document.createElement('span');
-    descEl.className = 'preview-clipboard-chip target';
-    descEl.textContent = appState.previewActionTrackId === appState.clipboard.sourceTrackId
-        ? '同じトラックへすぐペースト'
-        : '別トラックにもペースト可能';
+    const titleEl = document.createElement('div');
+    titleEl.className = 'preview-paste-title';
+    titleEl.textContent = `${formatMeasureRange(sourceStart - 1, sourceEnd - 1)}をコピー中`;
 
-    infoEl.append(typeEl, descEl);
-    return infoEl;
+    const rowEl = document.createElement('div');
+    rowEl.className = 'preview-paste-controls';
+
+    const pasteBtn = document.createElement('button');
+    pasteBtn.type = 'button';
+    pasteBtn.className = 'preview-card-action-btn confirm';
+    pasteBtn.textContent = 'ペースト';
+    pasteBtn.addEventListener('click', () => {
+        pasteTrackMeasureRange(track, appState.currentMeasure, appState.clipboard);
+        closePreviewActions(true);
+    });
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.className = 'preview-card-action-btn';
+    cancelBtn.textContent = 'キャンセル';
+    cancelBtn.addEventListener('click', () => {
+        closePreviewActions(true);
+    });
+
+    rowEl.append(pasteBtn, cancelBtn);
+    confirmEl.append(titleEl, rowEl);
+    return confirmEl;
 }
 
-export function attachPreviewCardLongPress(cardEl, trackId) {
-    let timerId = null;
-    let startX = 0;
-    let startY = 0;
-
-    const isInteractiveTarget = (target) => {
-        return target instanceof Element && !!target.closest('input, select, textarea, option');
-    };
-
-    const clearTimer = () => {
-        if (timerId !== null) {
-            clearTimeout(timerId);
-            timerId = null;
-        }
-    };
-
-    cardEl.addEventListener('pointerdown', (event) => {
-        if (event.target.closest('button, input, select, label, .preview-card-actions')) return;
-        startX = event.clientX;
-        startY = event.clientY;
-        clearTimer();
-        timerId = window.setTimeout(() => {
-            appState.previewActionTrackId = trackId;
-            appState.previewActionMenuOpen = true;
-            clearPreviewCopyState();
-            callbacks.renderEditor?.();
-        }, LONG_PRESS_MS);
-    });
-
-    cardEl.addEventListener('pointermove', (event) => {
-        if (timerId === null) return;
-        if (Math.abs(event.clientX - startX) > 8 || Math.abs(event.clientY - startY) > 8) {
-            clearTimer();
-        }
-    });
-    cardEl.addEventListener('pointerup', clearTimer);
-    cardEl.addEventListener('pointercancel', clearTimer);
-    cardEl.addEventListener('pointerleave', clearTimer);
-    cardEl.addEventListener('contextmenu', (event) => {
-        if (isInteractiveTarget(event.target)) return;
-        event.preventDefault();
-    });
-    cardEl.addEventListener('selectstart', (event) => {
-        if (isInteractiveTarget(event.target)) return;
-        event.preventDefault();
-    });
+function formatMeasureRange(startMeasure, endMeasure) {
+    const startLabel = startMeasure + 1;
+    const endLabel = endMeasure + 1;
+    return startLabel === endLabel
+        ? `${startLabel}小節`
+        : `${startLabel}小節から${endLabel}小節まで`;
 }
 
 export function closePreviewActions(shouldRender) {
@@ -196,31 +160,20 @@ export function closePreviewActions(shouldRender) {
     if (shouldRender) callbacks.renderEditor?.();
 }
 
+function buildRepeatIcon() {
+    const iconEl = document.createElement('img');
+    iconEl.className = 'preview-track-repeat-icon';
+    iconEl.src = repeatLoopIconUrl;
+    iconEl.alt = '';
+    iconEl.setAttribute('aria-hidden', 'true');
+    return iconEl;
+}
+
 export function buildTrackControls(track) {
     const controlsEl = document.createElement('div');
     controlsEl.className = 'preview-track-controls';
     controlsEl.dataset.trackId = String(track.id);
     controlsEl.addEventListener('click', (event) => event.stopPropagation());
-
-    const muteRow = document.createElement('div');
-    muteRow.className = 'preview-track-toggle-row';
-
-    const muteWrap = document.createElement('label');
-    muteWrap.className = 'preview-track-toggle';
-
-    const muteText = document.createElement('span');
-    muteText.textContent = '発音';
-
-    const muteInput = document.createElement('input');
-    muteInput.type = 'checkbox';
-    muteInput.checked = !track.muted;
-    muteInput.addEventListener('change', () => {
-        track.muted = !muteInput.checked;
-        callbacks.renderEditor?.();
-    });
-
-    muteWrap.append(muteText, muteInput);
-    muteRow.appendChild(muteWrap);
 
     const repeatSlot = document.createElement('div');
     repeatSlot.className = 'preview-track-repeat-slot';
@@ -228,10 +181,12 @@ export function buildTrackControls(track) {
     if (shouldShowRepeatButton(track.id)) {
         const repeatBtn = document.createElement('button');
         repeatBtn.type = 'button';
-        repeatBtn.className = 'preview-track-repeat-btn active';
-        repeatBtn.textContent = '⟲';
+        repeatBtn.className = 'preview-track-repeat-btn'
+            + (isRepeatButtonActive(track.id) ? ' active' : '');
         repeatBtn.title = '繰り返し';
         repeatBtn.setAttribute('aria-label', '繰り返し');
+        repeatBtn.disabled = isRepeatButtonDisabled(track.id);
+        repeatBtn.appendChild(buildRepeatIcon());
         repeatBtn.addEventListener('click', () => {
             handleRepeatButton(track);
             callbacks.renderEditor?.();
@@ -242,20 +197,22 @@ export function buildTrackControls(track) {
     const toneBtn = document.createElement('button');
     toneBtn.type = 'button';
     toneBtn.className = 'preview-track-tone-btn';
-    toneBtn.textContent = '⚙';
-    toneBtn.title = '音作り';
-    toneBtn.setAttribute('aria-label', '音作り');
+    toneBtn.textContent = '…';
+    toneBtn.title = 'オプション';
+    toneBtn.setAttribute('aria-label', 'オプション');
     toneBtn.addEventListener('click', () => {
-        appState.previewActionTrackId = null;
-        appState.previewActionMenuOpen = false;
-        appState.previewToneTrackId = track.id;
+        appState.previewActionTrackId = appState.previewActionMenuOpen
+            && appState.previewActionTrackId === track.id
+            ? null
+            : track.id;
+        appState.previewActionMenuOpen = appState.previewActionTrackId !== null;
+        appState.previewToneTrackId = null;
         clearPreviewCopyState();
         callbacks.renderEditor?.();
     });
     repeatSlot.appendChild(toneBtn);
 
-    muteRow.appendChild(repeatSlot);
-    controlsEl.appendChild(muteRow);
+    controlsEl.appendChild(repeatSlot);
 
     const volumeWrap = document.createElement('div');
     volumeWrap.className = 'preview-track-volume';
@@ -283,4 +240,23 @@ export function buildTrackControls(track) {
     controlsEl.appendChild(volumeWrap);
 
     return controlsEl;
+}
+
+export function buildTrackMuteToggle(track) {
+    const muteWrap = document.createElement('label');
+    muteWrap.className = 'preview-track-toggle';
+    muteWrap.title = '発音';
+    muteWrap.setAttribute('aria-label', '発音');
+    muteWrap.addEventListener('click', (event) => event.stopPropagation());
+
+    const muteInput = document.createElement('input');
+    muteInput.type = 'checkbox';
+    muteInput.checked = !track.muted;
+    muteInput.addEventListener('change', () => {
+        track.muted = !muteInput.checked;
+        callbacks.renderEditor?.();
+    });
+
+    muteWrap.appendChild(muteInput);
+    return muteWrap;
 }

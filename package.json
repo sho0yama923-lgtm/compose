@@ -8,6 +8,7 @@
     "mobile:open:android": "npx cap open android",
     "mobile:sync:ios": "npm run build && npx cap sync ios",
     "mobile:open:ios": "npx cap open ios",
+    "mobile:run:ios:sim": "node scripts/run-ios-simulator.mjs",
     "mobile:doctor": "node scripts/mobile-doctor.mjs",
     "build:android-web": "npm run build",
     "build:ios-web": "npm run build",

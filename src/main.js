@@ -8,10 +8,21 @@ import { initPlayback } from './features/playback/playback-controller.js';
 import { initModal } from './ui/instrument-modal.js';
 import { initOnboarding } from './ui/onboarding.js';
 import { syncViewToggleButton } from './ui/topbar.js';
-import { saveState, loadState, initSaveLoad } from './features/project/project-storage.js';
+import {
+    createProject,
+    deleteProject,
+    initProjectStorage,
+    initSaveLoad,
+    openProject,
+    renameProject,
+    saveState,
+} from './features/project/project-storage.js';
 import { prepareAudioPlayback } from './features/bridges/audio-bridge.js';
+import { renderProjectHome, setProjectHomeVisible } from './ui/project-home.js';
+import { requestProjectImport } from './features/bridges/file-share-bridge.js';
 
 let audioWarmupPromise = null;
+let hasInitializedOnboarding = false;
 
 function showBootOverlay() {
     const overlay = document.getElementById('bootOverlay');
@@ -44,6 +55,14 @@ callbacks.renderSidebar = (...args) => {
 callbacks.closeSidebar = closeSidebar;
 callbacks.saveState = () => {
     if (!appState.isPlaying) void saveState();
+};
+callbacks.renderProjectHome = () => renderProjectHome(projectHomeHandlers);
+callbacks.showProjectHome = () => {
+    setProjectHomeVisible(true);
+    callbacks.renderProjectHome?.();
+};
+callbacks.showProjectEditor = () => {
+    setProjectHomeVisible(false);
 };
 
 function showBootError(error) {
@@ -89,14 +108,113 @@ async function warmupAudioForPlayback() {
 
 function setupPlaybackWarmupLifecycle() {
     window.addEventListener('pageshow', () => {
+        if (!appState.activeProjectId || appState.projectHomeVisible) return;
         void warmupAudioForPlayback();
     });
 
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState !== 'visible') return;
+        if (!appState.activeProjectId || appState.projectHomeVisible) return;
         void warmupAudioForPlayback();
     });
 }
+
+function resetComposerState() {
+    appState.tracks = [];
+    appState.nextId = 0;
+    appState.activeTrackId = null;
+    appState.lastTouchedTrackId = null;
+    appState.numMeasures = 4;
+    appState.currentMeasure = 0;
+    appState.playheadStep = null;
+    appState.isPlaying = false;
+    appState.playRangeStartMeasure = null;
+    appState.playRangeEndMeasure = null;
+    appState.previewMode = true;
+    appState.previewActionTrackId = null;
+    appState.previewActionMenuOpen = false;
+    appState.previewToneTrackId = null;
+    appState.previewScrollTop = 0;
+    appState.previewRangeMode = null;
+    appState.previewRangeStartMeasure = null;
+    appState.previewRangeEndMeasure = null;
+    appState.clipboard = null;
+    appState.repeatStates = {};
+    appState.chordDrumSheetOpen = false;
+    appState.chordDetailTrackId = null;
+    appState.chordDetailStep = null;
+    appState.drumAddTrackId = null;
+    appState.drumAddOpenGroups = {};
+    appState.pendingDeleteNoteId = null;
+    appState.noteDrag = null;
+    appState.suppressNextNoteClick = false;
+    appState.songRoot = 'C';
+    appState.songHarmony = 'major';
+    appState.songScaleFamily = 'diatonic';
+    appState.editorGridMode = 'normal';
+    appState.selectedDuration = '16n';
+    appState.lastNormalDuration = '16n';
+    appState.lastTripletDuration = '8t';
+    appState.dottedMode = false;
+    appState.tripletMode = false;
+    appState.beatConfig = Array.from({ length: appState.numMeasures }, () => [4, 4, 4, 4]);
+    const bpmInput = document.getElementById('bpmInput');
+    if (bpmInput) bpmInput.value = '120';
+}
+
+async function showProjectEditor() {
+    setProjectHomeVisible(false);
+    appState.previewMode = true;
+    syncViewToggleButton(true);
+    callbacks.renderSidebar();
+    callbacks.renderEditor();
+    await warmupAudioForPlayback();
+    if (!hasInitializedOnboarding) {
+        initOnboarding();
+        hasInitializedOnboarding = true;
+    }
+}
+
+async function createDefaultProject(name) {
+    await createProject(name);
+    resetComposerState();
+    addTrack('drums');
+    addTrack('chord');
+    addTrack('piano');
+    appState.previewMode = true;
+    await saveState();
+    await showProjectEditor();
+}
+
+async function openExistingProject(projectId) {
+    if (!(await openProject(projectId))) {
+        alert('プロジェクトを読み込めませんでした');
+        callbacks.renderProjectHome?.();
+        return;
+    }
+    await showProjectEditor();
+}
+
+const projectHomeHandlers = {
+    onCreateProject: (name) => {
+        void createDefaultProject(name);
+    },
+    onOpenProject: (projectId) => {
+        void openExistingProject(projectId);
+    },
+    onRenameProject: (project) => {
+        const nextName = window.prompt('プロジェクト名を入力してください', project.name);
+        if (nextName === null) return;
+        void renameProject(project.id, nextName);
+    },
+    onDeleteProject: (project) => {
+        if (!confirm(`「${project.name}」を削除しますか？`)) return;
+        void deleteProject(project.id);
+    },
+    onImportProject: () => {
+        requestProjectImport(document.getElementById('importFile'));
+    },
+};
 
 async function boot() {
     // 各モジュール初期化
@@ -124,19 +242,9 @@ async function boot() {
         callbacks.renderEditor();
     });
 
-    // 起動時: 保存データがあれば復元、なければデフォルトトラック生成
-    // (loadState成功でもトラック0件ならデフォルト作成)
-    if (!(await loadState()) || appState.tracks.length === 0) {
-        // beatConfig 初期化（全小節デフォルト [4,4,4,4]）
-        appState.beatConfig = Array.from({ length: appState.numMeasures }, () => [4, 4, 4, 4]);
-        addTrack('drums');
-        addTrack('chord');
-        addTrack('piano');
-    }
+    await initProjectStorage();
 
-    await warmupAudioForPlayback();
-
-    // ライフサイクル監視はブート完了後に登録（pageshow の早期発火で空トラック preload を防ぐ）
+    // ライフサイクル監視はプロジェクト選択後の再表示で音源を温め直す
     setupPlaybackWarmupLifecycle();
 
     // ローディング表示を解除し、本来のempty-stateメッセージに切替
@@ -145,12 +253,10 @@ async function boot() {
     if (emptyIcon) emptyIcon.classList.remove('loading');
     if (emptyText) emptyText.innerHTML = '☰ メニューを開いて<br>トラックを選択してください';
 
-    // 起動時はプレビュー画面を表示
-    appState.previewMode = true;
-    syncViewToggleButton(true);
-    callbacks.renderSidebar();
-    callbacks.renderEditor();
-    initOnboarding();
+    appState.isBooting = false;
+    hideBootOverlay();
+    setProjectHomeVisible(true);
+    callbacks.renderProjectHome();
 }
 
 boot().catch((error) => {

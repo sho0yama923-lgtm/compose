@@ -1,0 +1,155 @@
+import { appState } from '../core/state.js';
+
+function formatProjectUpdatedAt(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hour = String(date.getHours()).padStart(2, '0');
+    const minute = String(date.getMinutes()).padStart(2, '0');
+    return `${month}/${day} ${hour}:${minute}`;
+}
+
+function createProjectCard(project, handlers) {
+    const item = document.createElement('li');
+    item.className = 'project-home-item';
+
+    const openButton = document.createElement('button');
+    openButton.className = 'project-home-card';
+    openButton.type = 'button';
+    openButton.innerHTML = `
+        <span class="project-home-card-title"></span>
+        <span class="project-home-card-meta"></span>
+    `;
+    openButton.querySelector('.project-home-card-title').textContent = project.name;
+    openButton.querySelector('.project-home-card-meta').textContent = `更新 ${formatProjectUpdatedAt(project.updatedAt)}`;
+    openButton.addEventListener('click', () => handlers.onOpenProject(project.id));
+
+    const tools = document.createElement('div');
+    tools.className = 'project-home-card-tools';
+
+    const renameButton = document.createElement('button');
+    renameButton.className = 'project-home-icon-btn';
+    renameButton.type = 'button';
+    renameButton.setAttribute('aria-label', `${project.name} の名前を変更`);
+    renameButton.textContent = '✎';
+    renameButton.addEventListener('click', () => handlers.onRenameProject(project));
+
+    const deleteButton = document.createElement('button');
+    deleteButton.className = 'project-home-icon-btn danger';
+    deleteButton.type = 'button';
+    deleteButton.setAttribute('aria-label', `${project.name} を削除`);
+    deleteButton.textContent = '×';
+    deleteButton.addEventListener('click', () => handlers.onDeleteProject(project));
+
+    tools.append(renameButton, deleteButton);
+    item.append(openButton, tools);
+    return item;
+}
+
+function buildDefaultProjectName() {
+    return `新規プロジェクト ${(appState.projectList || []).length + 1}`;
+}
+
+function openCreateProjectDialog(home, handlers) {
+    const dialog = home.querySelector('[data-project-create-dialog="true"]');
+    const input = home.querySelector('[data-project-create-name="true"]');
+    const error = home.querySelector('[data-project-create-error="true"]');
+    if (!dialog || !input) return;
+
+    input.value = buildDefaultProjectName();
+    if (error) error.hidden = true;
+    dialog.hidden = false;
+    requestAnimationFrame(() => {
+        input.focus();
+        input.select();
+    });
+
+    const submit = () => {
+        const name = input.value.trim();
+        if (!name) {
+            if (error) error.hidden = false;
+            input.focus();
+            return;
+        }
+        dialog.hidden = true;
+        handlers.onCreateProject(name);
+    };
+    const updateSubmitAvailability = () => {
+        const submitButton = dialog.querySelector('[data-project-create-submit="true"]');
+        if (submitButton) submitButton.disabled = input.value.trim().length === 0;
+    };
+
+    dialog.querySelector('[data-project-create-submit="true"]').onclick = submit;
+    dialog.querySelector('[data-project-create-cancel="true"]').onclick = () => {
+        dialog.hidden = true;
+    };
+    input.onkeydown = (event) => {
+        if (event.key === 'Enter') submit();
+        if (event.key === 'Escape') dialog.hidden = true;
+    };
+    input.oninput = () => {
+        if (error) error.hidden = true;
+        updateSubmitAvailability();
+    };
+    updateSubmitAvailability();
+}
+
+export function setProjectHomeVisible(visible) {
+    appState.projectHomeVisible = visible;
+    document.body.classList.toggle('project-home-active', visible);
+    const home = document.getElementById('projectHome');
+    const emptyState = document.getElementById('emptyState');
+    const editor = document.getElementById('trackEditor');
+    if (home) home.hidden = !visible;
+    if (emptyState) emptyState.style.display = visible ? 'none' : '';
+    if (editor) editor.style.display = visible ? 'none' : editor.style.display;
+}
+
+export function renderProjectHome(handlers) {
+    const home = document.getElementById('projectHome');
+    if (!home) return;
+
+    const projects = appState.projectList || [];
+    home.innerHTML = `
+        <div class="project-home-shell">
+            <div class="project-home-header">
+                <div>
+                    <p class="project-home-kicker">Compose</p>
+                    <h1>プロジェクト</h1>
+                </div>
+                <button class="project-home-action primary" type="button" data-project-new="true">＋</button>
+            </div>
+            <ul class="project-home-list" aria-label="プロジェクト一覧"></ul>
+            <div class="project-home-empty" ${projects.length > 0 ? 'hidden' : ''}>
+                <strong>まだプロジェクトがありません</strong>
+                <span>新規作成してすぐ作曲を始められます。</span>
+            </div>
+            <div class="project-home-actions">
+                <button class="project-home-action wide primary" type="button" data-project-new="true">＋ 新規プロジェクト</button>
+                <button class="project-home-action wide" type="button" data-project-import="true">読み込み</button>
+            </div>
+            <div class="project-create-dialog" data-project-create-dialog="true" hidden>
+                <div class="project-create-panel" role="dialog" aria-modal="true" aria-labelledby="projectCreateTitle">
+                    <h2 id="projectCreateTitle">プロジェクト名</h2>
+                    <input class="project-create-input" data-project-create-name="true" type="text" maxlength="40" autocomplete="off">
+                    <div class="project-create-error" data-project-create-error="true" hidden>名前を入力してください</div>
+                    <div class="project-create-actions">
+                        <button class="project-create-btn" type="button" data-project-create-cancel="true">キャンセル</button>
+                        <button class="project-create-btn primary" type="button" data-project-create-submit="true">作成</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const list = home.querySelector('.project-home-list');
+    projects.forEach((project) => {
+        list.appendChild(createProjectCard(project, handlers));
+    });
+
+    home.querySelectorAll('[data-project-new="true"]').forEach((button) => {
+        button.addEventListener('click', () => openCreateProjectDialog(home, handlers));
+    });
+    home.querySelector('[data-project-import="true"]').addEventListener('click', handlers.onImportProject);
+}
