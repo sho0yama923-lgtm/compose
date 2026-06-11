@@ -1,10 +1,10 @@
 // player.js
-// Tone.js はグローバル変数として使用（HTMLでCDN読み込み済み）
 import { appState, STEPS_PER_BEAT, STEPS_PER_MEASURE } from '../../core/state.js';
 import { normalizeUnitValue } from '../../core/number-utils.js';
 import { getTrackPlaybackInstrument, syncTrackPlaybackChains } from '../tracks/instrument-map.js';
 import { getDrumSampleDefinition } from '../tracks/instruments/instrument-config.js';
 import { prepareTrackPlaybackInstrument } from '../tracks/instruments/playback-chains.js';
+import { Tone } from './tone-runtime.js';
 
 // ==========================================================
 // スコアのデータ形式
@@ -51,7 +51,7 @@ async function waitForSamplerReady(sampler, timeoutMs = PREVIEW_SAMPLER_READY_TI
 }
 
 export async function warmupPlaybackInstrument(track, playbackInstrumentId) {
-    if (!globalThis.Tone || !track?.id || !playbackInstrumentId) return false;
+    if (!track?.id || !playbackInstrumentId) return false;
     try {
         await Tone.start();
         const sampler = await prepareTrackPlaybackInstrument(track, playbackInstrumentId);
@@ -81,11 +81,6 @@ export async function play(score, {
     startStep = 0,
     endStepExclusive = score.length,
 } = {}) {
-    if (!globalThis.Tone) {
-        alert('Tone.js の読み込みに失敗したため、再生できません。ネットワーク接続を確認して再読み込みしてください。');
-        return false;
-    }
-
     await Tone.start();
 
     // 前の再生を停止
@@ -161,11 +156,6 @@ export async function previewDrumSample({
     trackId,
     tracks = [],
 } = {}) {
-    if (!globalThis.Tone) {
-        alert('Tone.js の読み込みに失敗したため、試聴できません。ネットワーク接続を確認して再読み込みしてください。');
-        return false;
-    }
-
     if (Tone.Transport.state === 'started') {
         console.warn('[Audio] 曲再生中のため、ドラム試聴をスキップしました。');
         return false;
@@ -214,11 +204,6 @@ export async function previewTrackNote({
     note,
     durationSeconds = 0.35,
 } = {}) {
-    if (!globalThis.Tone) {
-        alert('Tone.js の読み込みに失敗したため、試聴できません。ネットワーク接続を確認して再読み込みしてください。');
-        return false;
-    }
-
     if (appState.isPlaying) {
         console.warn('[Audio] 曲再生中のため、音試聴をスキップしました。');
         return false;

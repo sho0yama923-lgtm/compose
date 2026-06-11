@@ -1,12 +1,17 @@
 {
   "name": "compose",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "release:verify": "node scripts/verify-web-release.mjs",
+    "release:build": "npm run build && npm run release:verify",
+    "release:check": "npm audit && npm run release:build && npm run test:e2e:webkit",
+    "version:sync": "node scripts/sync-app-version.mjs",
     "mobile:sync:android": "npm run build && npx cap sync android",
     "mobile:open:android": "npx cap open android",
-    "mobile:sync:ios": "npm run build && npx cap sync ios",
+    "mobile:sync:ios": "npm run version:sync && npm run build && npx cap sync ios",
     "mobile:open:ios": "npx cap open ios",
     "mobile:run:ios:sim": "node scripts/run-ios-simulator.mjs",
     "mobile:doctor": "node scripts/mobile-doctor.mjs",
@@ -33,5 +38,8 @@
     "@capacitor/share": "^8.0.1",
     "@playwright/test": "^1.54.2",
     "vite": "^7.1.5"
+  },
+  "dependencies": {
+    "tone": "^14.8.49"
   }
 }

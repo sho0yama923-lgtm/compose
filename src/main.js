@@ -1,6 +1,7 @@
 // app.js — エントリポイント: コールバック登録 + 各モジュール初期化
 
 import { appState, callbacks, clearPendingDeleteNote } from './core/state.js';
+import { APP_VERSION } from './core/app-info.js';
 import { renderEditor } from './editors/editor-router.js';
 import { renderSidebar, closeSidebar, initSidebar } from './ui/track-drawer.js';
 import { addTrack } from './features/tracks/tracks-controller.js';
@@ -20,9 +21,30 @@ import {
 import { prepareAudioPlayback } from './features/bridges/audio-bridge.js';
 import { renderProjectHome, setProjectHomeVisible } from './ui/project-home.js';
 import { requestProjectImport } from './features/bridges/file-share-bridge.js';
+import { getAppRuntime, isWebApp } from './features/bridges/device-bridge.js';
 
 let audioWarmupPromise = null;
 let hasInitializedOnboarding = false;
+
+document.documentElement.dataset.appVersion = APP_VERSION;
+document.documentElement.dataset.appRuntime = getAppRuntime();
+
+function setupWebViewportHeight() {
+    if (!isWebApp()) return;
+
+    const syncViewportHeight = () => {
+        const viewportHeight = window.visualViewport?.height || window.innerHeight;
+        document.documentElement.style.setProperty('--app-viewport-height', `${Math.round(viewportHeight)}px`);
+    };
+
+    syncViewportHeight();
+    window.addEventListener('resize', syncViewportHeight, { passive: true });
+    window.addEventListener('orientationchange', syncViewportHeight, { passive: true });
+    window.visualViewport?.addEventListener('resize', syncViewportHeight, { passive: true });
+    window.visualViewport?.addEventListener('scroll', syncViewportHeight, { passive: true });
+}
+
+setupWebViewportHeight();
 
 function showBootOverlay() {
     const overlay = document.getElementById('bootOverlay');

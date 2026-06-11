@@ -1,4 +1,4 @@
-import { Capacitor, registerPlugin } from '@capacitor/core';
+import { registerPlugin } from '@capacitor/core';
 import { normalizeFiniteNumber, normalizeUnitValue } from '../../core/number-utils.js';
 import { appState } from '../../core/state.js';
 import {
@@ -10,7 +10,7 @@ import {
 } from '../playback/scheduler.js';
 import { buildNativePlaybackManifest, buildNativePlaybackManifestForInstrumentIds } from '../playback/score-serializer.js';
 import { getDrumSampleDefinition } from '../tracks/instrument-map.js';
-import { isIosApp } from './device-bridge.js';
+import { canUseIosNativePlayback } from './device-bridge.js';
 
 const NativePlayback = registerPlugin('NativePlayback');
 
@@ -34,7 +34,7 @@ function normalizePositionStep(value) {
 }
 
 function canUseNativePlayback() {
-    return isIosApp() && Capacitor.isPluginAvailable('NativePlayback');
+    return canUseIosNativePlayback();
 }
 
 function getManifestCacheKey(manifests) {

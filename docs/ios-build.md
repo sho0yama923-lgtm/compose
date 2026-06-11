@@ -54,6 +54,12 @@
 現在の privacy manifest は、追跡なし、収集データなし、required reason API は file timestamp の `C617.1` として管理する。
 アプリ機能や SDK を増やしてデータ収集、UserDefaults、Disk Space、System Boot Time などの required reason API が増えた場合は、`ios/App/PrivacyInfo.xcprivacy` も更新する。
 
+### App Store Connect 署名の注意
+
+`xcodebuild archive` が成功しても、Development 署名の archive はそのまま App Store へ提出できない。
+Organizer の Validate / Distribute では App Store Connect に紐づいた provider、`iOS Distribution` / `Apple Distribution` 証明書、`com.yamaoxiogo.compose` の App Store provisioning profile 作成権限が必要。
+CLI で export を試す場合は `method=app-store-connect`、`destination=export`、`signingStyle=automatic`、`teamID=KLPR8P3U9F` の export options を使い、失敗時はアプリ設定と Apple Developer / App Store Connect 側の権限問題を切り分ける。
+
 ## iOS 実機 acceptance flow
 
 - 新規プロジェクト作成後に保存できること

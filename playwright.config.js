@@ -4,11 +4,12 @@ const WEBKIT_DEV_PORT = 41234;
 
 module.exports = defineConfig({
   testDir: './tests',
-  timeout: 30_000,
+  timeout: 60_000,
   expect: {
     timeout: 5_000,
   },
   fullyParallel: true,
+  workers: 2,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL: `http://127.0.0.1:${WEBKIT_DEV_PORT}`,

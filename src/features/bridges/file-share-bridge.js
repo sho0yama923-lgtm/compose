@@ -1,6 +1,6 @@
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
-import { isNativeApp } from './device-bridge.js';
+import { canUseNativeShare } from './device-bridge.js';
 
 const EXPORT_DIR = 'compose/exports';
 
@@ -13,7 +13,7 @@ async function ensureExportDir() {
 }
 
 export async function exportProjectData(serialized, fileName) {
-    if (!isNativeApp()) {
+    if (!canUseNativeShare()) {
         const blob = new Blob([serialized], { type: 'application/json' });
         const linkEl = document.createElement('a');
         linkEl.href = URL.createObjectURL(blob);

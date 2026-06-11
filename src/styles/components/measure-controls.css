@@ -56,33 +56,109 @@
 }
 
 /* ======= 小節シークバー（エディタ内） ======= */
+:root {
+    --seek-collapsed-height: 92px;
+    --seek-expanded-height: 190px;
+    --seek-card-padding-x: 20px;
+    --seek-shell-side-gap: 8px;
+    --seek-shell-bottom-gap: 8px;
+    --seek-handle-width: 28px;
+    --seek-handle-height: 4px;
+    --seek-overlay-space: calc(var(--seek-collapsed-height) + var(--seek-shell-bottom-gap));
+}
+
+#trackEditor {
+    position: relative;
+}
+#trackEditor:has(.measure-seek-card.is-expanded) {
+    --seek-overlay-space: calc(var(--seek-expanded-height) + var(--seek-shell-bottom-gap));
+}
 .measure-seek-shell {
+    position: absolute;
+    z-index: 20;
+    right: 0;
+    bottom: 0;
+    left: 0;
     display: flex;
     flex-direction: column;
     gap: 2px;
-    flex-shrink: 0;
-    margin-top: auto;
-    padding: 8px 0 0;
-    background: #fff;
+    padding: 8px var(--seek-shell-side-gap) var(--seek-shell-bottom-gap);
+    background: transparent;
+    pointer-events: none;
 }
 #trackEditor > .measure-seek-shell {
     width: 100%;
+    margin-inline: 0;
     box-sizing: border-box;
 }
 #trackEditor.melodic-track-editor > .measure-seek-shell {
-    width: calc(100% - 24px);
-    margin-inline: 12px;
+    width: 100%;
+    margin-inline: 0;
+    padding-inline: 20px;
 }
 .measure-seek-card {
+    pointer-events: auto;
+}
+.melodic-track-editor .continuous-roll .melody-roll-content,
+.drum-track-editor .drum-editor .drum-roll-content {
+    padding-bottom: calc(var(--seek-overlay-space) + var(--safe-bottom));
+}
+.melodic-track-editor .continuous-roll .melody-roll-scroll,
+.drum-track-editor .drum-editor .steps-grid-scroll,
+.preview-editor .preview-wrap {
+    scroll-padding-bottom: calc(var(--seek-overlay-space) + var(--safe-bottom));
+}
+.preview-editor .preview-wrap {
+    padding-bottom: calc(var(--seek-overlay-space) + var(--safe-bottom));
+}
+.drum-track-editor .drum-add-panel {
+    margin-bottom: calc(var(--seek-overlay-space) + var(--safe-bottom));
+}
+.measure-seek-card {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 0;
-    min-height: 180px;
-    padding: 12px 16px var(--safe-bottom);
-    border-radius: 16px 16px 0 0;
+    height: calc(var(--seek-collapsed-height) + var(--safe-bottom));
+    min-height: calc(var(--seek-collapsed-height) + var(--safe-bottom));
+    padding: 8px var(--seek-card-padding-x) var(--safe-bottom);
+    border-radius: 24px;
     background: #fff;
-    border-top: 1px solid #e7ebf2;
-    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e7ebf2;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+    transition: height 220ms ease, min-height 220ms ease, border-radius 220ms ease;
+}
+.measure-seek-card.is-expanded {
+    height: calc(var(--seek-expanded-height) + var(--safe-bottom));
+    min-height: calc(var(--seek-expanded-height) + var(--safe-bottom));
+    border-radius: 24px;
+}
+.measure-seek-handle {
+    position: relative;
+    width: 100%;
+    height: 20px;
+    min-height: 20px;
+    margin: -4px 0 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    touch-action: pan-y;
+    outline: none;
+}
+.measure-seek-handle::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    width: var(--seek-handle-width);
+    height: var(--seek-handle-height);
+    border-radius: 999px;
+    background: #d7d7d7;
+    transform: translateX(-50%);
+}
+.measure-seek-handle:focus-visible::before {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.24);
 }
 .measure-seek-label {
     font-size: 12px;
@@ -91,6 +167,34 @@
     letter-spacing: 0.05em;
     white-space: nowrap;
     line-height: 1.2;
+}
+.measure-seek-compact-label {
+    position: absolute;
+    top: 10px;
+    left: 16px;
+    color: #777;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    pointer-events: none;
+}
+.measure-seek-card.is-expanded .measure-range-meta {
+    display: none;
+}
+.measure-seek-card.is-expanded .measure-range-editor {
+    min-height: 44px;
+    gap: 0;
+}
+.measure-seek-card.is-expanded .measure-seek.transport-row {
+    flex: 0 0 56px;
+    min-height: 56px;
+}
+.measure-seek-card.is-expanded .measure-seek.action-row {
+    flex: 0 0 44px;
+    min-height: 44px;
+    margin-top: 0;
 }
 .measure-seek {
     display: flex;
@@ -104,17 +208,10 @@
     gap: 32px;
     min-height: 64px;
     padding: 0;
+    flex: 1;
 }
 .measure-preview-highlight {
     display: none;
-}
-.mb-btn-guide {
-    display: block;
-    font-size: 11px;
-    line-height: 1;
-    margin-top: 6px;
-    font-weight: 500;
-    color: #666;
 }
 .mb-btn {
     width: 44px;
@@ -137,20 +234,25 @@
 .mb-nav-btn {
     width: 44px;
     height: 44px;
-    font-size: 16px;
-    flex-direction: column;
-    gap: 0;
+    font-size: 22px;
+    font-weight: 500;
 }
 .mb-play-btn {
     justify-self: center;
     width: 56px;
     height: 56px;
-    border-radius: 999px;
-    font-size: 22px;
-    color: #fff;
-    background: #1a1a1a;
+    border-radius: 12px;
+    border: 0;
+    font-size: 32px;
+    color: #111;
+    background: transparent;
     box-shadow: none;
     transition: transform 150ms ease-out;
+}
+.mb-play-btn.is-playing {
+    border: 0;
+    color: #111;
+    background: transparent;
 }
 .mb-play-btn:not(:disabled):active {
     transform: scale(0.95);
@@ -160,6 +262,10 @@
     flex-direction: column;
     gap: 8px;
     min-height: 72px;
+}
+.measure-seek-card:not(.is-expanded) .measure-range-editor,
+.measure-seek-card:not(.is-expanded) .measure-seek.action-row {
+    display: none;
 }
 .measure-range-rail {
     position: relative;

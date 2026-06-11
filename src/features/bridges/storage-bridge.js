@@ -1,6 +1,6 @@
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem';
 import { STORAGE_KEY } from '../project/storage/storage-helpers.js';
-import { isNativeApp } from './device-bridge.js';
+import { canUseNativeFilesystem } from './device-bridge.js';
 
 const PROJECT_DIR = 'compose';
 const PROJECT_FILE = `${PROJECT_DIR}/compose-save.json`;
@@ -10,13 +10,22 @@ const PROJECT_INDEX_FILE = `${PROJECT_DIR}/project-index.json`;
 const ACTIVE_PROJECT_FILE = `${PROJECT_DIR}/active-project.json`;
 let hasEnsuredNativeProjectDir = false;
 let ensureNativeProjectDirPromise = null;
+const PROJECT_ID_PATTERN = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|project-\d+-\d+)$/i;
+
+function requireValidProjectId(projectId) {
+    const value = String(projectId || '');
+    if (!PROJECT_ID_PATTERN.test(value)) {
+        throw new TypeError('Invalid project id');
+    }
+    return value;
+}
 
 function buildProjectStorageKey(projectId) {
-    return `compose_project:${projectId}`;
+    return `compose_project:${requireValidProjectId(projectId)}`;
 }
 
 function buildProjectFile(projectId) {
-    return `${PROJECT_DIR}/project-${projectId}.json`;
+    return `${PROJECT_DIR}/project-${requireValidProjectId(projectId)}.json`;
 }
 
 function isMissingEntryError(error) {
@@ -29,7 +38,7 @@ function isMissingEntryError(error) {
 }
 
 async function ensureNativeProjectDir() {
-    if (!isNativeApp() || hasEnsuredNativeProjectDir) return;
+    if (!canUseNativeFilesystem() || hasEnsuredNativeProjectDir) return;
     if (!ensureNativeProjectDirPromise) {
         ensureNativeProjectDirPromise = (async () => {
             try {
@@ -54,7 +63,7 @@ async function ensureNativeProjectDir() {
 }
 
 async function writeNativeTextFile(path, serialized) {
-    if (!isNativeApp()) return;
+    if (!canUseNativeFilesystem()) return;
     await ensureNativeProjectDir();
     await Filesystem.writeFile({
         path,
@@ -66,7 +75,7 @@ async function writeNativeTextFile(path, serialized) {
 }
 
 async function readNativeTextFile(path) {
-    if (!isNativeApp()) return null;
+    if (!canUseNativeFilesystem()) return null;
     try {
         const result = await Filesystem.readFile({
             path,
@@ -80,7 +89,7 @@ async function readNativeTextFile(path) {
 }
 
 async function deleteNativeTextFile(path) {
-    if (!isNativeApp()) return;
+    if (!canUseNativeFilesystem()) return;
     try {
         await Filesystem.deleteFile({
             path,

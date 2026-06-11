@@ -4,6 +4,7 @@ import {
     restoreFromData,
     buildDefaultExportFileName,
     normalizeExportFileName,
+    MAX_PROJECT_FILE_BYTES,
 } from './storage-helpers.js';
 import { exportProjectData, requestProjectImport } from '../../bridges/file-share-bridge.js';
 import {
@@ -18,8 +19,13 @@ import {
     saveProjectDataById,
     saveProjectIndexData,
 } from '../../bridges/storage-bridge.js';
+import { hideSaveErrorNotice, showSaveErrorNotice } from '../../../ui/save-error-notice.js';
 
 const PROJECT_INDEX_VERSION = 1;
+const MAX_PROJECT_NAME_LENGTH = 40;
+const MAX_PROJECT_INDEX_BYTES = 512 * 1024;
+const PROJECT_ID_PATTERN = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|project-\d+-\d+)$/i;
+let latestUnsavedProjectJson = null;
 
 function createProjectId() {
     if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
@@ -31,15 +37,22 @@ function createTimestamp() {
 }
 
 function normalizeProjectName(name, fallback = '新規プロジェクト') {
-    const trimmed = String(name || '').trim();
+    const trimmed = String(name || '').trim().slice(0, MAX_PROJECT_NAME_LENGTH);
     return trimmed || fallback;
 }
 
+function normalizeProjectId(projectId) {
+    const value = String(projectId || '');
+    return PROJECT_ID_PATTERN.test(value) ? value : null;
+}
+
 function normalizeProjectMeta(meta) {
-    if (!meta || typeof meta !== 'object' || !meta.id) return null;
+    if (!meta || typeof meta !== 'object') return null;
+    const id = normalizeProjectId(meta.id);
+    if (!id) return null;
     const createdAt = typeof meta.createdAt === 'string' ? meta.createdAt : createTimestamp();
     return {
-        id: String(meta.id),
+        id,
         name: normalizeProjectName(meta.name),
         createdAt,
         updatedAt: typeof meta.updatedAt === 'string' ? meta.updatedAt : createdAt,
@@ -59,6 +72,7 @@ function buildProjectIndexData(projects) {
 
 function parseProjectIndex(raw) {
     if (!raw) return [];
+    if (raw.length > MAX_PROJECT_INDEX_BYTES) return [];
     try {
         const parsed = JSON.parse(raw);
         if (parsed?.version !== PROJECT_INDEX_VERSION || !Array.isArray(parsed.projects)) {
@@ -117,17 +131,19 @@ export async function createProject(name = null) {
 
 export async function openProject(projectId) {
     try {
-        const raw = await loadProjectDataById(projectId);
-        if (!raw) return false;
+        const normalizedProjectId = normalizeProjectId(projectId);
+        if (!normalizedProjectId) return false;
+        const raw = await loadProjectDataById(normalizedProjectId);
+        if (!raw || raw.length > MAX_PROJECT_FILE_BYTES) return false;
 
         const data = JSON.parse(raw);
         if (!restoreFromData(data, { clearPreviewCopyState, clearRepeatState })) return false;
 
-        appState.activeProjectId = projectId;
+        appState.activeProjectId = normalizedProjectId;
         appState.projectHomeVisible = false;
         appState.previewMode = true;
         appState.chordDrumSheetOpen = false;
-        await saveActiveProjectId(projectId);
+        await saveActiveProjectId(normalizedProjectId);
         return true;
     } catch (e) {
         console.warn('openProject failed:', e);
@@ -155,46 +171,7 @@ export async function deleteProject(projectId) {
     callbacks.renderProjectHome?.();
 }
 
-export async function saveState() {
-    if (!appState.activeProjectId) return;
-    try {
-        const serialized = JSON.stringify(createSaveData());
-        await saveProjectDataById(appState.activeProjectId, serialized);
-        await saveProjectData(serialized);
-
-        const activeProject = getActiveProjectMeta();
-        if (activeProject) {
-            updateProjectMeta(activeProject.id, { updatedAt: createTimestamp() });
-            await persistProjectList();
-            callbacks.renderProjectHome?.();
-        }
-    } catch (e) {
-        console.warn('saveState failed:', e);
-    }
-}
-
-export async function loadState() {
-    if (appState.activeProjectId) {
-        return openProject(appState.activeProjectId);
-    }
-
-    try {
-        const raw = await loadProjectData();
-        if (!raw) return false;
-
-        const data = JSON.parse(raw);
-        return restoreFromData(data, { clearPreviewCopyState, clearRepeatState });
-    } catch (e) {
-        console.warn('loadState failed:', e);
-        return false;
-    }
-}
-
-export async function exportJSON() {
-    await saveState();
-    const json = appState.activeProjectId
-        ? await loadProjectDataById(appState.activeProjectId)
-        : await loadProjectData();
+async function exportProjectJson(json) {
     if (!json) return false;
 
     const activeProject = getActiveProjectMeta();
@@ -205,14 +182,85 @@ export async function exportJSON() {
     const requestedName = window.prompt('書き出すファイル名を入力してください', defaultFileName);
     if (requestedName === null) return false;
 
-    const normalizedName = normalizeExportFileName(requestedName, defaultFileName);
+    return exportProjectData(
+        json,
+        normalizeExportFileName(requestedName, defaultFileName)
+    );
+}
 
-    return exportProjectData(json, normalizedName);
+async function exportLatestProjectBackup() {
+    const json = latestUnsavedProjectJson || JSON.stringify(createSaveData());
+    if (await exportProjectJson(json)) {
+        hideSaveErrorNotice();
+        return true;
+    }
+    return false;
+}
+
+export async function saveState({ notifyOnError = true } = {}) {
+    if (!appState.activeProjectId) return true;
+    try {
+        const serialized = JSON.stringify(createSaveData());
+        latestUnsavedProjectJson = serialized;
+        await saveProjectDataById(appState.activeProjectId, serialized);
+        await saveProjectData(serialized);
+
+        const activeProject = getActiveProjectMeta();
+        if (activeProject) {
+            updateProjectMeta(activeProject.id, { updatedAt: createTimestamp() });
+            await persistProjectList();
+            callbacks.renderProjectHome?.();
+        }
+        latestUnsavedProjectJson = null;
+        hideSaveErrorNotice();
+        return true;
+    } catch (e) {
+        console.warn('saveState failed:', e);
+        if (notifyOnError) {
+            showSaveErrorNotice({ onExport: exportLatestProjectBackup });
+        }
+        return false;
+    }
+}
+
+export async function loadState() {
+    if (appState.activeProjectId) {
+        return openProject(appState.activeProjectId);
+    }
+
+    try {
+        const raw = await loadProjectData();
+        if (!raw || raw.length > MAX_PROJECT_FILE_BYTES) return false;
+
+        const data = JSON.parse(raw);
+        return restoreFromData(data, { clearPreviewCopyState, clearRepeatState });
+    } catch (e) {
+        console.warn('loadState failed:', e);
+        return false;
+    }
+}
+
+export async function exportJSON() {
+    const saved = await saveState({ notifyOnError: false });
+    const json = saved && appState.activeProjectId
+        ? await loadProjectDataById(appState.activeProjectId)
+        : (saved ? await loadProjectData() : latestUnsavedProjectJson);
+    if (!json) return false;
+
+    return exportProjectJson(json);
 }
 
 export async function importJSON(file) {
     try {
+        if (!file || file.size > MAX_PROJECT_FILE_BYTES) {
+            alert('ファイルサイズが大きすぎます');
+            return false;
+        }
         const text = await file.text();
+        if (text.length > MAX_PROJECT_FILE_BYTES) {
+            alert('ファイルサイズが大きすぎます');
+            return false;
+        }
         const data = JSON.parse(text);
 
         if (!restoreFromData(data, { clearPreviewCopyState, clearRepeatState })) {

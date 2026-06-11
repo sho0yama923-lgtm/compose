@@ -1,4 +1,4 @@
-import { access } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { execSync } from 'node:child_process';
 import process from 'node:process';
@@ -59,6 +59,23 @@ async function checkPath(path) {
   }
 }
 
+async function checkAppVersion() {
+  const packageJson = JSON.parse(await readFile('package.json', 'utf8'));
+  const projectFile = await readFile('ios/App/App.xcodeproj/project.pbxproj', 'utf8');
+  const iosVersions = [...projectFile.matchAll(/MARKETING_VERSION = ([^;]+);/g)]
+    .map((match) => match[1]);
+  const versionsMatch = iosVersions.length > 0
+    && iosVersions.every((version) => version === packageJson.version);
+
+  if (versionsMatch) {
+    console.log(`[ok] app version: Web/iOS ${packageJson.version}`);
+    return true;
+  }
+
+  console.log(`[mismatch] app version: Web ${packageJson.version}, iOS ${iosVersions.join(', ') || 'not found'}`);
+  return false;
+}
+
 console.log('Mobile Doctor');
 console.log(`cwd: ${process.cwd()}`);
 console.log('');
@@ -73,6 +90,9 @@ console.log('');
 for (const path of nativePaths) {
   await checkPath(path);
 }
+
+console.log('');
+healthy = (await checkAppVersion()) && healthy;
 
 console.log('');
 console.log('Recommended daily flow');

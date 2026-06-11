@@ -22,6 +22,77 @@ import { normalizeUnitValue } from '../../../core/number-utils.js';
 export const STORAGE_KEY = 'compose_save';
 export const DATA_VERSION = 11;
 export const VALID_DURATIONS = new Set(Object.keys(DURATION_CELLS));
+export const MAX_PROJECT_FILE_BYTES = 5 * 1024 * 1024;
+export const MAX_PROJECT_MEASURES = 128;
+export const MAX_PROJECT_TRACKS = 64;
+const MAX_DRUM_ROWS = 64;
+const MAX_REPEAT_STATES = MAX_PROJECT_TRACKS;
+const VALID_INSTRUMENT_IDS = new Set(Object.keys(INST_TYPE));
+
+function isPlainObject(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    const prototype = Object.getPrototypeOf(value);
+    return prototype === Object.prototype || prototype === null;
+}
+
+function isValidTrackShape(track, length) {
+    if (!isPlainObject(track) || !VALID_INSTRUMENT_IDS.has(track.instrument)) return false;
+    if (!Number.isInteger(track.id) || track.id < 0) return false;
+
+    const type = INST_TYPE[track.instrument];
+    if (type === 'rhythm') {
+        if (!Array.isArray(track.rows) || track.rows.length > MAX_DRUM_ROWS) return false;
+        return track.rows.every((row) => (
+            isPlainObject(row)
+            && Array.isArray(row.steps)
+            && row.steps.length === length
+        ));
+    }
+
+    if (type === 'chord') {
+        return Array.isArray(track.chordMap)
+            && track.chordMap.length === length
+            && Array.isArray(track.soundSteps)
+            && track.soundSteps.length === length;
+    }
+
+    if (!isPlainObject(track.stepsMap)) return false;
+    const stepEntries = Object.entries(track.stepsMap);
+    return stepEntries.length <= CHROMATIC.length * 7
+        && stepEntries.every(([note, steps]) => (
+            /^[A-G]#?[1-7]$/.test(note)
+            && Array.isArray(steps)
+            && steps.length === length
+        ));
+}
+
+function isValidSaveDataShape(data) {
+    if (!isPlainObject(data) || data.version !== DATA_VERSION) return false;
+    if (!Number.isInteger(data.numMeasures)
+        || data.numMeasures < 1
+        || data.numMeasures > MAX_PROJECT_MEASURES) {
+        return false;
+    }
+    if (!Array.isArray(data.tracks)
+        || data.tracks.length === 0
+        || data.tracks.length > MAX_PROJECT_TRACKS) {
+        return false;
+    }
+    if (data.repeatStates !== undefined) {
+        if (!isPlainObject(data.repeatStates)
+            || Object.keys(data.repeatStates).length > MAX_REPEAT_STATES) {
+            return false;
+        }
+    }
+
+    const length = STEPS_PER_MEASURE * data.numMeasures;
+    const trackIds = new Set();
+    return data.tracks.every((track) => {
+        if (!isValidTrackShape(track, length) || trackIds.has(track.id)) return false;
+        trackIds.add(track.id);
+        return true;
+    });
+}
 
 function normalizeStepArray(steps, length) {
     if (Array.isArray(steps) && steps.length !== length) {
@@ -240,8 +311,7 @@ export function createSaveData() {
 }
 
 export function restoreFromData(data, options = {}) {
-    if (!data || !Array.isArray(data.tracks)) return false;
-    if (data.version !== DATA_VERSION) return false;
+    if (!isValidSaveDataShape(data)) return false;
 
     appState.numMeasures = data.numMeasures ?? 4;
     appState.nextId = data.nextId ?? 0;

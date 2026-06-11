@@ -21,6 +21,16 @@
   - Web と native の境界
   - iOS / Android 差分はここ経由で吸収する
 
+## 実行環境とバージョン
+
+- Web では Tone.js、`localStorage`、ブラウザ download を使う
+- iOS では利用可能な Capacitor plugin に応じて native 再生、Filesystem、Share を使う
+- 実行環境と plugin 可否の判定は `src/features/bridges/device-bridge.js` に集約する
+- アプリバージョンの正本は `package.json` の `version`
+- Web ビルドには Vite が同じ値を埋め込み、iOS の `MARKETING_VERSION` も同じ値にする
+- `npm run version:sync` と `npm run mobile:sync:ios` は `package.json` の値を iOS へ反映する
+- `npm run mobile:doctor` で Web / iOS のバージョン一致を確認する
+
 ## 生成物として扱うもの
 
 - `ios/App/App/public/`

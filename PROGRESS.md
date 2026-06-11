@@ -1,6 +1,6 @@
 # PROGRESS.md
 
-最終更新: 2026-06-09
+最終更新: 2026-06-11
 
 ## 進捗ルール
 
@@ -36,15 +36,36 @@
 
 ## 次の作業予定
 
-- Xcode 実機または `Any iOS Device` で Archive を作成し、Organizer の Validate App を通す
-- iOS 実機で `docs/ios-build.md` の acceptance flow に沿って、再生、停止、ループ、試聴、保存、読込、共有を確認する
+- Xcode Organizer で今回の archive を App Store Connect 用署名に切り替えて Validate App / Distribute App を通す
+- iOS 実機で `docs/ios-build.md` の acceptance flow に沿って、ループ、試聴、サイレントスイッチ時の音、実機性能を確認する
 - App Store Connect の Privacy Nutrition Labels と `ios/App/PrivacyInfo.xcprivacy` の「追跡なし、収集データなし、file timestamp C617.1」を一致させる
 - Version / Build、Bundle Identifier、Team、App Store Connect の app record を提出予定値にそろえる
-- レガシー候補の `swipe.js` を削除するか、必要なら `src/` 配下へ現行責務として移すか判断する
-- tracked 済みの `.DS_Store` をリリース前に整理する
 
 ## 変更履歴
 
+- 2026-06-11: 再生カードを重ねた状態で`scrollIntoView`した操作対象がカード裏へ止まる問題を、ピアノ/ドラム/全体プレビューの`scroll-padding-bottom`と、スクロール領域外にあるドラム追加パネルの下余白をカード高へ連動させて修正した
+- 2026-06-11: 下部プレイヤー展開時の内部高をシーク`44px`、再生行`56px`、操作行`44px`へ整理し、シークバーと再生ボタン間の余分な伸縮スペースを削除した。展開高`190px`のまま小節追加/その他ボタンが見切れないようにした
+- 2026-06-11: 下部プレイヤー展開時も左上の`10px`小節表示を維持し、シークバー下の重複する小節ラベル行を削除した。展開高とスクロール末尾余白を`210px`から`190px`基準へ縮小した
+- 2026-06-11: 下部プレイヤー収納時も左上へ現在小節を`小節 1 / 4`形式・`10px`で常時表示し、詳細表示時は既存ラベルへ切り替わるようにした
+- 2026-06-11: 下部プレイヤーをエディタ上へ重ねる絶対配置に変更し、ピアノ/ドラム/全体プレビューのスクロール末尾へプレイヤー高に連動する余白を追加した。収納時は`100px`、展開時は`218px`を基準にし、最下部の編集内容をプレイヤーより上までスクロールできるようにした
+- 2026-06-11: 下部プレイヤーの収納時と展開時の角丸を`24px`へ統一した
+- 2026-06-11: 最小下部プレイヤーを四隅が丸いフローティング楕円カードへ変更し、再生ボタンの黒丸と前後ボタンの日本語ラベルを削除した。Web版のbodyを固定高へ戻しつつ`2px`のページスクロール余地を残し、内容量の大きいピアノエディタで下部プレイヤーが画面外へ押し出される問題を修正した
+- 2026-06-11: 下部プレイヤーを通常時は前小節・再生・次小節だけの最小表示にし、ハンドルのタップ/上下スワイプでシークバーと小節操作を展開・収納できる構成へ変更した。最小高は`92px`、展開高は`210px`、左右余白は`20px`。Web版だけページに実スクロール領域を持たせ、Safariの下部UIがスクロールで縮小できるようにした
+- 2026-06-10: Web Safariで音価SVGがフォント代替表示に崩れる問題を、5種類すべてフォント非依存のベクターパスへ置換して修正した。Web版は`visualViewport.height`を`--app-viewport-height`へ同期し、Safariの下部UI表示時もボトムバーが実表示領域の下端へ収まるようにした。native版は従来の`100dvh`を維持する
+- 2026-06-10: Webブラウザのページタイトルを `作曲ツール` から `ezmelo` へ変更した。画面内の作曲モード表記は変更していない
+- 2026-06-10: Web公開準備として `npm run release:build` / `release:check` と成果物検査scriptを追加し、外部script、security headers、音源payload、100MiB容量上限を自動検査するようにした。Netlify build/header/cache設定、GitHub Actionsの依存監査・WebKit smoke、Codex appの`Web Release Check` actionを追加した。フルチェックは418ファイル・69.0MiB、WebKit 4件で成功した
+- 2026-06-10: Tone.js bundleを含む公開チェックでWebKit 4並列時に30秒上限へ達したため、CI安定化としてPlaywrightを2 workers・1 test 60秒へ調整した
+- 2026-06-10: Web保存失敗時に画面下部へ通知を表示し、保存失敗直前のメモリ上データをJSONとして書き出せるバックアップ導線を追加した。通知幅は最大`420px`、左右/下余白`16px`、操作ボタン高さ`44px`
+- 2026-06-10: Tone.js `14.8.49` を npm dependency としてVite bundleへ含め、外部CDN scriptを廃止した。`public/_headers` とVite dev/previewへ CSP、nosniff、Referrer-Policy、Permissions-Policy、cache policyを追加した
+- 2026-06-10: 一般公開前の保存セキュリティ改善として、JSON読込を5MB・128小節・64トラックに制限し、復元前にトラック構造、配列長、楽器ID、重複IDを検証するようにした。プロジェクト名を40文字に制限し、project ID を許可形式へ限定して native 保存パスへの不正文字混入を防止した。公開HTMLから開発用 Figma capture script を削除し、`security_best_practices_report.md` と `docs/public-release.md` に残課題と公開手順を整理した
+- 2026-06-10: `npm audit` で検出した Vite dev server、xmldom、picomatch、PostCSS など5件の既知脆弱性を修正版へ更新し、再監査0件を確認した
+- 2026-06-10: Vite dev server の `/audio-buffers/sounds/...` が `sounds/sounds/...` と二重解決され、MP3 の代わりに fallback HTML を返していた不具合を修正した。Web 版 Tone.js sampler が開発環境でも音源バイナリを取得できるようにした
+- 2026-06-10: Web / native の実行環境と Capacitor plugin 可否の判定を `device-bridge.js` に集約し、Web では Tone.js、localStorage、ブラウザ download を使う分岐を明示した。アプリバージョンの正本を `package.json` の `1.0.0` とし、Web ビルドへの埋め込み、iOS `MARKETING_VERSION` への同期、`mobile:doctor` の不一致検出を追加した
+- 2026-06-09: iPhone 17 Simulator で XcodeBuildMCP `build_run_sim` が成功した。Computer Use でプロジェクト一覧、既存プロジェクト読込、編集画面表示、native 再生/停止、保存 write、書出ファイル名ダイアログ、iOS share sheet 到達、アプリ終了後の再起動復元を確認した。runtime log では `NativePlayback preload` / `warmup` / `play started:true` / `stop stopped:true`、`Share canShare true` / `Share share` を確認した
+- 2026-06-09: App Store Connect 用 export を `method=app-store-connect` / automatic signing で試し、Team `KLPR8P3U9F` に対して provider 未関連、iOS Distribution 証明書なし、App Store provisioning profile 作成権限なし、`com.yamaoxiogo.compose` の profile なしで失敗することを確認した。アプリ設定ではなく Apple Developer / App Store Connect 側の権限・証明書整備が次のブロッカー
+- 2026-06-09: 未参照のレガシーファイル `swipe.js` を削除し、`CODEBASE_GUIDE.md` からレガシー候補の記載を削除した
+- 2026-06-09: iOS リリース準備として tracked 済み `.DS_Store` を削除し、`npm run mobile:doctor`、`npm run mobile:sync:ios`、`xcodebuild archive -configuration Release -destination generic/platform=iOS`、`npm run test:e2e:webkit` が成功した。Archive 内は Bundle ID `com.yamaoxiogo.compose`、Version `1.0`、Build `1`、`PrivacyInfo.xcprivacy` 同梱、`.DS_Store` なしを確認した。署名は Apple Development のため、App Store 提出時は Organizer で App Store Connect 用署名の Validate / Distribute が必要
+- 2026-06-09: WebKit smoke を現行のプレビューカード3点メニュー導線に更新し、コピー範囲と音作り確認が長押し/常時表示前提に戻らないようにした
 - 2026-06-09: 音価ツールバーの3連バッジ位置を `top: 1px` に下げ、付点ボタンは使用可能な通常音価の時だけ表示するようにした。3連時の不要な空枠を削除し、`npm run build` が成功した
 - 2026-06-09: プレビューカードの繰り返しボタンに提供SVG `src/assets/repeat_loop_icon.svg` を採用した。ボタンは `30px`、アイコン表示は `22px` のまま、`npm run build` が成功した
 - 2026-06-09: プレビューカード右上の繰り返し / オプションボタンを `20px`、内側アイコン / 記号を `15px` に変更した。寸法は `--preview-header-small-button-size` / `--preview-header-small-icon-size` に集約し、`npm run build` が成功した

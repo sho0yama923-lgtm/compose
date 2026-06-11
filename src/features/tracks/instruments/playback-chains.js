@@ -7,8 +7,8 @@ import {
 } from './instrument-config.js';
 import { clampNumber } from '../../../core/number-utils.js';
 import { TRACK_TONE_DEFAULTS, normalizeEqValue, normalizeTrackTone } from './track-tone.js';
+import { Tone } from '../../playback/tone-runtime.js';
 
-const ToneLib = globalThis.Tone;
 const playbackChains = new Map();
 let masterBus = null;
 
@@ -99,13 +99,12 @@ function disposeMasterBus() {
 }
 
 function ensureMasterBus() {
-    if (!ToneLib) return null;
     if (masterBus) return masterBus;
 
-    const input = new ToneLib.Gain(1);
-    const highpass = new ToneLib.Filter(MASTER_BUS_CONFIG.highpass.frequency, MASTER_BUS_CONFIG.highpass.type);
-    const lowpass = new ToneLib.Filter(MASTER_BUS_CONFIG.lowpass.frequency, MASTER_BUS_CONFIG.lowpass.type);
-    const compressor = new ToneLib.Compressor(
+    const input = new Tone.Gain(1);
+    const highpass = new Tone.Filter(MASTER_BUS_CONFIG.highpass.frequency, MASTER_BUS_CONFIG.highpass.type);
+    const lowpass = new Tone.Filter(MASTER_BUS_CONFIG.lowpass.frequency, MASTER_BUS_CONFIG.lowpass.type);
+    const compressor = new Tone.Compressor(
         MASTER_BUS_CONFIG.compressor.threshold,
         MASTER_BUS_CONFIG.compressor.ratio
     );
@@ -113,8 +112,8 @@ function ensureMasterBus() {
     compressor.release.value = MASTER_BUS_CONFIG.compressor.release;
     compressor.knee.value = MASTER_BUS_CONFIG.compressor.knee;
 
-    const limiter = new ToneLib.Limiter(MASTER_BUS_CONFIG.limiter.threshold);
-    const outputGain = new ToneLib.Gain(dbToLinearGain(MASTER_BUS_CONFIG.outputGainDb));
+    const limiter = new Tone.Limiter(MASTER_BUS_CONFIG.limiter.threshold);
+    const outputGain = new Tone.Gain(dbToLinearGain(MASTER_BUS_CONFIG.outputGainDb));
 
     input.connect(highpass);
     highpass.connect(lowpass);
@@ -167,11 +166,6 @@ function disposePlaybackChain(chainKey) {
 }
 
 function createPlaybackChain(track, playbackInstrumentId) {
-    if (!ToneLib) {
-        console.warn('[Warning] Tone.js の読み込み前のため、音源初期化をスキップします。');
-        return null;
-    }
-
     const master = ensureMasterBus();
     if (!master) return null;
 
@@ -194,12 +188,12 @@ function createPlaybackChain(track, playbackInstrumentId) {
         );
     }
 
-    const lowFilter = new ToneLib.Filter(TRACK_BUS_CONFIG.low.frequency, TRACK_BUS_CONFIG.low.type);
-    const midFilter = new ToneLib.Filter(TRACK_BUS_CONFIG.mid.frequency, TRACK_BUS_CONFIG.mid.type);
+    const lowFilter = new Tone.Filter(TRACK_BUS_CONFIG.low.frequency, TRACK_BUS_CONFIG.low.type);
+    const midFilter = new Tone.Filter(TRACK_BUS_CONFIG.mid.frequency, TRACK_BUS_CONFIG.mid.type);
     midFilter.Q.value = TRACK_BUS_CONFIG.mid.q;
-    const highFilter = new ToneLib.Filter(TRACK_BUS_CONFIG.high.frequency, TRACK_BUS_CONFIG.high.type);
+    const highFilter = new Tone.Filter(TRACK_BUS_CONFIG.high.frequency, TRACK_BUS_CONFIG.high.type);
 
-    const compressor = new ToneLib.Compressor(
+    const compressor = new Tone.Compressor(
         TRACK_BUS_CONFIG.compressor.threshold,
         TRACK_BUS_CONFIG.compressor.ratio
     );
@@ -207,11 +201,11 @@ function createPlaybackChain(track, playbackInstrumentId) {
     compressor.release.value = TRACK_BUS_CONFIG.compressor.release;
     compressor.knee.value = TRACK_BUS_CONFIG.compressor.knee;
 
-    const limiter = new ToneLib.Limiter(TRACK_BUS_CONFIG.limiter.threshold);
-    const sourceTrim = new ToneLib.Gain(dbToLinearGain(mixPreset.trimDb));
-    const preHighpass = new ToneLib.Filter(mixPreset.highpassHz, 'highpass');
-    const inputGain = new ToneLib.Gain(dbToLinearGain(TRACK_TONE_DEFAULTS.gainDb));
-    const sampler = new ToneLib.Sampler({
+    const limiter = new Tone.Limiter(TRACK_BUS_CONFIG.limiter.threshold);
+    const sourceTrim = new Tone.Gain(dbToLinearGain(mixPreset.trimDb));
+    const preHighpass = new Tone.Filter(mixPreset.highpassHz, 'highpass');
+    const inputGain = new Tone.Gain(dbToLinearGain(TRACK_TONE_DEFAULTS.gainDb));
+    const sampler = new Tone.Sampler({
         urls,
         baseUrl,
         release: 0.03,
@@ -301,8 +295,8 @@ export async function prepareTrackPlaybackInstrument(track, playbackInstrumentId
     if (track?.id == null || !playbackInstrumentId) return null;
     const chain = ensurePlaybackChain(track, playbackInstrumentId);
     if (!chain?.sampler) return null;
-    if (typeof ToneLib?.loaded === 'function') {
-        await ToneLib.loaded();
+    if (typeof Tone.loaded === 'function') {
+        await Tone.loaded();
     }
     return chain.sampler;
 }

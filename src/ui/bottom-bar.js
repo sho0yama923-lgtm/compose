@@ -5,25 +5,33 @@ import {
 import { clampNumber } from '../core/number-utils.js';
 import { addMeasure, clearTrackMeasure, removeMeasure } from '../features/tracks/tracks-controller.js';
 
+let isSeekBarExpanded = false;
+
 export function buildSeekBar(renderEditor) {
     ensureDefaultPlayRangeMeasures();
     const seekShell = document.createElement('div');
     seekShell.className = 'measure-seek-shell';
     const seekCard = document.createElement('div');
     seekCard.className = 'measure-seek-card';
+    seekCard.classList.toggle('is-expanded', isSeekBarExpanded);
+
+    const handleButton = buildSeekHandle(seekCard);
     const seekLabel = document.createElement('span');
     seekLabel.className = 'measure-seek-label';
     updateSeekLabel(seekLabel);
+    const compactSeekLabel = document.createElement('span');
+    compactSeekLabel.className = 'measure-seek-compact-label';
+    updateSeekLabel(compactSeekLabel);
 
     const timelineSection = buildRangeTimeline(renderEditor, seekLabel);
-    seekCard.appendChild(timelineSection);
+    seekCard.append(handleButton, compactSeekLabel, timelineSection);
 
     const transportRow = document.createElement('div');
     transportRow.className = 'measure-seek transport-row';
 
     const seekPrev = buildSeekNavButton({
         direction: -1,
-        icon: '|◁',
+        icon: '|◀',
         label: '前小節',
         renderEditor,
     });
@@ -40,7 +48,7 @@ export function buildSeekBar(renderEditor) {
 
     const seekNext = buildSeekNavButton({
         direction: 1,
-        icon: '▷|',
+        icon: '▶|',
         label: '次小節',
         renderEditor,
     });
@@ -55,10 +63,59 @@ export function buildSeekBar(renderEditor) {
     return seekShell;
 }
 
+function buildSeekHandle(seekCard) {
+    const button = document.createElement('button');
+    button.className = 'measure-seek-handle';
+    button.type = 'button';
+    button.setAttribute('aria-controls', 'measure-seek-details');
+
+    let touchStartY = null;
+    let ignoreNextClick = false;
+    const syncState = () => {
+        seekCard.classList.toggle('is-expanded', isSeekBarExpanded);
+        button.setAttribute('aria-expanded', String(isSeekBarExpanded));
+        button.setAttribute('aria-label', isSeekBarExpanded ? '詳細を閉じる' : '詳細を開く');
+    };
+    const setExpanded = (expanded) => {
+        if (isSeekBarExpanded === expanded) return;
+        isSeekBarExpanded = expanded;
+        syncState();
+        if (expanded && document.documentElement.dataset.appRuntime === 'web') {
+            window.scrollBy({ top: 2, behavior: 'smooth' });
+        }
+    };
+
+    button.addEventListener('click', () => {
+        if (ignoreNextClick) {
+            ignoreNextClick = false;
+            return;
+        }
+        setExpanded(!isSeekBarExpanded);
+    });
+    button.addEventListener('touchstart', (event) => {
+        touchStartY = event.touches[0]?.clientY ?? null;
+    }, { passive: true });
+    button.addEventListener('touchend', (event) => {
+        if (touchStartY === null) return;
+        const endY = event.changedTouches[0]?.clientY ?? touchStartY;
+        const deltaY = endY - touchStartY;
+        touchStartY = null;
+        if (Math.abs(deltaY) < 32) return;
+        ignoreNextClick = true;
+        if (deltaY < 0) setExpanded(true);
+        if (deltaY > 0) setExpanded(false);
+    }, { passive: true });
+
+    syncState();
+    return button;
+}
+
 export function syncMeasureSeekUI() {
     const seekLabel = document.querySelector('.measure-seek-label');
-    if (!seekLabel) return;
-    updateSeekLabel(seekLabel);
+    const compactSeekLabel = document.querySelector('.measure-seek-compact-label');
+    if (!seekLabel && !compactSeekLabel) return;
+    if (seekLabel) updateSeekLabel(seekLabel);
+    if (compactSeekLabel) updateSeekLabel(compactSeekLabel);
     const rail = document.querySelector('.measure-range-rail');
     if (rail) {
         rail.style.setProperty('--measure-current-left', `${getCurrentHeadMeasureRatio() * 100}%`);
@@ -132,6 +189,7 @@ function buildRangeMarker(type, measure) {
 function buildRangeTimeline(renderEditor, seekLabel) {
     const timelineSection = document.createElement('section');
     timelineSection.className = 'measure-range-editor';
+    timelineSection.id = 'measure-seek-details';
 
     const rail = document.createElement('div');
     rail.className = 'measure-range-rail';
@@ -409,7 +467,8 @@ function buildSeekNavButton({ direction, icon, label, renderEditor }) {
     const button = document.createElement('button');
     button.className = 'mb-btn mb-nav-btn';
     button.dataset.direction = String(direction);
-    button.innerHTML = `${icon}<span class="mb-btn-guide">${label}</span>`;
+    button.textContent = icon;
+    button.setAttribute('aria-label', label);
     button.disabled = isCopyRangeEditing()
         ? !canMoveCopyRangeEnd(direction)
         : (direction < 0

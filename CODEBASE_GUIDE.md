@@ -41,6 +41,12 @@
   - WebKit smoke の確認基盤
 - `.codex/environments/environment.toml`
   - Codex app の project actions。Run / Build / WebKit smoke / iOS sync などの共有導線
+- `.github/workflows/web-release-check.yml`
+  - Web公開前の依存監査、成果物検査、WebKit smoke
+- `netlify.toml`、`public/_headers`
+  - Web静的配信のbuild設定、security headers、cache policy
+- `scripts/verify-web-release.mjs`
+  - `dist/` の外部script、headers、音源、容量を検査する公開判定script
 - `.xcodebuildmcp/config.yaml`
   - XcodeBuildMCP の iOS Simulator session defaults。Codex から `build_run_sim` する時の正本
 - `scripts/run-ios-simulator.mjs`
@@ -50,8 +56,6 @@
 
 - `CLAUDE.md`
   - `CLAUDE.md` を読むツール向けの互換入口。実装ルールの正本は `AGENTS.md`
-- `swipe.js`
-  - 小節またぎ横スワイプ用の旧ファイル。現行 `src/main.js` からは読み込まれていない
 - `dev-server.py`
   - Vite 以前/補助確認用の簡易サーバー。通常は `npm run dev` を使う
 - `start.command`
@@ -80,7 +84,7 @@
 - `src/main.js`
   - 起動順序、初期化、保存フック、初回トラック生成
 - `src/core/`
-  - 状態、定数、BPM、duration、リズム分割、音楽理論などの低レベル共通ロジック
+  - 状態、アプリバージョン、定数、BPM、duration、リズム分割、音楽理論などの低レベル共通ロジック
 - `src/editors/`
   - ドラム、メロディ、コード、全体プレビューの描画と UI イベント
 - `src/features/`
@@ -93,6 +97,7 @@
   - CSS の正本。入口は `src/styles/editor.css`
 - `docs/`
   - 運用、ビルド、実装ルールなどの補助文書
+  - Web 一般公開の確認は `docs/public-release.md`
 
 ## 作業タイプ別の入口
 
@@ -197,6 +202,8 @@ Codex app では `Run` action または `npm run dev -- --host 127.0.0.1` で de
 
 ### iPhone アプリ
 
+- `package.json`
+- `src/core/app-info.js`
 - `docs/mobile-dev.md`
 - `docs/ios-build.md`
 - `capacitor.config.json`
@@ -206,6 +213,8 @@ Codex app では `Run` action または `npm run dev -- --host 127.0.0.1` で de
 - `ios/App/App/NativePlaybackPlugin.swift`
 - `ios/App/App/AppDelegate.swift`
 - `ios/App/App/Info.plist`
+
+アプリバージョンの正本は `package.json` の `version` とし、Web ビルドには Vite が埋め込む。`npm run version:sync` または `npm run mobile:sync:ios` で iOS の `MARKETING_VERSION` へ反映し、`npm run mobile:doctor` で不一致を検出する。
 
 ### Android アプリ
 

@@ -163,7 +163,14 @@ async function getChordDetailKeyboardMetrics(page) {
 }
 
 test('webkit mobile smoke check', async ({ page }) => {
+  const sampleResponse = await page.request.get('/audio-buffers/sounds/piano/A1.mp3.bin');
+  expect(sampleResponse.ok()).toBe(true);
+  expect(sampleResponse.headers()['content-type']).toContain('application/octet-stream');
+  expect((await sampleResponse.body()).subarray(0, 3).toString()).toBe('ID3');
+
   await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute('data-app-version', '1.0.0');
+  await expect(page.locator('html')).toHaveAttribute('data-app-runtime', 'web');
   await expect(page.locator('meta[name="viewport"]')).toHaveAttribute(
     'content',
     /viewport-fit=cover/
@@ -226,10 +233,10 @@ test('webkit mobile smoke check', async ({ page }) => {
   await page.selectOption('.preview-song-family-select', 'pentatonic');
   await page.locator('.preview-harmony-btn[data-harmony="minor"]').click();
   await expect(page.locator('.preview-harmony-btn.selected')).toContainText('m');
-  await longPressSelector(page, '.preview-card[data-instrument="drums"]');
+  await page.locator('.preview-card[data-instrument="drums"] .preview-track-tone-btn').click();
   await expect(page.locator('.preview-card[data-instrument="drums"] .preview-card-actions')).toBeVisible();
   await page.locator('.preview-card[data-instrument="drums"] .preview-card-action-btn', { hasText: 'コピー' }).click();
-  await expect(page.locator('.preview-range-title')).toHaveText('コピー範囲');
+  await expect(page.locator('.preview-range-current')).toHaveText('コピー範囲: 1小節');
   await page.locator('.preview-card[data-instrument="drums"] .preview-card-action-btn.compact', { hasText: '中止' }).click();
 
   await page.evaluate(() => {
@@ -416,6 +423,7 @@ test('webkit mobile smoke check', async ({ page }) => {
 
   const pianoCard = page.locator('.preview-card[data-instrument="piano"]');
   await expect(pianoCard).toBeVisible();
+  await pianoCard.locator('.preview-track-tone-btn').click();
   await expect(pianoCard.getByRole('button', { name: '音作り' })).toBeVisible();
   await expect(pianoCard.locator('.preview-track-eq-summary')).toHaveCount(0);
   await expect(pianoCard.locator('.preview-track-eq-slider')).toHaveCount(0);
@@ -502,6 +510,7 @@ test('webkit mobile smoke check', async ({ page }) => {
   await expect(page.locator('.preview-song-root-select')).toHaveValue('C');
   await expect(page.locator('.preview-song-family-select')).toHaveValue('pentatonic');
   await expect(page.locator('.preview-harmony-btn.selected')).toContainText('m');
+  await reloadedPianoCard.locator('.preview-track-tone-btn').click();
   await reloadedPianoCard.getByRole('button', { name: '音作り' }).click();
   await expect(page.locator('.preview-tone-control-value[data-tone-key="gainDb"]')).toContainText('+6 dB');
   await expect(page.locator('.preview-tone-control-value[data-tone-key="compAmount"]')).toContainText('72 %');
@@ -523,6 +532,7 @@ test('webkit mobile smoke check', async ({ page }) => {
   await page.getByRole('button', { name: '閉じる', exact: true }).click();
 
   await page.locator('#viewToggleBtn').click();
+  await reloadedPianoCard.locator('.preview-track-tone-btn').click();
   await reloadedPianoCard.getByRole('button', { name: '音作り' }).click();
   await page.getByRole('button', { name: '初期化' }).click();
   await expect(page.locator('.preview-tone-control-value[data-tone-key="gainDb"]')).toContainText('0 dB');
@@ -557,4 +567,78 @@ test('current song settings restore on load', async ({ page }) => {
   await expect(page.locator('.preview-song-root-select')).toHaveValue('D');
   await expect(page.locator('.preview-song-family-select')).toHaveValue('pentatonic');
   await expect(page.locator('.preview-harmony-btn.selected')).toContainText('m');
+});
+
+test('rejects oversized or malformed project data before restore', async ({ page }) => {
+  await page.goto('/');
+  const result = await page.evaluate(async () => {
+    const { restoreFromData } = await import('/src/features/project/storage/storage-helpers.js');
+    return {
+      tooManyMeasures: restoreFromData({
+        version: 11,
+        numMeasures: 129,
+        tracks: [],
+      }),
+      unknownInstrument: restoreFromData({
+        version: 11,
+        numMeasures: 1,
+        tracks: [{
+          id: 1,
+          instrument: 'unknown',
+        }],
+      }),
+    };
+  });
+
+  expect(result).toEqual({
+    tooManyMeasures: false,
+    unknownInstrument: false,
+  });
+});
+
+test('shows a backup action when browser storage save fails', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await createNewProject(page, 'Save Error Test');
+
+  const saveFailed = await page.evaluate(async () => {
+    const originalSetItem = Storage.prototype.setItem;
+    window.__originalStorageSetItem = originalSetItem;
+    Storage.prototype.setItem = () => {
+      throw new DOMException('Quota exceeded', 'QuotaExceededError');
+    };
+    const { saveState } = await import('/src/features/project/storage/storage-core.js');
+    return saveState();
+  });
+
+  expect(saveFailed).toBe(false);
+  await expect(page.getByRole('alert')).toContainText('保存できませんでした');
+  await expect(page.getByRole('button', { name: 'JSONを書き出す' })).toBeVisible();
+
+  const noticeMetrics = await page.locator('#saveErrorNotice').evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const exportButton = element.querySelector('.save-error-notice-export');
+    const exportRect = exportButton?.getBoundingClientRect();
+    return {
+      width: Math.round(rect.width),
+      left: Math.round(rect.left),
+      rightGap: Math.round(window.innerWidth - rect.right),
+      actionHeight: Math.round(exportRect?.height || 0),
+    };
+  });
+  expect(noticeMetrics.width).toBeLessThanOrEqual(420);
+  expect(noticeMetrics.left).toBeGreaterThanOrEqual(16);
+  expect(noticeMetrics.rightGap).toBeGreaterThanOrEqual(16);
+  expect(noticeMetrics.actionHeight).toBeGreaterThanOrEqual(44);
+
+  const saveRecovered = await page.evaluate(async () => {
+    Storage.prototype.setItem = window.__originalStorageSetItem;
+    delete window.__originalStorageSetItem;
+    const { saveState } = await import('/src/features/project/storage/storage-core.js');
+    return saveState();
+  });
+
+  expect(saveRecovered).toBe(true);
+  await expect(page.locator('#saveErrorNotice')).toHaveCount(0);
 });

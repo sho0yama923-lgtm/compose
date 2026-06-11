@@ -21,6 +21,11 @@ icon = "test"
 command = "npm run test:e2e:webkit"
 
 [[actions]]
+name = "Web Release Check"
+icon = "check"
+command = "npm run release:check"
+
+[[actions]]
 name = "iOS Sync"
 icon = "phone"
 command = "npm run mobile:sync:ios"

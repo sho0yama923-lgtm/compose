@@ -3,6 +3,7 @@
 :root {
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --app-viewport-height: 100dvh;
 }
 
 body {
@@ -10,10 +11,21 @@ body {
     background: #f0f0f0;
     color: #111;
     margin: 0;
-    height: 100dvh;
+    height: var(--app-viewport-height);
     overflow: hidden;
     display: flex;
     flex-direction: column;
+}
+
+html[data-app-runtime="web"] {
+    min-height: calc(var(--app-viewport-height) + 2px);
+}
+
+html[data-app-runtime="web"] body {
+    height: calc(var(--app-viewport-height) + 2px);
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior-y: auto;
 }
 
 /* ======= トップバー（ピアノの天板イメージ）======= */
