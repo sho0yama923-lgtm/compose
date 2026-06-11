@@ -210,7 +210,7 @@ export function getInstrumentBaseUrl(config) {
 export function getInstrumentBufferBaseUrl(config) {
     const folder = config?.folder || '';
     if (!folder) return '';
-    return `/audio-buffers/${folder}`;
+    return `${import.meta.env.BASE_URL}audio-buffers/${folder}`;
 }
 
 export function getInstrumentUrls(config) {

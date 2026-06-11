@@ -30,7 +30,7 @@ assert(distBytes <= MAX_DIST_BYTES, `dist exceeds 100 MiB: ${distBytes} bytes`);
 
 const indexHtml = await readFile(join(DIST_DIR, 'index.html'), 'utf8');
 assert(!/<script[^>]+src=["']https?:\/\//i.test(indexHtml), 'External script found in dist/index.html');
-assert(/<script[^>]+type=["']module["'][^>]+src=["']\/assets\//i.test(indexHtml), 'Bundled module script not found');
+assert(/<script[^>]+type=["']module["'][^>]+src=["'](?:\.\/|\/)assets\//i.test(indexHtml), 'Bundled module script not found');
 
 const headers = await readFile(join(DIST_DIR, '_headers'), 'utf8');
 for (const header of REQUIRED_HEADERS) {
