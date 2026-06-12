@@ -4,7 +4,7 @@ import { normalizeUnitValue } from '../../core/number-utils.js';
 import { getTrackPlaybackInstrument, syncTrackPlaybackChains } from '../tracks/instrument-map.js';
 import { getDrumSampleDefinition } from '../tracks/instruments/instrument-config.js';
 import { prepareTrackPlaybackInstrument } from '../tracks/instruments/playback-chains.js';
-import { Tone } from './tone-runtime.js';
+import { Tone, ensureToneAudioReady } from './tone-runtime.js';
 
 // ==========================================================
 // スコアのデータ形式
@@ -53,7 +53,7 @@ async function waitForSamplerReady(sampler, timeoutMs = PREVIEW_SAMPLER_READY_TI
 export async function warmupPlaybackInstrument(track, playbackInstrumentId) {
     if (!track?.id || !playbackInstrumentId) return false;
     try {
-        await Tone.start();
+        await ensureToneAudioReady();
         const sampler = await prepareTrackPlaybackInstrument(track, playbackInstrumentId);
         return await waitForSamplerReady(sampler, PREVIEW_SAMPLER_READY_TIMEOUT_MS);
     } catch (error) {
@@ -81,7 +81,13 @@ export async function play(score, {
     startStep = 0,
     endStepExclusive = score.length,
 } = {}) {
-    await Tone.start();
+    try {
+        await ensureToneAudioReady();
+    } catch (error) {
+        console.error('[Audio] Web Audioを開始できませんでした。', error);
+        alert('ブラウザの音声を開始できませんでした。ページを再読み込みして、もう一度再生してください。');
+        return false;
+    }
 
     // 前の再生を停止
     stop();
@@ -91,6 +97,7 @@ export async function play(score, {
     if (typeof Tone.loaded === 'function') {
         try {
             await Tone.loaded();
+            console.info('[Audio] 再生用音源のロードが完了しました。');
         } catch (error) {
             console.error('[Audio] 音源の読み込みに失敗しました。', error);
             alert('音源の読み込みに失敗したため、再生できませんでした。アプリを再起動してもう一度お試しください。');
@@ -146,7 +153,7 @@ export async function play(score, {
     _part.start(0);
 
     Tone.Transport.position = 0;
-    Tone.Transport.start();
+    Tone.Transport.start(Tone.now() + 0.05);
     return true;
 }
 
@@ -174,7 +181,7 @@ export async function previewDrumSample({
         rows: [{ sampleInstrumentId, sampleId }],
     };
 
-    await Tone.start();
+    await ensureToneAudioReady();
 
     let sampler = null;
     try {
@@ -214,7 +221,7 @@ export async function previewTrackNote({
     const playbackInstrumentId = track.playbackInstrument || track.instrument;
     if (!playbackInstrumentId) return false;
 
-    await Tone.start();
+    await ensureToneAudioReady();
 
     let sampler = null;
     try {

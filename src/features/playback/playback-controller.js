@@ -5,6 +5,8 @@ import { getCurrentBpm } from '../../core/bpm.js';
 import { playScore, stopScorePlayback } from '../bridges/audio-bridge.js';
 import { serializeScoreForNativePlayback } from './score-serializer.js';
 import { buildPlaybackScore, resolvePlaybackWindow } from './score-builder.js';
+import { ensureToneAudioReady } from './tone-runtime.js';
+import { canUseIosNativePlayback } from '../bridges/device-bridge.js';
 
 let playbackRequestId = 0;
 let playheadAnimationFrameId = null;
@@ -47,17 +49,20 @@ export function initPlayback() {
         const playToggleBtn = target.closest('[data-play-toggle="true"]');
         if (!playToggleBtn) return;
         if (appState.isBooting) return;
-        void togglePlayback();
+        const audioReadyPromise = canUseIosNativePlayback()
+            ? null
+            : ensureToneAudioReady();
+        void togglePlayback(audioReadyPromise);
     });
 }
 
-async function togglePlayback() {
+async function togglePlayback(audioReadyPromise = null) {
     if (appState.isPlaying) {
         stopPlayback();
         return;
     }
 
-    await startPlayback();
+    await startPlayback(audioReadyPromise);
 }
 
 function buildPlaybackContext() {
@@ -96,7 +101,17 @@ function moveEditorToPlaybackStart(startStep) {
     appState.isPlaying = false;
 }
 
-async function startPlayback() {
+async function startPlayback(audioReadyPromise = null) {
+    if (audioReadyPromise) {
+        try {
+            await audioReadyPromise;
+        } catch (error) {
+            console.error('[Audio] 再生操作からWeb Audioを開始できませんでした。', error);
+            alert('ブラウザの音声を開始できませんでした。ページを再読み込みして、もう一度再生してください。');
+            return;
+        }
+    }
+
     const {
         bpm,
         score,
