@@ -43,6 +43,7 @@
 
 ## 変更履歴
 
+- 2026-06-12: GitHub Pagesの旧branch配信がartifact配信後に未ビルド版を上書きする競合を避けるため、artifact deployを旧配信の完了後に実行する待機を追加した
 - 2026-06-11: Web版の`html/body`を`visualViewport`の実表示高へ固定し、Safari UI縮小用に残していた`2px`のページスクロールを削除した。エディタ内部へ`overscroll-behavior: contain`を設定し、エディタ外のスワイプやスクロール端から画面全体が動かないようにした
 - 2026-06-11: GitHub PagesがVite未ビルドのソースを配信して起動停止していたため、`dist`をPages artifactとしてデプロイするworkflowを追加した。Vite assetsを相対URLへ変更し、音源URLも`import.meta.env.BASE_URL`基準にして`/compose/`配下へ対応した
 - 2026-06-11: 再生カードを重ねた状態で`scrollIntoView`した操作対象がカード裏へ止まる問題を、ピアノ/ドラム/全体プレビューの`scroll-padding-bottom`と、スクロール領域外にあるドラム追加パネルの下余白をカード高へ連動させて修正した

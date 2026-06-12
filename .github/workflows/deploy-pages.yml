@@ -48,6 +48,9 @@ jobs:
         with:
           path: dist
 
+      - name: Wait for legacy branch deployment
+        run: sleep 45
+
       - name: Deploy Pages
         id: deployment
         uses: actions/deploy-pages@v4
