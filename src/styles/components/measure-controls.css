@@ -107,6 +107,7 @@
 .drum-track-editor .drum-editor .steps-grid-scroll,
 .preview-editor .preview-wrap {
     scroll-padding-bottom: calc(var(--seek-overlay-space) + var(--safe-bottom));
+    overscroll-behavior: contain;
 }
 .preview-editor .preview-wrap {
     padding-bottom: calc(var(--seek-overlay-space) + var(--safe-bottom));

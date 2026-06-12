@@ -18,14 +18,20 @@ body {
 }
 
 html[data-app-runtime="web"] {
-    min-height: calc(var(--app-viewport-height) + 2px);
+    width: 100%;
+    height: var(--app-viewport-height);
+    overflow: hidden;
+    overscroll-behavior: none;
 }
 
 html[data-app-runtime="web"] body {
-    height: calc(var(--app-viewport-height) + 2px);
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: var(--app-viewport-height);
     min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior-y: auto;
+    overflow: hidden;
+    overscroll-behavior: none;
 }
 
 /* ======= トップバー（ピアノの天板イメージ）======= */

@@ -1062,6 +1062,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    overscroll-behavior: contain;
     min-height: 0;
 }
 /* 3. アコーディオン（オクターブ選択）の中身を画面の高さに合わせて伸縮させる */
