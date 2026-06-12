@@ -564,6 +564,8 @@
 }
 
 .onboarding-overlay {
+    --onboarding-progress-steps: 3;
+    --onboarding-progress-height: 4px;
     position: fixed;
     inset: 0;
     background: rgba(10, 10, 10, 0.56);
@@ -574,6 +576,8 @@
     z-index: 300;
 }
 .onboarding-card {
+    position: relative;
+    z-index: 302;
     width: 100%;
     max-width: 420px;
     background: #fff;
@@ -594,6 +598,31 @@
     font-size: 22px;
     line-height: 1.2;
     color: #111;
+}
+.onboarding-description {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.65;
+    color: #555;
+}
+.onboarding-progress {
+    height: var(--onboarding-progress-height);
+    margin: 0 0 14px;
+    border-radius: 999px;
+    background:
+        linear-gradient(
+            to right,
+            #111 0,
+            #111 calc(var(--onboarding-progress) / var(--onboarding-progress-steps) * 100%),
+            #e7e7e7 calc(var(--onboarding-progress) / var(--onboarding-progress-steps) * 100%),
+            #e7e7e7 100%
+        );
+}
+.onboarding-guide-target {
+    position: relative;
+    z-index: 301;
+    outline: 3px solid #f6c945;
+    outline-offset: 3px;
 }
 .onboarding-points {
     display: flex;

@@ -43,6 +43,7 @@
 
 ## 変更履歴
 
+- 2026-06-12: 新規プロジェクトへ4小節のカノン進行サンプル（コード、ドラム、メロディ）を常設した。初回だけ操作説明の可否を尋ね、承認時はサンプルの全体再生、コード進行、メロディを順に表示する3段階ガイドへ変更し、ドラム/メロディ画面の自明なタップ説明を削除した
 - 2026-06-12: GitHub Pagesの旧branch配信がartifact配信後に未ビルド版を上書きする競合を避けるため、artifact deployを旧配信の完了後に実行する待機を追加した
 - 2026-06-11: Web版の`html/body`を`visualViewport`の実表示高へ固定し、Safari UI縮小用に残していた`2px`のページスクロールを削除した。エディタ内部へ`overscroll-behavior: contain`を設定し、エディタ外のスワイプやスクロール端から画面全体が動かないようにした
 - 2026-06-11: GitHub PagesがVite未ビルドのソースを配信して起動停止していたため、`dist`をPages artifactとしてデプロイするworkflowを追加した。Vite assetsを相対URLへ変更し、音源URLも`import.meta.env.BASE_URL`基準にして`/compose/`配下へ対応した

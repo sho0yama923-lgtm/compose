@@ -105,7 +105,9 @@
 
 - `src/main.js`
 - `src/core/state.js`
+- `src/features/project/canon-sample.js`
 - `src/ui/project-home.js`
+- `src/ui/onboarding.js`
 - `src/ui/topbar.js`
 - `src/ui/track-drawer.js`
 - `src/editors/editor-router.js`

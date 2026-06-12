@@ -66,17 +66,6 @@ export function renderDrumEditor(track, editorEl) {
     const toolbarEl = renderDurationToolbar(topbarEl, () => callbacks.renderEditor());
     toolbarEl.classList.add('melody-duration-toolbar');
 
-    if (!appState.drumHintDismissed) {
-        topbarEl.appendChild(buildEditorHint(
-            'リズムを作る',
-            '行をタップして音を置きます。黒いブロックの切れ目で拍を確認できます。',
-            () => {
-                appState.drumHintDismissed = true;
-                callbacks.renderEditor();
-            }
-        ));
-    }
-
     const wrapEl = document.createElement('div');
     wrapEl.className = 'melodic-editor drum-editor';
     wrapEl.style.setProperty('--drum-key-width', `${DRUM_KEY_WIDTH_PX}px`);
@@ -572,29 +561,6 @@ function updatePlayheadBar(barEl, measureStart) {
     const localStep = step - measureStart;
     barEl.style.display = 'block';
     barEl.style.left = `calc(var(--drum-key-width, ${DRUM_KEY_WIDTH_PX}px) + ${(localStep / STEPS_PER_MEASURE).toFixed(6)} * (100% - var(--drum-key-width, ${DRUM_KEY_WIDTH_PX}px)))`;
-}
-
-function buildEditorHint(title, body, onDismiss) {
-    const el = document.createElement('div');
-    el.className = 'editor-help';
-    if (typeof onDismiss === 'function') {
-        const closeBtn = document.createElement('button');
-        closeBtn.className = 'editor-help-close';
-        closeBtn.type = 'button';
-        closeBtn.setAttribute('aria-label', '案内を閉じる');
-        closeBtn.textContent = '×';
-        closeBtn.addEventListener('click', onDismiss);
-        el.appendChild(closeBtn);
-    }
-
-    const titleEl = document.createElement('strong');
-    titleEl.textContent = title;
-
-    const bodyEl = document.createElement('span');
-    bodyEl.textContent = body;
-
-    el.append(titleEl, bodyEl);
-    return el;
 }
 
 function isDrumDragOrigin(trackId, rowLabel, sourceIndex) {

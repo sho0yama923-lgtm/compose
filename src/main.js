@@ -22,6 +22,7 @@ import { prepareAudioPlayback } from './features/bridges/audio-bridge.js';
 import { renderProjectHome, setProjectHomeVisible } from './ui/project-home.js';
 import { requestProjectImport } from './features/bridges/file-share-bridge.js';
 import { getAppRuntime, isWebApp } from './features/bridges/device-bridge.js';
+import { applyCanonSample } from './features/project/canon-sample.js';
 
 let audioWarmupPromise = null;
 let hasInitializedOnboarding = false;
@@ -184,14 +185,14 @@ function resetComposerState() {
     if (bpmInput) bpmInput.value = '120';
 }
 
-async function showProjectEditor() {
+async function showProjectEditor({ offerOnboarding = false } = {}) {
     setProjectHomeVisible(false);
     appState.previewMode = true;
     syncViewToggleButton(true);
     callbacks.renderSidebar();
     callbacks.renderEditor();
     await warmupAudioForPlayback();
-    if (!hasInitializedOnboarding) {
+    if (offerOnboarding && !hasInitializedOnboarding) {
         initOnboarding();
         hasInitializedOnboarding = true;
     }
@@ -203,9 +204,10 @@ async function createDefaultProject(name) {
     addTrack('drums');
     addTrack('chord');
     addTrack('piano');
+    applyCanonSample();
     appState.previewMode = true;
     await saveState();
-    await showProjectEditor();
+    await showProjectEditor({ offerOnboarding: true });
 }
 
 async function openExistingProject(projectId) {
