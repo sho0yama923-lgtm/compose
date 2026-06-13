@@ -1,6 +1,7 @@
 import { appState, callbacks, STEPS_PER_BEAT } from '../../core/state.js';
 import { ROOT_COLORS, normalizeChordCustomNotes } from '../../core/constants.js';
 import { closeChordDetail } from './chord-detail-sheet.js';
+import { emitTutorialAction } from '../../core/tutorial-events.js';
 
 export function buildProgressSection(track, offset, mEnd, options = {}) {
     const { embedded = false } = options;
@@ -106,6 +107,11 @@ export function buildProgressSection(track, offset, mEnd, options = {}) {
                 closeChordDetail(false);
             }
             callbacks.renderEditor();
+            emitTutorialAction('chord-changed', {
+                trackId: track.id,
+                step: beatStart,
+                chord: sameChord ? null : selected,
+            });
         });
 
         gridEl.appendChild(beatCell);

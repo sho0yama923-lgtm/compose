@@ -25,8 +25,6 @@ import { getAppRuntime, isWebApp } from './features/bridges/device-bridge.js';
 import { applyCanonSample } from './features/project/canon-sample.js';
 
 let audioWarmupPromise = null;
-let hasInitializedOnboarding = false;
-
 document.documentElement.dataset.appVersion = APP_VERSION;
 document.documentElement.dataset.appRuntime = getAppRuntime();
 
@@ -185,20 +183,29 @@ function resetComposerState() {
     if (bpmInput) bpmInput.value = '120';
 }
 
-async function showProjectEditor({ offerOnboarding = false } = {}) {
+async function showProjectEditor({
+    offerOnboarding = false,
+    forceOnboarding = false,
+    startOnboardingImmediately = false,
+} = {}) {
     setProjectHomeVisible(false);
     appState.previewMode = true;
     syncViewToggleButton(true);
     callbacks.renderSidebar();
     callbacks.renderEditor();
     await warmupAudioForPlayback();
-    if (offerOnboarding && !hasInitializedOnboarding) {
-        initOnboarding();
-        hasInitializedOnboarding = true;
+    if (offerOnboarding) {
+        initOnboarding({
+            force: forceOnboarding,
+            startImmediately: startOnboardingImmediately,
+        });
     }
 }
 
-async function createDefaultProject(name) {
+async function createDefaultProject(name, {
+    forceOnboarding = false,
+    startOnboardingImmediately = false,
+} = {}) {
     await createProject(name);
     resetComposerState();
     addTrack('drums');
@@ -207,7 +214,11 @@ async function createDefaultProject(name) {
     applyCanonSample();
     appState.previewMode = true;
     await saveState();
-    await showProjectEditor({ offerOnboarding: true });
+    await showProjectEditor({
+        offerOnboarding: true,
+        forceOnboarding,
+        startOnboardingImmediately,
+    });
 }
 
 async function openExistingProject(projectId) {
@@ -225,6 +236,12 @@ const projectHomeHandlers = {
     },
     onOpenProject: (projectId) => {
         void openExistingProject(projectId);
+    },
+    onStartTutorial: () => {
+        void createDefaultProject('チュートリアル', {
+            forceOnboarding: true,
+            startOnboardingImmediately: true,
+        });
     },
     onRenameProject: (project) => {
         const nextName = window.prompt('プロジェクト名を入力してください', project.name);

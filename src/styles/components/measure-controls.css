@@ -564,8 +564,16 @@
 }
 
 .onboarding-overlay {
-    --onboarding-progress-steps: 3;
+    --onboarding-progress-steps: 4;
     --onboarding-progress-height: 4px;
+    --onboarding-card-max-width: 420px;
+    --onboarding-card-radius: 18px;
+    --onboarding-card-padding-x: 16px;
+    --onboarding-card-padding-top: 18px;
+    --onboarding-card-padding-bottom: 16px;
+    --onboarding-guide-edge-gap: 12px;
+    --onboarding-guide-top-offset: calc(64px + env(safe-area-inset-top, 0px));
+    --onboarding-guide-bottom-offset: calc(108px + env(safe-area-inset-bottom, 0px));
     position: fixed;
     inset: 0;
     background: rgba(10, 10, 10, 0.56);
@@ -573,17 +581,55 @@
     align-items: flex-end;
     justify-content: center;
     padding: 18px 12px calc(18px + env(safe-area-inset-bottom, 0px));
-    z-index: 300;
+    z-index: 400;
+}
+.onboarding-overlay.is-guide {
+    background: transparent;
+    padding: 0;
+    pointer-events: none;
 }
 .onboarding-card {
     position: relative;
-    z-index: 302;
+    z-index: 402;
     width: 100%;
-    max-width: 420px;
+    max-width: var(--onboarding-card-max-width);
     background: #fff;
-    border-radius: 18px;
-    padding: 18px 16px 16px;
+    border-radius: var(--onboarding-card-radius);
+    padding:
+        var(--onboarding-card-padding-top)
+        var(--onboarding-card-padding-x)
+        var(--onboarding-card-padding-bottom);
     box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+}
+.onboarding-overlay.is-guide .onboarding-card {
+    position: fixed;
+    right: var(--onboarding-guide-edge-gap);
+    left: var(--onboarding-guide-edge-gap);
+    margin: 0 auto;
+    pointer-events: auto;
+}
+.onboarding-overlay.is-guide .onboarding-card.is-top {
+    top: var(--onboarding-guide-top-offset);
+    bottom: auto;
+}
+.onboarding-overlay.is-guide .onboarding-card.is-bottom {
+    top: auto;
+    bottom: var(--onboarding-guide-bottom-offset);
+}
+.onboarding-shade,
+.onboarding-spotlight {
+    position: fixed;
+    pointer-events: none;
+}
+.onboarding-shade {
+    z-index: 400;
+    background: rgba(10, 10, 10, 0.58);
+}
+.onboarding-spotlight {
+    z-index: 401;
+    border: 3px solid #f6c945;
+    border-radius: 12px;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.28);
 }
 .onboarding-kicker {
     font-size: 10px;
@@ -617,35 +663,6 @@
             #e7e7e7 calc(var(--onboarding-progress) / var(--onboarding-progress-steps) * 100%),
             #e7e7e7 100%
         );
-}
-.onboarding-guide-target {
-    position: relative;
-    z-index: 301;
-    outline: 3px solid #f6c945;
-    outline-offset: 3px;
-}
-.onboarding-points {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-.onboarding-point {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 10px 12px;
-    border-radius: 12px;
-    background: #f7f7f7;
-    border: 1px solid #ececec;
-}
-.onboarding-point strong {
-    font-size: 13px;
-    color: #222;
-}
-.onboarding-point span {
-    font-size: 12px;
-    line-height: 1.5;
-    color: #666;
 }
 .onboarding-actions {
     display: flex;

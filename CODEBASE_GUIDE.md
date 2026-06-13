@@ -105,6 +105,7 @@
 
 - `src/main.js`
 - `src/core/state.js`
+- `src/core/tutorial-events.js`
 - `src/features/project/canon-sample.js`
 - `src/ui/project-home.js`
 - `src/ui/onboarding.js`

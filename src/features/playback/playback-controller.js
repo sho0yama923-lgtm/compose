@@ -7,6 +7,7 @@ import { serializeScoreForNativePlayback } from './score-serializer.js';
 import { buildPlaybackScore, resolvePlaybackWindow } from './score-builder.js';
 import { ensureToneAudioReady } from './tone-runtime.js';
 import { canUseIosNativePlayback } from '../bridges/device-bridge.js';
+import { emitTutorialAction } from '../../core/tutorial-events.js';
 
 let playbackRequestId = 0;
 let playheadAnimationFrameId = null;
@@ -102,15 +103,24 @@ function moveEditorToPlaybackStart(startStep) {
 }
 
 async function startPlayback(audioReadyPromise = null) {
+    const requestId = ++playbackRequestId;
+    appState.isPlaying = true;
+    setPlaybackButtonState();
+    emitTutorialAction('playback-requested');
+
     if (audioReadyPromise) {
         try {
             await audioReadyPromise;
         } catch (error) {
+            if (requestId !== playbackRequestId) return;
+            appState.isPlaying = false;
+            setPlaybackButtonState();
             console.error('[Audio] 再生操作からWeb Audioを開始できませんでした。', error);
             alert('ブラウザの音声を開始できませんでした。ページを再読み込みして、もう一度再生してください。');
             return;
         }
     }
+    if (requestId !== playbackRequestId || !appState.isPlaying) return;
 
     const {
         bpm,
@@ -122,9 +132,6 @@ async function startPlayback(audioReadyPromise = null) {
 
     moveEditorToPlaybackStart(startStep);
 
-    const requestId = ++playbackRequestId;
-    appState.isPlaying = true;
-    setPlaybackButtonState();
     beginPlaybackAnimation({
         mode: 'pending',
         bpm,
@@ -156,6 +163,7 @@ async function startPlayback(audioReadyPromise = null) {
         : !!playbackResult;
     appState.isPlaying = started;
     if (started) {
+        emitTutorialAction('playback-started');
         beginPlaybackAnimation({
             mode: playbackResult?.mode || 'web',
             bpm,
@@ -329,6 +337,7 @@ function stopPlayback() {
     updatePlayheadIndicators(null);
     callbacks.renderEditor();
     setPlaybackButtonState();
+    emitTutorialAction('playback-stopped');
 }
 
 function setPlaybackButtonState() {

@@ -23,6 +23,7 @@ import {
 } from '../core/rhythm-grid.js';
 import { previewTrackNote } from '../features/bridges/audio-bridge.js';
 import { beginNoteDragInteraction } from './note-drag-session.js';
+import { emitTutorialAction } from '../core/tutorial-events.js';
 
 const NOTE_DRAG_HOLD_MS = 380;
 
@@ -173,8 +174,15 @@ export function renderMelodicEditor(track, editorEl) {
                 const column = Math.floor((x / rect.width) * cells.length);
                 const cellInfo = cells[Math.max(0, Math.min(cells.length - 1, column))];
                 track.activeOctave = octave;
-                toggleStep(steps, offset + cellInfo.localStep, getCurrentDuration(), maxIndex);
+                const step = offset + cellInfo.localStep;
+                const wasEmpty = !isStepHead(steps[step]);
+                toggleStep(steps, step, getCurrentDuration(), maxIndex);
                 callbacks.renderEditor();
+                emitTutorialAction(wasEmpty ? 'melody-note-added' : 'melody-note-removed', {
+                    trackId: track.id,
+                    note: fullNote,
+                    step,
+                });
             });
 
             chordToneBeats.forEach((chord, beat) => {
@@ -189,6 +197,8 @@ export function renderMelodicEditor(track, editorEl) {
                 const noteEl = document.createElement('div');
                 noteEl.className = 'melody-grid-note';
                 const pendingDeleteId = `melody:${track.id}:${fullNote}:${si}`;
+                noteEl.dataset.note = fullNote;
+                noteEl.dataset.step = String(si);
                 noteEl.style.left = `${(localStep / STEPS_PER_MEASURE) * 100}%`;
                 noteEl.style.width = `${((DURATION_CELLS[val] || 1) / STEPS_PER_MEASURE) * 100}%`;
                 if (isPendingDeleteNote(pendingDeleteId)) noteEl.classList.add('is-delete-pending');
@@ -201,6 +211,11 @@ export function renderMelodicEditor(track, editorEl) {
                         track.activeOctave = octave;
                         toggleStep(steps, si, getCurrentDuration(), maxIndex);
                         callbacks.renderEditor();
+                        emitTutorialAction('melody-note-removed', {
+                            trackId: track.id,
+                            note: fullNote,
+                            step: si,
+                        });
                         return;
                     }
                     setPendingDeleteNote(pendingDeleteId);
@@ -450,6 +465,13 @@ function startMelodyNoteDrag({
                     track.stepsMap[fullNote] = movingWithinSameLane ? nextTargetSteps : nextSourceSteps;
                     track.stepsMap[drag.targetFullNote] = nextTargetSteps;
                     track.activeOctave = Number.parseInt(drag.targetFullNote.slice(-1), 10) || octave;
+                    emitTutorialAction('melody-note-moved', {
+                        trackId: track.id,
+                        sourceNote: fullNote,
+                        sourceStep: sourceIndex,
+                        targetNote: drag.targetFullNote,
+                        targetStep: drag.targetIndex,
+                    });
                 }
             }
         }

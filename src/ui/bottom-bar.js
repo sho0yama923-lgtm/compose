@@ -3,6 +3,7 @@ import {
     getNormalizedPlayRangeMeasures,
 } from '../core/state.js';
 import { clampNumber } from '../core/number-utils.js';
+import { emitTutorialAction } from '../core/tutorial-events.js';
 import { addMeasure, clearTrackMeasure, removeMeasure } from '../features/tracks/tracks-controller.js';
 
 let isSeekBarExpanded = false;
@@ -509,6 +510,10 @@ function moveCurrentMeasure(direction, renderEditor) {
     appState.currentMeasure = nextMeasure;
     appState.playheadStep = nextMeasure * 48;
     renderEditor();
+    emitTutorialAction('measure-changed', {
+        currentMeasure: nextMeasure,
+        direction,
+    });
     return true;
 }
 

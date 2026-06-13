@@ -195,6 +195,12 @@ body.project-home-active .main {
     color: #fff;
 }
 
+.project-home-action.tutorial {
+    border-color: #111;
+    background: #fff;
+    color: #111;
+}
+
 .project-home-action.wide {
     width: 100%;
 }

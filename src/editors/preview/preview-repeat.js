@@ -1,5 +1,6 @@
 import { appState, callbacks, clearPreviewCopyState, clearRepeatState } from '../../core/state.js';
 import { copyTrackMeasureRange, pasteTrackMeasureRange, repeatTrackMeasureRange } from '../../features/tracks/tracks-controller.js';
+import { emitTutorialAction } from '../../core/tutorial-events.js';
 
 export function buildRepeatSelectionRail(track, side) {
     const btn = document.createElement('button');
@@ -49,6 +50,10 @@ function handleRepeatStartRail(trackId) {
         return;
     }
     startRepeatFlow(trackId);
+    emitTutorialAction('repeat-source-started', {
+        trackId,
+        sourceStartMeasure: appState.currentMeasure,
+    });
 }
 
 function handleRepeatEndRail(trackId) {
@@ -81,6 +86,11 @@ function finalizeRepeatSource(trackId) {
     repeatState.sourceSnapshot = track
         ? copyTrackMeasureRange(track, sourceStart, sourceEnd)
         : null;
+    emitTutorialAction('repeat-source-completed', {
+        trackId,
+        sourceStartMeasure: sourceStart,
+        sourceEndMeasure: sourceEnd,
+    });
 }
 
 function extendRepeatByOneMeasure(track) {
@@ -102,6 +112,10 @@ function extendRepeatByOneMeasure(track) {
         repeatState.sourceStartMeasure,
         repeatState.sourceEndMeasure
     );
+    emitTutorialAction('repeat-applied', {
+        trackId: track.id,
+        targetEndMeasure: nextEnd,
+    });
 }
 
 function repeatPreviousMeasure(track) {

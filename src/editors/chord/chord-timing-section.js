@@ -17,6 +17,7 @@ import { clearNote, placeNote, toggleStep, isStepHead, isStepTie } from '../../c
 import { getCurrentDuration } from '../duration-toolbar.js';
 import { createPlayheadBar } from './chord-shared.js';
 import { beginNoteDragInteraction } from '../note-drag-session.js';
+import { emitTutorialAction } from '../../core/tutorial-events.js';
 
 const NOTE_DRAG_HOLD_MS = 380;
 
@@ -53,8 +54,14 @@ export function buildTimingSection(track, offset, mEnd, cells, majorGroup, optio
         const x = Math.max(0, Math.min(rect.width - 1, event.clientX - rect.left));
         const column = Math.floor((x / rect.width) * cells.length);
         const cellInfo = cells[Math.max(0, Math.min(cells.length - 1, column))];
-        toggleStep(track.soundSteps, offset + cellInfo.localStep, getCurrentDuration(), mEnd);
+        const step = offset + cellInfo.localStep;
+        const wasEmpty = !isStepHead(track.soundSteps[step]);
+        toggleStep(track.soundSteps, step, getCurrentDuration(), mEnd);
         callbacks.renderEditor();
+        emitTutorialAction(wasEmpty ? 'chord-sound-added' : 'chord-sound-removed', {
+            trackId: track.id,
+            step,
+        });
     });
 
     const inheritedChords = Array(totalSteps()).fill(null);

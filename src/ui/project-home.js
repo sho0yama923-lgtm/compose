@@ -126,6 +126,7 @@ export function renderProjectHome(handlers) {
                 <span>新規作成してすぐ作曲を始められます。</span>
             </div>
             <div class="project-home-actions">
+                <button class="project-home-action wide tutorial" type="button" data-project-tutorial="true">チュートリアルを受ける</button>
                 <button class="project-home-action wide primary" type="button" data-project-new="true">＋ 新規プロジェクト</button>
                 <button class="project-home-action wide" type="button" data-project-import="true">読み込み</button>
             </div>
@@ -151,5 +152,6 @@ export function renderProjectHome(handlers) {
     home.querySelectorAll('[data-project-new="true"]').forEach((button) => {
         button.addEventListener('click', () => openCreateProjectDialog(home, handlers));
     });
+    home.querySelector('[data-project-tutorial="true"]').addEventListener('click', handlers.onStartTutorial);
     home.querySelector('[data-project-import="true"]').addEventListener('click', handlers.onImportProject);
 }
