@@ -81,6 +81,7 @@ function buildSeekHandle(seekCard) {
         if (isSeekBarExpanded === expanded) return;
         isSeekBarExpanded = expanded;
         syncState();
+        emitTutorialAction(expanded ? 'seek-bar-expanded' : 'seek-bar-collapsed');
         if (expanded && document.documentElement.dataset.appRuntime === 'web') {
             window.scrollBy({ top: 2, behavior: 'smooth' });
         }
@@ -308,6 +309,9 @@ function startRangeDrag({ event, type, rail, refreshTimeline, renderEditor }) {
     event.preventDefault();
     event.stopPropagation();
     const tooltip = buildDragTooltip(rail);
+    const initialMeasure = type === 'start'
+        ? appState.playRangeStartMeasure
+        : appState.playRangeEndMeasure;
 
     const onMove = (moveEvent) => {
         const rect = rail.getBoundingClientRect();
@@ -330,6 +334,15 @@ function startRangeDrag({ event, type, rail, refreshTimeline, renderEditor }) {
         window.removeEventListener('pointerup', onUp);
         tooltip.remove();
         renderEditor();
+        const measure = type === 'start'
+            ? appState.playRangeStartMeasure
+            : appState.playRangeEndMeasure;
+        if (measure !== initialMeasure) {
+            emitTutorialAction('play-range-changed', {
+                type,
+                measure,
+            });
+        }
     };
 
     window.addEventListener('pointermove', onMove);

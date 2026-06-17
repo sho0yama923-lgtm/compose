@@ -572,8 +572,9 @@
     --onboarding-card-padding-top: 18px;
     --onboarding-card-padding-bottom: 16px;
     --onboarding-guide-edge-gap: 12px;
+    --onboarding-player-card-gap: 12px;
     --onboarding-guide-top-offset: calc(64px + env(safe-area-inset-top, 0px));
-    --onboarding-guide-bottom-offset: calc(108px + env(safe-area-inset-bottom, 0px));
+    --onboarding-guide-bottom-offset: calc(116px + env(safe-area-inset-bottom, 0px));
     position: fixed;
     inset: 0;
     background: rgba(10, 10, 10, 0.56);
@@ -591,6 +592,7 @@
 .onboarding-card {
     position: relative;
     z-index: 402;
+    box-sizing: border-box;
     width: 100%;
     max-width: var(--onboarding-card-max-width);
     background: #fff;
@@ -605,19 +607,40 @@
     position: fixed;
     right: var(--onboarding-guide-edge-gap);
     left: var(--onboarding-guide-edge-gap);
+    width: auto;
+    top: auto;
+    bottom: var(--onboarding-guide-bottom-offset);
     margin: 0 auto;
     pointer-events: auto;
 }
-.onboarding-overlay.is-guide .onboarding-card.is-top {
+.onboarding-overlay.is-guide .onboarding-card.is-guide-top {
     top: var(--onboarding-guide-top-offset);
     bottom: auto;
 }
-.onboarding-overlay.is-guide .onboarding-card.is-bottom {
+.onboarding-overlay.is-guide .onboarding-card.is-guide-player-top {
     top: auto;
-    bottom: var(--onboarding-guide-bottom-offset);
+    bottom: var(--onboarding-player-card-bottom, calc(
+        var(--seek-expanded-height)
+        + var(--seek-shell-bottom-gap)
+        + var(--onboarding-player-card-gap)
+    ));
+}
+.onboarding-overlay.is-guide .onboarding-card.is-guide-drums-anchor {
+    top: var(--onboarding-drums-card-top, 50%);
+    bottom: auto;
+}
+.onboarding-overlay.is-guide .onboarding-card.is-guide-sheet-top {
+    top: auto;
+    bottom: var(--onboarding-sheet-card-bottom, 50%);
+}
+.onboarding-overlay.is-guide .onboarding-card.is-guide-avoid-target {
+    top: var(--onboarding-avoid-target-top, 12px);
+    bottom: auto;
 }
 .onboarding-shade,
-.onboarding-spotlight {
+.onboarding-spotlight,
+.onboarding-range-destination,
+.onboarding-range-arrow {
     position: fixed;
     pointer-events: none;
 }
@@ -630,6 +653,64 @@
     border: 3px solid #f6c945;
     border-radius: 12px;
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.28);
+}
+.onboarding-range-destination {
+    z-index: 403;
+    width: 3px;
+    border-radius: 999px;
+    background: #f6c945;
+    box-shadow: 0 0 0 2px rgba(17, 17, 17, 0.3);
+    transform: translateX(-50%);
+}
+.onboarding-range-destination-label {
+    position: absolute;
+    top: -25px;
+    left: 50%;
+    padding: 3px 7px;
+    border-radius: 999px;
+    background: #f6c945;
+    color: #111;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+    transform: translateX(-50%);
+}
+.onboarding-range-destination.is-end .onboarding-range-destination-label {
+    left: auto;
+    right: 0;
+    transform: none;
+}
+.onboarding-range-arrow {
+    z-index: 403;
+    height: 22px;
+}
+.onboarding-range-arrow-line {
+    position: absolute;
+    top: 10px;
+    right: 4px;
+    left: 4px;
+    height: 3px;
+    border-radius: 999px;
+    background: #f6c945;
+    box-shadow: 0 0 0 2px rgba(17, 17, 17, 0.28);
+}
+.onboarding-range-arrow-head {
+    position: absolute;
+    top: 5px;
+    right: 0;
+    width: 0;
+    height: 0;
+    border-top: 7px solid transparent;
+    border-bottom: 7px solid transparent;
+    border-left: 10px solid #f6c945;
+    filter: drop-shadow(0 0 1px rgba(17, 17, 17, 0.5));
+}
+.onboarding-range-arrow.is-left .onboarding-range-arrow-head {
+    right: auto;
+    left: 0;
+    border-right: 10px solid #f6c945;
+    border-left: 0;
 }
 .onboarding-kicker {
     font-size: 10px;
@@ -650,6 +731,21 @@
     font-size: 13px;
     line-height: 1.65;
     color: #555;
+}
+.onboarding-guide-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin: 0 0 10px;
+    border-radius: 10px;
+    background: #f4f4f4;
+}
+.onboarding-guide-icon img {
+    width: 26px;
+    height: 26px;
+    object-fit: contain;
 }
 .onboarding-progress {
     height: var(--onboarding-progress-height);

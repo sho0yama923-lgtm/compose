@@ -10,6 +10,7 @@ import {
     getTrackDisplayLabel,
 } from '../instrument-map.js';
 import { setTopbarTitle } from '../../../ui/topbar.js';
+import { emitTutorialAction } from '../../../core/tutorial-events.js';
 
 export function selectTrack(id) {
     appState.activeTrackId = id;
@@ -20,7 +21,13 @@ export function selectTrack(id) {
     callbacks.closeSidebar();
 
     const track = appState.tracks.find((item) => item.id === id);
-    if (track) setTopbarTitle(getTrackDisplayLabel(track, { showChordPlaybackInstrument: true }));
+    if (track) {
+        setTopbarTitle(getTrackDisplayLabel(track, { showChordPlaybackInstrument: true }));
+        emitTutorialAction('track-selected', {
+            trackId: track.id,
+            trackType: INST_TYPE[track.instrument],
+        });
+    }
 }
 
 export function deleteTrack(id) {

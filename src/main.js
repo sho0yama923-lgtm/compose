@@ -12,6 +12,7 @@ import { syncViewToggleButton } from './ui/topbar.js';
 import {
     createProject,
     deleteProject,
+    exportJSON,
     initProjectStorage,
     initSaveLoad,
     openProject,
@@ -23,6 +24,7 @@ import { renderProjectHome, setProjectHomeVisible } from './ui/project-home.js';
 import { requestProjectImport } from './features/bridges/file-share-bridge.js';
 import { getAppRuntime, isWebApp } from './features/bridges/device-bridge.js';
 import { applyCanonSample } from './features/project/canon-sample.js';
+import { emitTutorialAction } from './core/tutorial-events.js';
 
 let audioWarmupPromise = null;
 document.documentElement.dataset.appVersion = APP_VERSION;
@@ -255,6 +257,9 @@ const projectHomeHandlers = {
     onImportProject: () => {
         requestProjectImport(document.getElementById('importFile'));
     },
+    onExportProject: () => {
+        void exportJSON();
+    },
 };
 
 async function boot() {
@@ -272,6 +277,7 @@ async function boot() {
     document.getElementById('viewToggleBtn').addEventListener('click', () => {
         appState.previewMode = true;
         callbacks.renderEditor();
+        emitTutorialAction('preview-view-opened');
     });
 
     document.addEventListener('click', (event) => {

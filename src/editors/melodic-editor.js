@@ -186,7 +186,9 @@ export function renderMelodicEditor(track, editorEl) {
             });
 
             chordToneBeats.forEach((chord, beat) => {
-                if (chord) rowEl.appendChild(buildChordToneSegment(beat, chord));
+                if (!chord) return;
+                rowEl.classList.add('has-chord-tone');
+                rowEl.appendChild(buildChordToneSegment(beat, chord));
             });
 
             for (let localStep = 0; localStep < STEPS_PER_MEASURE; localStep++) {

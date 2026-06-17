@@ -1,5 +1,6 @@
 import { appState, callbacks } from '../../core/state.js';
 import { isStepHead } from '../../core/duration.js';
+import { emitTutorialAction } from '../../core/tutorial-events.js';
 
 export function buildDrumReferenceSheet(track, drumTracks, offset, mEnd, cells) {
     const overlayEl = document.createElement('div');
@@ -33,6 +34,7 @@ export function buildDrumReferenceSheet(track, drumTracks, offset, mEnd, cells) 
         dt.rows.forEach((row) => {
             const rowEl = document.createElement('label');
             rowEl.className = 'chord-rhythm-row';
+            rowEl.dataset.drumRow = row.label;
 
             const chk = document.createElement('input');
             chk.type = 'checkbox';
@@ -41,6 +43,11 @@ export function buildDrumReferenceSheet(track, drumTracks, offset, mEnd, cells) 
             chk.addEventListener('change', () => {
                 if (chk.checked) track.selectedDrumRows.add(row.label);
                 else track.selectedDrumRows.delete(row.label);
+                emitTutorialAction('chord-drum-row-changed', {
+                    trackId: track.id,
+                    rowLabel: row.label,
+                    checked: chk.checked,
+                });
             });
             rowEl.appendChild(chk);
 
@@ -83,6 +90,11 @@ export function buildDrumReferenceSheet(track, drumTracks, offset, mEnd, cells) 
     syncBtn.textContent = '同期';
     syncBtn.addEventListener('click', () => {
         syncSelectedDrumRows(track, drumTracks, offset, mEnd);
+        emitTutorialAction('chord-drum-synced', {
+            trackId: track.id,
+            measure: appState.currentMeasure,
+            selectedRows: Array.from(track.selectedDrumRows),
+        });
         appState.chordDrumSheetOpen = false;
         callbacks.renderEditor();
     });

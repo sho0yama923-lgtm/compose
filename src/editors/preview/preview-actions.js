@@ -3,6 +3,7 @@ import { INST_TYPE, getTrackDisplayLabel } from '../../features/tracks/instrumen
 import { copyTrackMeasureRange, pasteTrackMeasureRange } from '../../features/tracks/tracks-controller.js';
 import repeatLoopIconUrl from '../../assets/repeat_loop_icon.svg';
 import { handleRepeatButton, isRepeatButtonActive, isRepeatButtonDisabled, shouldShowRepeatButton } from './preview-repeat.js';
+import { emitTutorialAction } from '../../core/tutorial-events.js';
 
 export function buildPreviewActionMenu(track) {
     const menuEl = document.createElement('div');
@@ -255,6 +256,11 @@ export function buildTrackMuteToggle(track) {
     muteInput.addEventListener('change', () => {
         track.muted = !muteInput.checked;
         callbacks.renderEditor?.();
+        emitTutorialAction('track-muted-changed', {
+            trackId: track.id,
+            trackType: INST_TYPE[track.instrument],
+            muted: track.muted,
+        });
     });
 
     muteWrap.appendChild(muteInput);

@@ -118,7 +118,14 @@ export function renderProjectHome(handlers) {
                     <p class="project-home-kicker">Compose</p>
                     <h1>プロジェクト</h1>
                 </div>
-                <button class="project-home-action primary" type="button" data-project-new="true">＋</button>
+                <div class="project-home-header-actions">
+                    <button class="project-home-menu-trigger" type="button" data-project-menu-trigger="true" aria-label="プロジェクトメニュー" aria-expanded="false">…</button>
+                    <div class="project-home-menu" data-project-menu="true" hidden>
+                        <button type="button" data-project-tutorial="true">チュートリアル</button>
+                        <button type="button" data-project-import="true">インポート</button>
+                        <button type="button" data-project-export="true">エクスポート</button>
+                    </div>
+                </div>
             </div>
             <ul class="project-home-list" aria-label="プロジェクト一覧"></ul>
             <div class="project-home-empty" ${projects.length > 0 ? 'hidden' : ''}>
@@ -126,9 +133,7 @@ export function renderProjectHome(handlers) {
                 <span>新規作成してすぐ作曲を始められます。</span>
             </div>
             <div class="project-home-actions">
-                <button class="project-home-action wide tutorial" type="button" data-project-tutorial="true">チュートリアルを受ける</button>
                 <button class="project-home-action wide primary" type="button" data-project-new="true">＋ 新規プロジェクト</button>
-                <button class="project-home-action wide" type="button" data-project-import="true">読み込み</button>
             </div>
             <div class="project-create-dialog" data-project-create-dialog="true" hidden>
                 <div class="project-create-panel" role="dialog" aria-modal="true" aria-labelledby="projectCreateTitle">
@@ -152,6 +157,39 @@ export function renderProjectHome(handlers) {
     home.querySelectorAll('[data-project-new="true"]').forEach((button) => {
         button.addEventListener('click', () => openCreateProjectDialog(home, handlers));
     });
-    home.querySelector('[data-project-tutorial="true"]').addEventListener('click', handlers.onStartTutorial);
-    home.querySelector('[data-project-import="true"]').addEventListener('click', handlers.onImportProject);
+
+    const shell = home.querySelector('.project-home-shell');
+    const menuTrigger = home.querySelector('[data-project-menu-trigger="true"]');
+    const menu = home.querySelector('[data-project-menu="true"]');
+    const closeMenu = () => {
+        if (!menu || !menuTrigger) return;
+        menu.hidden = true;
+        menuTrigger.setAttribute('aria-expanded', 'false');
+    };
+    const runMenuAction = (handler) => {
+        closeMenu();
+        handler?.();
+    };
+
+    menuTrigger?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const nextOpen = menu?.hidden;
+        if (!menu || !menuTrigger) return;
+        menu.hidden = !nextOpen;
+        menuTrigger.setAttribute('aria-expanded', String(nextOpen));
+    });
+    shell?.addEventListener('click', (event) => {
+        const target = event.target;
+        if (target instanceof Element && target.closest('.project-home-header-actions')) return;
+        closeMenu();
+    });
+    home.querySelector('[data-project-tutorial="true"]')?.addEventListener('click', () => {
+        runMenuAction(handlers.onStartTutorial);
+    });
+    home.querySelector('[data-project-import="true"]')?.addEventListener('click', () => {
+        runMenuAction(handlers.onImportProject);
+    });
+    home.querySelector('[data-project-export="true"]')?.addEventListener('click', () => {
+        runMenuAction(handlers.onExportProject);
+    });
 }

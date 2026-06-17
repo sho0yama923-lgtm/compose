@@ -7,6 +7,7 @@ import { buildPaletteOctaveControls, buildProgressSection } from './render-chord
 import { buildDetailAndSheets } from './render-chord-shell.js';
 import { buildTimingSection } from './chord-timing-section.js';
 import { appendChordTypeOptions, buildEditorHint } from './chord-shared.js';
+import { emitTutorialAction } from '../../core/tutorial-events.js';
 
 export function renderChordEditor(track, editorEl) {
     const measureIndex = appState.currentMeasure;
@@ -56,6 +57,9 @@ export function renderChordEditor(track, editorEl) {
         openBtn.addEventListener('click', () => {
             appState.chordDrumSheetOpen = true;
             callbacks.renderEditor();
+            emitTutorialAction('chord-drum-reference-opened', {
+                trackId: track.id,
+            });
         });
         actionsEl.appendChild(openBtn);
         sequencerSectionEl.appendChild(actionsEl);
@@ -89,6 +93,11 @@ function buildPalette(track) {
     rootSelect.addEventListener('change', () => {
         track.selectedChordRoot = rootSelect.value;
         rootSelect.style.borderColor = ROOT_COLORS[track.selectedChordRoot] ?? '#d0d0d0';
+        emitTutorialAction('chord-selection-changed', {
+            trackId: track.id,
+            root: track.selectedChordRoot,
+            type: track.selectedChordType,
+        });
     });
     rootRow.appendChild(rootSelect);
     paletteRow.appendChild(rootRow);
@@ -101,6 +110,11 @@ function buildPalette(track) {
     appendChordTypeOptions(typeSelect, track.selectedChordType);
     typeSelect.addEventListener('change', () => {
         track.selectedChordType = typeSelect.value;
+        emitTutorialAction('chord-selection-changed', {
+            trackId: track.id,
+            root: track.selectedChordRoot,
+            type: track.selectedChordType,
+        });
     });
     typeRow.appendChild(typeSelect);
     paletteRow.appendChild(typeRow);
