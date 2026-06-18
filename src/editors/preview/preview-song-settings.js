@@ -11,13 +11,9 @@ export function buildSongSettingsCard() {
     const cardEl = document.createElement('section');
     cardEl.className = 'preview-song-settings';
 
-    const titleEl = document.createElement('strong');
-    titleEl.textContent = 'ルート / スケール';
-    cardEl.appendChild(titleEl);
-
     const keyRow = document.createElement('div');
-    keyRow.className = 'preview-song-settings-row';
-    keyRow.appendChild(buildSettingsLabel('Root'));
+    keyRow.className = 'preview-song-settings-row key-row';
+    keyRow.appendChild(buildSettingsLabel('Key'));
 
     const keyRootSelect = document.createElement('select');
     keyRootSelect.className = 'preview-song-select preview-song-root-select';
@@ -40,11 +36,6 @@ export function buildSongSettingsCard() {
         callbacks.renderEditor?.();
     });
     keyRow.appendChild(keyRootSelect);
-    cardEl.appendChild(keyRow);
-
-    const scaleRow = document.createElement('div');
-    scaleRow.className = 'preview-song-settings-row scale-row';
-    scaleRow.appendChild(buildSettingsLabel('Scale'));
 
     const harmonyControls = document.createElement('div');
     harmonyControls.className = 'preview-harmony-segmented';
@@ -67,6 +58,12 @@ export function buildSongSettingsCard() {
         });
         harmonyControls.appendChild(button);
     });
+    keyRow.appendChild(harmonyControls);
+    cardEl.appendChild(keyRow);
+
+    const scaleRow = document.createElement('div');
+    scaleRow.className = 'preview-song-settings-row scale-row';
+    scaleRow.appendChild(buildSettingsLabel('Scale'));
 
     const scaleSelect = document.createElement('select');
     scaleSelect.className = 'preview-song-select preview-song-family-select';
@@ -89,7 +86,6 @@ export function buildSongSettingsCard() {
         appState.songScaleFamily = normalized.scaleFamily;
         callbacks.renderEditor?.();
     });
-    scaleRow.appendChild(harmonyControls);
     scaleRow.appendChild(scaleSelect);
     cardEl.appendChild(scaleRow);
 

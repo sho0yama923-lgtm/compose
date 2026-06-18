@@ -4,15 +4,17 @@ import { appState, callbacks, clearPendingDeleteNote } from './core/state.js';
 import { APP_VERSION } from './core/app-info.js';
 import { renderEditor } from './editors/editor-router.js';
 import { renderSidebar, closeSidebar, initSidebar } from './ui/track-drawer.js';
-import { addTrack } from './features/tracks/tracks-controller.js';
+import { addTrack, selectTrack } from './features/tracks/tracks-controller.js';
 import { initPlayback } from './features/playback/playback-controller.js';
 import { initModal } from './ui/instrument-modal.js';
 import { initOnboarding } from './ui/onboarding.js';
-import { syncViewToggleButton } from './ui/topbar.js';
+import { renderTopbarTabs, syncViewToggleButton } from './ui/topbar.js';
 import {
     createProject,
     deleteProject,
+    deleteProjects,
     exportJSON,
+    exportProjectsJSON,
     initProjectStorage,
     initSaveLoad,
     openProject,
@@ -254,6 +256,36 @@ const projectHomeHandlers = {
         if (!confirm(`「${project.name}」を削除しますか？`)) return;
         void deleteProject(project.id);
     },
+    onEnterProjectSelectionMode: () => {
+        appState.projectSelectionMode = true;
+        appState.selectedProjectIds = [];
+        callbacks.renderProjectHome?.();
+    },
+    onExitProjectSelectionMode: () => {
+        appState.projectSelectionMode = false;
+        appState.selectedProjectIds = [];
+        callbacks.renderProjectHome?.();
+    },
+    onToggleProjectSelection: (projectId) => {
+        const selected = new Set(appState.selectedProjectIds);
+        if (selected.has(projectId)) {
+            selected.delete(projectId);
+        } else {
+            selected.add(projectId);
+        }
+        appState.selectedProjectIds = [...selected];
+        callbacks.renderProjectHome?.();
+    },
+    onDeleteSelectedProjects: () => {
+        const count = appState.selectedProjectIds.length;
+        if (count === 0) return;
+        if (!confirm(`選択した${count}件のプロジェクトを削除しますか？`)) return;
+        void deleteProjects(appState.selectedProjectIds);
+    },
+    onExportSelectedProjects: () => {
+        if (appState.selectedProjectIds.length === 0) return;
+        void exportProjectsJSON(appState.selectedProjectIds);
+    },
     onImportProject: () => {
         requestProjectImport(document.getElementById('importFile'));
     },
@@ -269,15 +301,20 @@ async function boot() {
     initModal();
     initSaveLoad();
 
-    document.getElementById('trackModeBtn').addEventListener('click', () => {
-        if (appState.activeTrackId === null) return;
-        appState.previewMode = false;
-        callbacks.renderEditor();
-    });
-    document.getElementById('viewToggleBtn').addEventListener('click', () => {
-        appState.previewMode = true;
-        callbacks.renderEditor();
-        emitTutorialAction('preview-view-opened');
+    document.getElementById('topbarTabs')?.addEventListener('click', (event) => {
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+        const tab = target.closest('.topbar-tab-btn');
+        if (!(tab instanceof HTMLElement)) return;
+        if (tab.dataset.topbarView === 'preview') {
+            appState.previewMode = true;
+            callbacks.renderEditor();
+            emitTutorialAction('preview-view-opened');
+            return;
+        }
+        const trackId = Number(tab.dataset.trackId);
+        if (!Number.isFinite(trackId)) return;
+        selectTrack(trackId);
     });
 
     document.addEventListener('click', (event) => {
@@ -290,6 +327,7 @@ async function boot() {
     });
 
     await initProjectStorage();
+    renderTopbarTabs();
 
     // ライフサイクル監視はプロジェクト選択後の再表示で音源を温め直す
     setupPlaybackWarmupLifecycle();

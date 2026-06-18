@@ -7,6 +7,8 @@ export const appState = {
     isBooting: true,
     projectHomeVisible: true,
     projectList: [],
+    projectSelectionMode: false,
+    selectedProjectIds: [],
     activeProjectId: null,
     tracks: [],
     nextId: 0,

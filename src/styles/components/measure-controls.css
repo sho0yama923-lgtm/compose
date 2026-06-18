@@ -575,6 +575,19 @@
     --onboarding-player-card-gap: 12px;
     --onboarding-guide-top-offset: calc(64px + env(safe-area-inset-top, 0px));
     --onboarding-guide-bottom-offset: calc(116px + env(safe-area-inset-bottom, 0px));
+    --onboarding-next-bar-gap: 12px;
+    --onboarding-next-bar-height: 44px;
+    --onboarding-next-bar-width: 200px;
+    --onboarding-next-bar-bottom: calc(
+        var(--seek-shell-bottom-gap)
+        + var(--seek-collapsed-height)
+        + 10px
+    );
+    --onboarding-card-bottom-with-next: calc(
+        var(--onboarding-next-bar-bottom)
+        + var(--onboarding-next-bar-height)
+        + var(--onboarding-next-bar-gap)
+    );
     position: fixed;
     inset: 0;
     background: rgba(10, 10, 10, 0.56);
@@ -588,6 +601,9 @@
     background: transparent;
     padding: 0;
     pointer-events: none;
+}
+.onboarding-overlay.is-guide.is-guide-waiting-next:not(.is-guide-has-highlight) {
+    background: rgba(10, 10, 10, 0.58);
 }
 .onboarding-card {
     position: relative;
@@ -613,6 +629,9 @@
     margin: 0 auto;
     pointer-events: auto;
 }
+.onboarding-overlay.is-guide.is-guide-waiting-next .onboarding-card:not(.is-guide-top):not(.is-guide-player-top):not(.is-guide-drums-anchor):not(.is-guide-sheet-top):not(.is-guide-editor-lower):not(.is-guide-avoid-target) {
+    bottom: var(--onboarding-card-bottom-with-next);
+}
 .onboarding-overlay.is-guide .onboarding-card.is-guide-top {
     top: var(--onboarding-guide-top-offset);
     bottom: auto;
@@ -633,9 +652,32 @@
     top: auto;
     bottom: var(--onboarding-sheet-card-bottom, 50%);
 }
+.onboarding-overlay.is-guide .onboarding-card.is-guide-editor-lower {
+    top: var(--onboarding-editor-lower-top, 48vh);
+    bottom: auto;
+}
 .onboarding-overlay.is-guide .onboarding-card.is-guide-avoid-target {
     top: var(--onboarding-avoid-target-top, 12px);
     bottom: auto;
+}
+.onboarding-next-bar {
+    position: fixed;
+    right: 50%;
+    bottom: var(--onboarding-next-bar-bottom);
+    left: auto;
+    z-index: 404;
+    box-sizing: border-box;
+    width: min(var(--onboarding-next-bar-width), calc(100vw - var(--onboarding-guide-edge-gap) * 2));
+    transform: translateX(50%);
+    pointer-events: auto;
+}
+.onboarding-next-bar .onboarding-btn.primary {
+    width: 100%;
+    min-height: var(--onboarding-next-bar-height);
+    background: #f6c945;
+    color: #111;
+    border-color: #f6c945;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
 }
 .onboarding-shade,
 .onboarding-spotlight,

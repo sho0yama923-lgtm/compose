@@ -62,6 +62,9 @@
     gap: 8px;
     min-width: 0;
 }
+.preview-song-settings-row.key-row {
+    align-items: center;
+}
 .preview-song-settings-row.scale-row {
     align-items: center;
 }
@@ -81,6 +84,10 @@
     font-size: 13px;
     font-weight: 700;
     color: #223047;
+}
+.preview-song-root-select {
+    min-width: 68px;
+    max-width: 92px;
 }
 .preview-harmony-segmented {
     display: inline-grid;
@@ -105,9 +112,9 @@
     color: #fff;
 }
 .preview-song-family-select {
-    flex: 1 1 auto;
+    flex: 0 1 178px;
     min-width: 0;
-    max-width: 162px;
+    max-width: 178px;
     padding-right: 28px;
     font-size: 12px;
 }

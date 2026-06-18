@@ -6,7 +6,7 @@ import {
     normalizeExportFileName,
     MAX_PROJECT_FILE_BYTES,
 } from './storage-helpers.js';
-import { exportProjectData, requestProjectImport } from '../../bridges/file-share-bridge.js';
+import { exportProjectData, exportProjectFiles, requestProjectImport } from '../../bridges/file-share-bridge.js';
 import {
     clearProjectData,
     deleteProjectDataById,
@@ -171,6 +171,25 @@ export async function deleteProject(projectId) {
     callbacks.renderProjectHome?.();
 }
 
+export async function deleteProjects(projectIds) {
+    const ids = Array.isArray(projectIds)
+        ? projectIds.map(normalizeProjectId).filter(Boolean)
+        : [];
+    if (ids.length === 0) return false;
+    const idSet = new Set(ids);
+    await Promise.all(ids.map((projectId) => deleteProjectDataById(projectId)));
+    setProjectList(appState.projectList.filter((project) => !idSet.has(project.id)));
+    if (idSet.has(appState.activeProjectId)) {
+        appState.activeProjectId = null;
+        await saveActiveProjectId(null);
+    }
+    appState.selectedProjectIds = [];
+    appState.projectSelectionMode = false;
+    await persistProjectList();
+    callbacks.renderProjectHome?.();
+    return true;
+}
+
 async function exportProjectJson(json) {
     if (!json) return false;
 
@@ -179,7 +198,7 @@ async function exportProjectJson(json) {
         activeProject?.name || buildDefaultExportFileName(),
         buildDefaultExportFileName()
     );
-    const requestedName = window.prompt('書き出すファイル名を入力してください', defaultFileName);
+    const requestedName = window.prompt('エクスポートするファイル名を入力してください', defaultFileName);
     if (requestedName === null) return false;
 
     return exportProjectData(
@@ -250,6 +269,33 @@ export async function exportJSON() {
     return exportProjectJson(json);
 }
 
+export async function exportProjectsJSON(projectIds) {
+    const ids = Array.isArray(projectIds)
+        ? projectIds.map(normalizeProjectId).filter(Boolean)
+        : [];
+    if (ids.length === 0) return false;
+
+    const files = [];
+    const usedFileNames = new Map();
+    for (const projectId of ids) {
+        const project = appState.projectList.find((item) => item.id === projectId);
+        const json = await loadProjectDataById(projectId);
+        if (!json) continue;
+        const defaultName = normalizeExportFileName(
+            project?.name || buildDefaultExportFileName(),
+            buildDefaultExportFileName()
+        );
+        const usedCount = usedFileNames.get(defaultName) || 0;
+        usedFileNames.set(defaultName, usedCount + 1);
+        const fileName = usedCount === 0
+            ? defaultName
+            : defaultName.replace(/\.json$/i, `-${usedCount + 1}.json`);
+        files.push({ serialized: json, fileName });
+    }
+    if (files.length === 0) return false;
+    return exportProjectFiles(files);
+}
+
 export async function importJSON(file) {
     try {
         if (!file || file.size > MAX_PROJECT_FILE_BYTES) {
@@ -278,7 +324,7 @@ export async function importJSON(file) {
         callbacks.renderSidebar?.();
         return true;
     } catch (e) {
-        alert('ファイルの読み込みに失敗しました');
+        alert('ファイルのインポートに失敗しました');
         console.warn('importJSON failed:', e);
         return false;
     }

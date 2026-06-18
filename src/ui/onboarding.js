@@ -43,6 +43,9 @@ export function initOnboarding({
             <span class="onboarding-range-arrow-line"></span>
             <span class="onboarding-range-arrow-head"></span>
         </div>
+        <div class="onboarding-next-bar" hidden>
+            <button type="button" class="onboarding-btn primary" data-onboarding-next="true">次へ</button>
+        </div>
         <div class="onboarding-card">
             <div class="onboarding-kicker">はじめての方へ</div>
             <h2 class="onboarding-title">操作説明を受けますか？</h2>
@@ -143,7 +146,7 @@ function buildGuideSteps(session) {
             title: 'エディタ画面',
             body: 'ここでは、どこで音を鳴らすかを決めます。',
             target: '.drum-editor',
-            cardPosition: 'drums-anchor',
+            cardPosition: 'editor-lower',
         }),
         guideStep({
             section: 1,
@@ -151,7 +154,7 @@ function buildGuideSteps(session) {
             body: '1画面には1小節分が表示されます。通常のリズムでは、1小節が16分割されています。',
             target: '.timeline-header',
             highlight: true,
-            cardPosition: 'drums-anchor',
+            cardPosition: 'editor-lower',
         }),
         guideStep({
             section: 1,
@@ -159,7 +162,7 @@ function buildGuideSteps(session) {
             body: '音符のボタンでは、これから置く音の長さを選びます。',
             target: '.duration-toolbar',
             highlight: true,
-            cardPosition: 'drums-anchor',
+            cardPosition: 'editor-lower',
         }),
         guideStep({
             section: 1,
@@ -167,7 +170,7 @@ function buildGuideSteps(session) {
             body: 'グリッドでは、どの音をどのタイミングで鳴らすかを決めます。',
             target: '.drum-roll-scroll',
             highlight: true,
-            cardPosition: 'drums-anchor',
+            cardPosition: 'editor-lower',
         }),
         guideStep({
             section: 1,
@@ -288,16 +291,20 @@ function buildGuideSteps(session) {
         guideStep({
             section: 3,
             title: '繰り返し設定',
-            body: 'ここからは、残りの3〜4小節を実際に作っていきます。今はまだ2小節目までしかないので、まずドラムのトラックを4小節目まで繰り返してみましょう。',
+            body: 'ここからは、残りの3〜4小節を実際に作っていきます。',
             target: '.preview-card[data-instrument="drums"]',
             nextLabel: '次のステップへ',
+            prepare: () => setMeasureSeekExpanded(false),
         }),
         guideStep({
             section: 4,
             title: '繰り返し設定',
             body: '1〜2小節目のドラムを、3〜4小節目まで繰り返してみましょう！',
             target: '.preview-card[data-instrument="drums"]',
-            prepare: () => showPreviewMeasure(0),
+            prepare: () => {
+                setMeasureSeekExpanded(false);
+                showPreviewMeasure(0);
+            },
             cardPosition: 'player-top',
         }),
         guideStep({
@@ -394,14 +401,24 @@ function buildGuideSteps(session) {
     steps.push(guideStep({
         section: 5,
         title: 'コード設定',
-        body: '次は、コードを置いて曲の流れを作ってみましょう。前半にはC → G → Am → Emのコードが入っています。ここでは後半をF → C → F → Gにして、カノン進行を完成させます。',
+        body: '次は、コードを置いて曲の流れを作ってみましょう。',
         target: '.preview-card[data-instrument="chord"]',
-        prepare: () => showPreviewMeasure(2),
+        nextLabel: '次へ',
+        prepare: () => {
+            setMeasureSeekExpanded(false);
+            showPreviewMeasure(2);
+        },
+    }));
+    steps.push(guideStep({
+        section: 5,
+        title: 'コード設定',
+        body: '前半にはC → G → Am → Emのコードが入っています。ここでは後半をF → C → F → Gにして、カノン進行を完成させます。',
+        target: '.preview-card[data-instrument="chord"]',
     }));
     steps.push(guideStep({
         section: 5,
         title: 'コードエディタを開く',
-        body: 'コードは2拍ずつ置いていきます。まず、全体画面の「コード / Piano」を開きましょう！',
+        body: 'まず、「コード / Piano」を開きましょう！',
         target: '.preview-card[data-instrument="chord"] .preview-card-header',
         allowed: ['.preview-card[data-instrument="chord"] .preview-card-header'],
         action: 'track-selected',
@@ -575,9 +592,12 @@ function buildGuideSteps(session) {
         guideStep({
             section: 6,
             title: 'メロディ作成',
-            body: '最後に、コードに合わせてメロディを作ります。音を鳴らしたい場所をタップすると、音を置けます。グリッドには、コードに含まれる音が色付きで表示されています。迷ったときは、まず色が付いたコードトーンから選ぶと、曲になじみやすくなります。',
+            body: '最後に、コードに合わせてメロディを作ります。色が付いたコードトーンを使うと、曲になじみやすくなります。',
             target: MELODY_GUIDE_ROW_SELECTOR,
-            prepare: () => showTrackMeasure('melody', 2),
+            prepare: () => {
+                setMeasureSeekExpanded(false);
+                showTrackMeasure('melody', 2);
+            },
         }),
         guideStep({
             section: 6,
@@ -676,10 +696,19 @@ function renderGuideCard(session) {
     const step = session.steps[session.stepIndex];
     if (!step) return;
     const card = session.overlay.querySelector('.onboarding-card');
+    const nextBar = session.overlay.querySelector('.onboarding-next-bar');
+    const nextButton = nextBar.querySelector('[data-onboarding-next="true"]');
+    const waitsForNext = !step.action;
+    const hasVisualHighlight = Boolean(step.highlight || step.action);
     card.classList.toggle('is-guide-top', step.cardPosition === 'top');
     card.classList.toggle('is-guide-player-top', step.cardPosition === 'player-top');
     card.classList.toggle('is-guide-drums-anchor', step.cardPosition === 'drums-anchor');
     card.classList.toggle('is-guide-sheet-top', step.cardPosition === 'sheet-top');
+    card.classList.toggle('is-guide-editor-lower', step.cardPosition === 'editor-lower');
+    session.overlay.classList.toggle('is-guide-waiting-next', waitsForNext);
+    session.overlay.classList.toggle('is-guide-has-highlight', hasVisualHighlight);
+    nextBar.hidden = !waitsForNext;
+    nextButton.textContent = step.nextLabel;
     card.classList.remove('is-guide-avoid-target');
     card.style.removeProperty('--onboarding-avoid-target-top');
     if (step.cardPosition !== 'player-top') card.style.removeProperty('--onboarding-player-card-bottom');
@@ -688,25 +717,24 @@ function renderGuideCard(session) {
         session.anchoredCardTop = null;
     }
     if (step.cardPosition !== 'sheet-top') card.style.removeProperty('--onboarding-sheet-card-bottom');
+    if (step.cardPosition !== 'editor-lower') card.style.removeProperty('--onboarding-editor-lower-top');
     card.innerHTML = `
         <div class="onboarding-progress" style="--onboarding-progress: ${step.section}"></div>
         <div class="onboarding-kicker">${step.section} / ${GUIDE_SECTION_COUNT}${step.substep ? ` ・ ${step.substep}` : ''}</div>
         ${step.title ? `<h2 class="onboarding-title">${step.title}</h2>` : ''}
         ${step.icon ? `<div class="onboarding-guide-icon"><img src="${step.icon}" alt="繰り返し"></div>` : ''}
         <p class="onboarding-description">${step.body}</p>
-        ${!step.action ? `
-            <div class="onboarding-actions">
-                <button type="button" class="onboarding-btn primary" data-onboarding-next="true">${step.nextLabel}</button>
-            </div>
-        ` : ''}
     `;
-    card.querySelector('[data-onboarding-next="true"]')?.addEventListener('click', () => {
+    nextButton.onclick = () => {
         showGuideStep(session, session.stepIndex + 1);
-    });
+    };
 }
 
 function showGuideComplete(session) {
     clearGuideTarget(session);
+    const nextBar = session.overlay.querySelector('.onboarding-next-bar');
+    nextBar.hidden = true;
+    session.overlay.classList.add('is-guide-waiting-next');
     const card = session.overlay.querySelector('.onboarding-card');
     card.innerHTML = `
         <div class="onboarding-progress" style="--onboarding-progress: ${GUIDE_SECTION_COUNT}"></div>
@@ -740,6 +768,7 @@ function blockOutsideInteraction(session, event) {
     const target = event.target;
     if (!(target instanceof Element)) return;
     if (target.closest('.onboarding-card')) return;
+    if (target.closest('.onboarding-next-bar')) return;
 
     const step = session.steps[session.stepIndex];
     const selectors = resolveSelectors(step?.allowed);
@@ -764,6 +793,14 @@ function syncGuideTarget(session) {
     const rect = resolveTargetRect(step.target);
     if (!rect) {
         clearGuideTarget(session);
+        return;
+    }
+
+    if (!step.action && !step.highlight) {
+        clearGuideTarget(session);
+        syncGuideCardPosition(session, step);
+        avoidExpandedPlayerOverlap(session, step);
+        avoidGuideTargetRectOverlap(session, rect);
         return;
     }
 
@@ -859,6 +896,12 @@ function syncGuideCardPosition(session, step) {
         return;
     }
 
+    if (step.cardPosition === 'editor-lower') {
+        const top = Math.round(window.innerHeight * 0.48);
+        card.style.setProperty('--onboarding-editor-lower-top', `${top}px`);
+        return;
+    }
+
     if (step.cardPosition !== 'drums-anchor') return;
     const drumsCard = document.querySelector('.preview-card[data-instrument="drums"]');
     if (drumsCard instanceof HTMLElement) {
@@ -893,6 +936,13 @@ function avoidGuideTargetOverlap(session) {
     if (!(spotlight instanceof HTMLElement)) return;
     const cardRect = card.getBoundingClientRect();
     const targetRect = spotlight.getBoundingClientRect();
+    avoidGuideTargetRectOverlap(session, targetRect);
+}
+
+function avoidGuideTargetRectOverlap(session, targetRect) {
+    const card = session.overlay.querySelector('.onboarding-card');
+    const nextBar = session.overlay.querySelector('.onboarding-next-bar:not([hidden])');
+    const cardRect = card.getBoundingClientRect();
     const overlaps = cardRect.left < targetRect.right
         && cardRect.right > targetRect.left
         && cardRect.top < targetRect.bottom
@@ -900,14 +950,35 @@ function avoidGuideTargetOverlap(session) {
     if (!overlaps) return;
 
     const player = document.querySelector('.measure-seek-card.is-expanded');
-    const lowerLimit = player instanceof HTMLElement
+    const nextBarRect = nextBar instanceof HTMLElement ? nextBar.getBoundingClientRect() : null;
+    const lowerLimit = nextBarRect
+        ? nextBarRect.top - 12
+        : player instanceof HTMLElement
         ? player.getBoundingClientRect().top - 12
         : window.innerHeight - 12;
     const aboveTop = targetRect.top - cardRect.height - 12;
     const belowTop = targetRect.bottom + 12;
+    const maxTop = Math.max(12, lowerLimit - cardRect.height);
     const nextTop = aboveTop >= 12
-        ? aboveTop
+        ? Math.min(aboveTop, maxTop)
         : (belowTop + cardRect.height <= lowerLimit ? belowTop : 12);
+
+    card.classList.add('is-guide-avoid-target');
+    card.style.setProperty('--onboarding-avoid-target-top', `${nextTop}px`);
+}
+
+function positionGuideCardNearRect(session, targetRect) {
+    const card = session.overlay.querySelector('.onboarding-card');
+    const nextBar = session.overlay.querySelector('.onboarding-next-bar:not([hidden])');
+    const cardRect = card.getBoundingClientRect();
+    const nextBarRect = nextBar instanceof HTMLElement ? nextBar.getBoundingClientRect() : null;
+    const lowerLimit = nextBarRect ? nextBarRect.top - 12 : window.innerHeight - 12;
+    const belowTop = targetRect.bottom + 12;
+    const aboveTop = targetRect.top - cardRect.height - 12;
+    const maxTop = Math.max(12, lowerLimit - cardRect.height);
+    const nextTop = belowTop + cardRect.height <= lowerLimit
+        ? belowTop
+        : Math.max(12, Math.min(aboveTop, maxTop));
 
     card.classList.add('is-guide-avoid-target');
     card.style.setProperty('--onboarding-avoid-target-top', `${nextTop}px`);

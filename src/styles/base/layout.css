@@ -44,12 +44,19 @@ html[data-app-runtime="web"] body {
     flex-shrink: 0;
     min-height: calc(56px + var(--safe-top));
 }
-.topbar-main {
+.topbar-tabs {
     flex: 1;
     min-width: 0;
     display: flex;
     align-items: center;
     gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+.topbar-tabs::-webkit-scrollbar {
+    display: none;
 }
 .btn-menu {
     font-size: 20px;
@@ -88,6 +95,15 @@ html[data-app-runtime="web"] body {
     color: #fff;
     text-align: center;
 }
+.bpm-input::-webkit-outer-spin-button,
+.bpm-input::-webkit-inner-spin-button {
+    margin: 0;
+    -webkit-appearance: none;
+}
+.bpm-input {
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
 .btn {
     font-size: 17px;
     padding: 7px 12px;
@@ -101,20 +117,22 @@ html[data-app-runtime="web"] body {
 .btn:active { opacity: 0.7; }
 /* 白鍵イメージの再生ボタン */
 .btn-play { background: #fff; color: #111; }
-.topbar-mode-btn {
+.topbar-tab-btn {
     background: transparent;
     color: #d6d6d6;
     border: 1px solid #4a4a4a;
-    padding: 7px 10px;
+    min-width: 72px;
+    min-height: 36px;
+    padding: 0 12px;
     font-size: 12px;
     letter-spacing: 0.04em;
     flex-shrink: 0;
-    max-width: 140px;
+    max-width: 120px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.topbar-mode-btn.is-active {
+.topbar-tab-btn.is-active {
     background: #fff;
     color: #111;
     border-color: #fff;

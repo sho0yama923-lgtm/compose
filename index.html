@@ -19,13 +19,12 @@
 <!-- ======= トップバー ======= -->
 <header class="topbar">
     <button class="btn-menu" id="menuBtn">☰</button>
-    <div class="topbar-main">
-        <button class="btn topbar-mode-btn" id="trackModeBtn" aria-label="トラック編集へ切替">作曲ツール</button>
-        <button class="btn topbar-mode-btn" id="viewToggleBtn" aria-label="全体表示へ切替">全体</button>
+    <div class="topbar-tabs" id="topbarTabs" aria-label="表示するトラック">
+        <button class="btn topbar-tab-btn is-active" id="viewToggleBtn" type="button" data-topbar-view="preview" aria-pressed="true">全体</button>
     </div>
     <div class="topbar-right">
         <div class="bpm-wrap">
-            BPM<input type="number" class="bpm-input" id="bpmInput" value="120" min="30" max="300">
+            <input type="number" class="bpm-input" id="bpmInput" value="120" min="30" max="300" aria-label="BPM">
         </div>
     </div>
 </header>
@@ -41,8 +40,8 @@
         <button class="btn-add-track" id="addTrackBtn">＋ トラック追加</button>
         <div class="sidebar-actions">
             <button class="btn-sidebar-action" id="resetBtn">一覧</button>
-            <button class="btn-sidebar-action" id="exportBtn">書出</button>
-            <button class="btn-sidebar-action" id="importBtn">↑ 読込</button>
+            <button class="btn-sidebar-action" id="exportBtn">エクスポート</button>
+            <button class="btn-sidebar-action" id="importBtn">インポート</button>
         </div>
         <input type="file" id="importFile" accept=".json" style="display:none">
     </div>

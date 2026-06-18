@@ -13,17 +13,30 @@ function formatProjectUpdatedAt(value) {
 function createProjectCard(project, handlers) {
     const item = document.createElement('li');
     item.className = 'project-home-item';
+    item.classList.toggle('is-selecting', appState.projectSelectionMode);
 
     const openButton = document.createElement('button');
     openButton.className = 'project-home-card';
     openButton.type = 'button';
+    const selected = appState.selectedProjectIds.includes(project.id);
+    if (appState.projectSelectionMode) {
+        openButton.classList.toggle('is-selected', selected);
+        openButton.setAttribute('aria-pressed', String(selected));
+    }
     openButton.innerHTML = `
+        ${appState.projectSelectionMode ? '<span class="project-home-check" aria-hidden="true"></span>' : ''}
         <span class="project-home-card-title"></span>
         <span class="project-home-card-meta"></span>
     `;
     openButton.querySelector('.project-home-card-title').textContent = project.name;
     openButton.querySelector('.project-home-card-meta').textContent = `更新 ${formatProjectUpdatedAt(project.updatedAt)}`;
-    openButton.addEventListener('click', () => handlers.onOpenProject(project.id));
+    openButton.addEventListener('click', () => {
+        if (appState.projectSelectionMode) {
+            handlers.onToggleProjectSelection(project.id);
+            return;
+        }
+        handlers.onOpenProject(project.id);
+    });
 
     const tools = document.createElement('div');
     tools.className = 'project-home-card-tools';
@@ -43,7 +56,10 @@ function createProjectCard(project, handlers) {
     deleteButton.addEventListener('click', () => handlers.onDeleteProject(project));
 
     tools.append(renameButton, deleteButton);
-    item.append(openButton, tools);
+    item.append(openButton);
+    if (!appState.projectSelectionMode) {
+        item.append(tools);
+    }
     return item;
 }
 
@@ -111,12 +127,13 @@ export function renderProjectHome(handlers) {
     if (!home) return;
 
     const projects = appState.projectList || [];
+    const isSelecting = Boolean(appState.projectSelectionMode);
+    const selectedCount = appState.selectedProjectIds.length;
     home.innerHTML = `
         <div class="project-home-shell">
             <div class="project-home-header">
                 <div>
-                    <p class="project-home-kicker">Compose</p>
-                    <h1>プロジェクト</h1>
+                    <h1>プロジェクト一覧</h1>
                 </div>
                 <div class="project-home-header-actions">
                     <button class="project-home-menu-trigger" type="button" data-project-menu-trigger="true" aria-label="プロジェクトメニュー" aria-expanded="false">…</button>
@@ -124,6 +141,7 @@ export function renderProjectHome(handlers) {
                         <button type="button" data-project-tutorial="true">チュートリアル</button>
                         <button type="button" data-project-import="true">インポート</button>
                         <button type="button" data-project-export="true">エクスポート</button>
+                        <button type="button" data-project-select-mode="true">複数選択</button>
                     </div>
                 </div>
             </div>
@@ -132,8 +150,14 @@ export function renderProjectHome(handlers) {
                 <strong>まだプロジェクトがありません</strong>
                 <span>新規作成してすぐ作曲を始められます。</span>
             </div>
-            <div class="project-home-actions">
-                <button class="project-home-action wide primary" type="button" data-project-new="true">＋ 新規プロジェクト</button>
+            <div class="project-home-actions ${isSelecting ? 'is-selecting' : ''}">
+                ${isSelecting ? `
+                    <button class="project-home-action danger" type="button" data-project-bulk-delete="true" ${selectedCount === 0 ? 'disabled' : ''}>一括削除</button>
+                    <button class="project-home-action primary" type="button" data-project-bulk-export="true" ${selectedCount === 0 ? 'disabled' : ''}>一括エクスポート</button>
+                    <button class="project-home-action" type="button" data-project-select-cancel="true">キャンセル</button>
+                ` : `
+                    <button class="project-home-action wide primary" type="button" data-project-new="true">＋ 新規プロジェクト</button>
+                `}
             </div>
             <div class="project-create-dialog" data-project-create-dialog="true" hidden>
                 <div class="project-create-panel" role="dialog" aria-modal="true" aria-labelledby="projectCreateTitle">
@@ -191,5 +215,17 @@ export function renderProjectHome(handlers) {
     });
     home.querySelector('[data-project-export="true"]')?.addEventListener('click', () => {
         runMenuAction(handlers.onExportProject);
+    });
+    home.querySelector('[data-project-select-mode="true"]')?.addEventListener('click', () => {
+        runMenuAction(handlers.onEnterProjectSelectionMode);
+    });
+    home.querySelector('[data-project-select-cancel="true"]')?.addEventListener('click', () => {
+        handlers.onExitProjectSelectionMode();
+    });
+    home.querySelector('[data-project-bulk-delete="true"]')?.addEventListener('click', () => {
+        handlers.onDeleteSelectedProjects();
+    });
+    home.querySelector('[data-project-bulk-export="true"]')?.addEventListener('click', () => {
+        handlers.onExportSelectedProjects();
     });
 }
