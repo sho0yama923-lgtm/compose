@@ -564,7 +564,7 @@
 }
 
 .onboarding-overlay {
-    --onboarding-progress-steps: 4;
+    --onboarding-progress-steps: 6;
     --onboarding-progress-height: 4px;
     --onboarding-card-max-width: 420px;
     --onboarding-card-radius: 18px;

@@ -8,6 +8,17 @@ import { addMeasure, clearTrackMeasure, removeMeasure } from '../features/tracks
 
 let isSeekBarExpanded = false;
 
+export function setMeasureSeekExpanded(expanded) {
+    isSeekBarExpanded = Boolean(expanded);
+    document.querySelectorAll('.measure-seek-card').forEach((card) => {
+        card.classList.toggle('is-expanded', isSeekBarExpanded);
+    });
+    document.querySelectorAll('.measure-seek-handle').forEach((button) => {
+        button.setAttribute('aria-expanded', String(isSeekBarExpanded));
+        button.setAttribute('aria-label', isSeekBarExpanded ? '詳細を閉じる' : '詳細を開く');
+    });
+}
+
 export function buildSeekBar(renderEditor) {
     ensureDefaultPlayRangeMeasures();
     const seekShell = document.createElement('div');
