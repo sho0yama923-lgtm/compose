@@ -481,7 +481,8 @@ function buildSeekNavButton({ direction, icon, label, renderEditor }) {
     const button = document.createElement('button');
     button.className = 'mb-btn mb-nav-btn';
     button.dataset.direction = String(direction);
-    button.textContent = icon;
+    button.title = icon;
+    button.appendChild(buildMeasureNavIcon(direction));
     button.setAttribute('aria-label', label);
     button.disabled = isCopyRangeEditing()
         ? !canMoveCopyRangeEnd(direction)
@@ -512,6 +513,25 @@ function buildSeekNavButton({ direction, icon, label, renderEditor }) {
     button.addEventListener('pointerleave', clearHold);
     button.addEventListener('pointercancel', clearHold);
     return button;
+}
+
+function buildMeasureNavIcon(direction) {
+    const iconEl = document.createElement('span');
+    iconEl.className = `mb-nav-icon ${direction < 0 ? 'prev' : 'next'}`;
+    iconEl.setAttribute('aria-hidden', 'true');
+
+    const barEl = document.createElement('span');
+    barEl.className = 'mb-nav-icon-bar';
+
+    const triangleEl = document.createElement('span');
+    triangleEl.className = 'mb-nav-icon-triangle';
+
+    if (direction < 0) {
+        iconEl.append(barEl, triangleEl);
+    } else {
+        iconEl.append(triangleEl, barEl);
+    }
+    return iconEl;
 }
 
 function moveCurrentMeasure(direction, renderEditor) {

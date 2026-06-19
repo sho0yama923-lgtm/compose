@@ -60,7 +60,7 @@ export function renderMelodicEditor(track, editorEl) {
     const downBtn = document.createElement('button');
     downBtn.className = 'oct-range-btn';
     downBtn.type = 'button';
-    downBtn.innerHTML = '&lt;<span class="btn-guide">低</span>';
+    downBtn.textContent = '<';
     downBtn.disabled = track.viewBase <= 1;
     downBtn.addEventListener('click', () => {
         track.viewBase = Math.max(1, track.viewBase - 1);
@@ -71,12 +71,12 @@ export function renderMelodicEditor(track, editorEl) {
 
     const rangeLabel = document.createElement('span');
     rangeLabel.className = 'oct-range-label';
-    rangeLabel.textContent = `表示 ${track.viewBase}オクターブ - ${Math.min(track.viewBase + 2, 7)}オクターブ`;
+    rangeLabel.textContent = `${track.viewBase}オクターブ - ${Math.min(track.viewBase + 2, 7)}オクターブ`;
 
     const upBtn = document.createElement('button');
     upBtn.className = 'oct-range-btn';
     upBtn.type = 'button';
-    upBtn.innerHTML = '&gt;<span class="btn-guide">高</span>';
+    upBtn.textContent = '>';
     upBtn.disabled = track.viewBase >= 5;
     upBtn.addEventListener('click', () => {
         track.viewBase = Math.min(5, track.viewBase + 1);
