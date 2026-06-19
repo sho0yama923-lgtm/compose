@@ -2,7 +2,7 @@ import { appState, callbacks } from '../core/state.js';
 import { INST_LABEL, INST_TYPE } from '../features/tracks/instrument-map.js';
 
 const TAB_REORDER_HOLD_MS = 420;
-const TAB_REORDER_CANCEL_MOVE_PX = 8;
+const TAB_REORDER_CANCEL_MOVE_PX = 18;
 
 let tabDragState = null;
 
@@ -72,7 +72,6 @@ function startTabDrag(button, event) {
     button.dataset.dragSuppress = 'true';
     tabsEl.classList.add('is-reordering');
     button.classList.add('is-dragging');
-    button.setPointerCapture?.(event.pointerId);
 }
 
 function updateTabDrag(event) {
@@ -93,9 +92,8 @@ function updateTabDrag(event) {
 
 function finishTabDrag(event) {
     if (!tabDragState || event.pointerId !== tabDragState.pointerId) return;
-    const { button, moved, pointerId } = tabDragState;
+    const { button, moved } = tabDragState;
     tabDragState = null;
-    button.releasePointerCapture?.(pointerId);
     button.classList.remove('is-dragging');
     document.getElementById('topbarTabs')?.classList.remove('is-reordering');
     if (moved) {
@@ -170,17 +168,6 @@ function bindTrackTabReorder(button) {
     });
     button.addEventListener('contextmenu', (event) => {
         if (holdTimer || tabDragState?.button === button) event.preventDefault();
-    });
-    button.addEventListener('lostpointercapture', () => {
-        clearHold();
-        if (tabDragState?.button === button) {
-            tabDragState = null;
-            button.classList.remove('is-dragging');
-            document.getElementById('topbarTabs')?.classList.remove('is-reordering');
-            window.setTimeout(() => {
-                delete button.dataset.dragSuppress;
-            }, 0);
-        }
     });
 }
 

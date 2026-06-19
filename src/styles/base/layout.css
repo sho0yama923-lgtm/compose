@@ -61,6 +61,7 @@ html[data-app-runtime="web"] body {
 }
 .topbar-tabs.is-reordering {
     cursor: grabbing;
+    touch-action: none;
 }
 .btn-menu {
     font-size: 20px;
@@ -146,6 +147,7 @@ html[data-app-runtime="web"] body {
 .topbar-tab-btn.is-dragging {
     opacity: 0.72;
     transform: scale(0.96);
+    touch-action: none;
 }
 .btn-play.is-playing {
     background: #333;

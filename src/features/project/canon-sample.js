@@ -32,7 +32,9 @@ function fillChords(track) {
         for (let step = start; step < end; step += 1) {
             track.chordMap[step] = { ...chord, customNotes: null };
         }
-        placeNote(track.soundSteps, start, '2n', track.soundSteps.length);
+        for (let step = start; step < end; step += STEPS_PER_BEAT) {
+            placeNote(track.soundSteps, step, '8n', track.soundSteps.length);
+        }
     });
 }
 

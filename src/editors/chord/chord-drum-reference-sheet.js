@@ -1,5 +1,5 @@
 import { appState, callbacks } from '../../core/state.js';
-import { isStepHead } from '../../core/duration.js';
+import { isStepHead, placeNote } from '../../core/duration.js';
 import { emitTutorialAction } from '../../core/tutorial-events.js';
 
 export function buildDrumReferenceSheet(track, drumTracks, offset, mEnd, cells) {
@@ -112,7 +112,7 @@ function syncSelectedDrumRows(track, drumTracks, offset, mEnd) {
             if (!track.selectedDrumRows.has(row.label)) return;
             row.steps.forEach((val, i) => {
                 if (i >= offset && i < mEnd && isStepHead(val)) {
-                    track.soundSteps[i] = '16n';
+                    placeNote(track.soundSteps, i, val, mEnd);
                 }
             });
         });

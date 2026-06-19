@@ -210,6 +210,7 @@ async function showProjectEditor({
     offerOnboarding = false,
     forceOnboarding = false,
     startOnboardingImmediately = false,
+    prepareTutorialSample = false,
 } = {}) {
     setProjectHomeVisible(false);
     appState.previewMode = true;
@@ -221,6 +222,13 @@ async function showProjectEditor({
         initOnboarding({
             force: forceOnboarding,
             startImmediately: startOnboardingImmediately,
+            onStart: prepareTutorialSample
+                ? () => {
+                    applyCanonSample();
+                    callbacks.renderEditor?.();
+                    callbacks.saveState?.();
+                }
+                : null,
         });
     }
 }
@@ -236,13 +244,13 @@ async function createDefaultProject(name, {
     addTrack('drums');
     addTrack('chord');
     addTrack('piano');
-    applyCanonSample();
     appState.previewMode = true;
     await saveState();
     await showProjectEditor({
         offerOnboarding: true,
         forceOnboarding,
         startOnboardingImmediately,
+        prepareTutorialSample: true,
     });
 }
 

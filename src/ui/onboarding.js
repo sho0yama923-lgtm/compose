@@ -24,6 +24,7 @@ const CHORD_EXERCISE = [
 export function initOnboarding({
     force = false,
     startImmediately = false,
+    onStart = null,
 } = {}) {
     if (document.querySelector('.onboarding-overlay')) return;
     if (!force && localStorage.getItem(ONBOARDING_KEY) === 'seen') return;
@@ -58,17 +59,18 @@ export function initOnboarding({
     `;
     document.body.appendChild(overlay);
 
-    const session = createGuideSession(overlay);
+    const session = createGuideSession(overlay, { onStart });
     overlay.querySelector('[data-onboarding-skip="true"]').addEventListener('click', session.dismiss);
     overlay.querySelector('[data-onboarding-start="true"]').addEventListener('click', session.start);
     if (startImmediately) session.start();
 }
 
-function createGuideSession(overlay) {
+function createGuideSession(overlay, { onStart = null } = {}) {
     const session = {
         overlay,
         stepIndex: -1,
         active: false,
+        startedHookCalled: false,
         lastMelodyNote: null,
         resizeHandler: null,
         actionHandler: null,
@@ -86,6 +88,10 @@ function createGuideSession(overlay) {
     session.interactionBlocker = (event) => blockOutsideInteraction(session, event);
     session.dismiss = () => dismissGuide(session);
     session.start = () => {
+        if (!session.startedHookCalled) {
+            session.startedHookCalled = true;
+            onStart?.();
+        }
         session.active = true;
         session.overlay.classList.add('is-guide');
         document.addEventListener(TUTORIAL_ACTION_EVENT, session.actionHandler);
@@ -498,8 +504,8 @@ function buildGuideSteps(session) {
     steps.push(
         guideStep({
             section: 5,
-            title: 'キックとコードを合わせる',
-            body: 'キックとコードを同じタイミングで鳴らすと、リズムにまとまりが生まれます。まず、3小節目のコードをキックに合わせてみましょう！',
+            title: 'ドラムとコードを合わせる',
+            body: 'ドラムと同じタイミングでコードを鳴らすと、リズムにまとまりが生まれます。まず、3小節目のコードをKickとSnareに合わせてみましょう！',
             target: '.chord-rhythm-summary',
             prepare: () => showTrackMeasure('chord', 2),
         }),
@@ -514,7 +520,7 @@ function buildGuideSteps(session) {
         guideStep({
             section: 5,
             title: 'キックを選ぶ',
-            body: '次に、Kick（キック）にチェックを入れましょう！',
+            body: 'まず、Kick（キック）にチェックを入れましょう！',
             target: '.chord-rhythm-row[data-drum-row="Kick"]',
             allowed: ['.chord-rhythm-row[data-drum-row="Kick"]'],
             action: 'chord-drum-row-changed',
@@ -523,25 +529,36 @@ function buildGuideSteps(session) {
         }),
         guideStep({
             section: 5,
-            title: 'キックに同期する',
-            body: '最後に「同期」を押すと、キックと同じ位置でコードが鳴るようになります！',
+            title: 'スネアを選ぶ',
+            body: '次に、Snare（スネア）にもチェックを入れましょう！',
+            target: '.chord-rhythm-row[data-drum-row="Snare"]',
+            allowed: ['.chord-rhythm-row[data-drum-row="Snare"]'],
+            action: 'chord-drum-row-changed',
+            matches: (detail) => detail.rowLabel === 'Snare' && detail.checked,
+            cardPosition: 'sheet-top',
+        }),
+        guideStep({
+            section: 5,
+            title: 'ドラムに同期する',
+            body: '最後に「同期」を押すと、KickとSnareの位置でコードが鳴るようになります！',
             target: '.chord-drum-sheet .chord-sync-all-btn',
             allowed: ['.chord-drum-sheet .chord-sync-all-btn'],
             action: 'chord-drum-synced',
-            matches: (detail) => detail.selectedRows?.includes('Kick'),
+            matches: (detail) => detail.selectedRows?.includes('Kick')
+                && detail.selectedRows?.includes('Snare'),
             cardPosition: 'sheet-top',
         }),
         guideStep({
             section: 5,
             title: '同期できました',
-            body: '3小節目のコードが、キックと同じタイミングで鳴るようになりました。再生して確認してみましょう。',
+            body: '3小節目のコードが、ドラムと同じタイミングで鳴るようになりました。再生して確認してみましょう。',
             target: '[data-play-toggle="true"]',
             cardPosition: 'player-top',
         }),
         guideStep({
             section: 5,
             title: '再生する',
-            body: '再生ボタンを押して、キックとコードが重なるところを聴いてみましょう！',
+            body: '再生ボタンを押して、ドラムとコードが重なるところを聴いてみましょう！',
             target: '[data-play-toggle="true"]',
             allowed: ['[data-play-toggle="true"]'],
             action: 'playback-requested',
