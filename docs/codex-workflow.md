@@ -21,12 +21,13 @@ UI 変更後は、Web 表示で十分に判断できる限り Codex app の in-a
 
 1. 既存の dev server が動いていれば、そのまま in-app Browser / Browser plugin で `http://127.0.0.1:5173/` を開く
 2. dev server が動いていなければ、`Run` action または `npm run dev -- --host 127.0.0.1` で起動してから同じURLを開く
-3. 対象画面を操作する
+3. `#bootOverlay` が非表示になり、初期化が終わってから対象画面を操作する
 4. 表示崩れ、タップしづらさ、コンソールエラーを確認する
 5. 必要なら Browser annotation やスクリーンショットで対象箇所を絞る
 
 サンドボックス内で dev server 起動が `listen EPERM` になった場合は、ローカル表示に必要なポート待ち受けとして同じ `npm run dev -- --host 127.0.0.1` を権限付きで再実行する。
 Browser plugin は一度接続済みのスレッドでは再調査せず、既存タブまたは新規タブを `http://127.0.0.1:5173/` へ移動する。
+Codex の terminal sandbox から `curl http://127.0.0.1:5173/` が失敗しても、in-app Browser から到達できる場合がある。ローカル表示確認の正本は Browser plugin 側の表示・DOM・コンソール確認とする。
 
 認証が必要な外部サイトや通常ブラウザの profile が必要な確認は、in-app Browser ではなく通常ブラウザまたは Chrome extension を使う。
 

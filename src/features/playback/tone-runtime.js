@@ -19,6 +19,21 @@ export async function ensureToneAudioReady() {
     return context;
 }
 
+export async function ensureToneAudioReadyWithTimeout(timeoutMs = 1500) {
+    const timeout = Math.max(0, timeoutMs);
+    if (timeout <= 0) {
+        await ensureToneAudioReady();
+        return true;
+    }
+
+    return Promise.race([
+        ensureToneAudioReady().then(() => true),
+        new Promise((resolve) => {
+            globalThis.setTimeout(() => resolve(false), timeout);
+        }),
+    ]);
+}
+
 export async function waitForToneLoaded(timeoutMs = 2500) {
     if (typeof Tone.loaded !== 'function') return true;
 

@@ -4,7 +4,7 @@ import { normalizeUnitValue } from '../../core/number-utils.js';
 import { getTrackPlaybackInstrument, syncTrackPlaybackChains } from '../tracks/instrument-map.js';
 import { getDrumSampleDefinition } from '../tracks/instruments/instrument-config.js';
 import { prepareTrackPlaybackInstrument } from '../tracks/instruments/playback-chains.js';
-import { Tone, ensureToneAudioReady, waitForToneLoaded } from './tone-runtime.js';
+import { Tone, ensureToneAudioReady, ensureToneAudioReadyWithTimeout, waitForToneLoaded } from './tone-runtime.js';
 
 // ==========================================================
 // スコアのデータ形式
@@ -26,6 +26,7 @@ const DRUM_PREVIEW_DURATION_SECONDS = 0.35;
 const PREVIEW_SAMPLER_READY_TIMEOUT_MS = 2000;
 const PREVIEW_SAMPLER_POLL_MS = 50;
 const PLAYBACK_WARMUP_TIMEOUT_MS = 2500;
+const WEB_AUDIO_CONTEXT_WARMUP_TIMEOUT_MS = 1500;
 
 async function waitForSamplerReady(sampler, timeoutMs = PREVIEW_SAMPLER_READY_TIMEOUT_MS) {
     if (!sampler) return false;
@@ -54,7 +55,11 @@ async function waitForSamplerReady(sampler, timeoutMs = PREVIEW_SAMPLER_READY_TI
 export async function warmupPlaybackInstrument(track, playbackInstrumentId) {
     if (!track?.id || !playbackInstrumentId) return false;
     try {
-        await ensureToneAudioReady();
+        const audioReady = await ensureToneAudioReadyWithTimeout(WEB_AUDIO_CONTEXT_WARMUP_TIMEOUT_MS);
+        if (!audioReady) {
+            console.warn('[Audio] 試聴用Web Audio準備がタイムアウトしました。');
+            return false;
+        }
         const sampler = await prepareTrackPlaybackInstrument(track, playbackInstrumentId);
         return await waitForSamplerReady(sampler, PREVIEW_SAMPLER_READY_TIMEOUT_MS);
     } catch (error) {
@@ -65,7 +70,11 @@ export async function warmupPlaybackInstrument(track, playbackInstrumentId) {
 
 export async function warmupPlaybackTracks(tracks = []) {
     try {
-        await ensureToneAudioReady();
+        const audioReady = await ensureToneAudioReadyWithTimeout(WEB_AUDIO_CONTEXT_WARMUP_TIMEOUT_MS);
+        if (!audioReady) {
+            console.warn('[Audio] 再生用Web Audio準備がタイムアウトしました。');
+            return false;
+        }
         syncTrackPlaybackChains(tracks);
         const loaded = await waitForToneLoaded(PLAYBACK_WARMUP_TIMEOUT_MS);
         if (!loaded) {

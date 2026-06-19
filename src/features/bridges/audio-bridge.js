@@ -9,7 +9,7 @@ import {
     warmupPlaybackInstrument as warmupSchedulerInstrument,
     warmupPlaybackTracks as warmupSchedulerTracks,
 } from '../playback/scheduler.js';
-import { ensureToneAudioReady } from '../playback/tone-runtime.js';
+import { ensureToneAudioReadyWithTimeout } from '../playback/tone-runtime.js';
 import { buildNativePlaybackManifest, buildNativePlaybackManifestForInstrumentIds } from '../playback/score-serializer.js';
 import { getDrumSampleDefinition } from '../tracks/instrument-map.js';
 import { canUseIosNativePlayback } from './device-bridge.js';
@@ -20,6 +20,7 @@ let preparedManifestKey = null;
 let nativePlaybackStateErrorLogged = false;
 const NATIVE_READY_POLL_INTERVAL_MS = 60;
 const NATIVE_READY_TIMEOUT_MS = 2500;
+const WEB_AUDIO_CONTEXT_WARMUP_TIMEOUT_MS = 1500;
 
 function normalizeStartDelayMs(value) {
     const parsed = normalizeFiniteNumber(value, 0);
@@ -120,8 +121,11 @@ export async function prepareAudioPlayback(tracks = []) {
 export async function prepareAudioContextForUserGesture() {
     if (canUseNativePlayback()) return true;
     try {
-        await ensureToneAudioReady();
-        return true;
+        const ready = await ensureToneAudioReadyWithTimeout(WEB_AUDIO_CONTEXT_WARMUP_TIMEOUT_MS);
+        if (!ready) {
+            console.warn('[Audio] Web Audio context warmup timed out.');
+        }
+        return ready;
     } catch (error) {
         console.warn('[Audio] Web Audio context warmup skipped.', error);
         return false;
