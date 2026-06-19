@@ -7,10 +7,11 @@ import {
 } from './instrument-config.js';
 import { clampNumber } from '../../../core/number-utils.js';
 import { TRACK_TONE_DEFAULTS, normalizeEqValue, normalizeTrackTone } from './track-tone.js';
-import { Tone } from '../../playback/tone-runtime.js';
+import { Tone, waitForToneLoaded } from '../../playback/tone-runtime.js';
 
 const playbackChains = new Map();
 let masterBus = null;
+const PREVIEW_PREPARE_TIMEOUT_MS = 2000;
 
 const TRACK_BUS_CONFIG = {
     low: { frequency: 180, type: 'lowshelf' },
@@ -295,8 +296,9 @@ export async function prepareTrackPlaybackInstrument(track, playbackInstrumentId
     if (track?.id == null || !playbackInstrumentId) return null;
     const chain = ensurePlaybackChain(track, playbackInstrumentId);
     if (!chain?.sampler) return null;
-    if (typeof Tone.loaded === 'function') {
-        await Tone.loaded();
+    const loaded = await waitForToneLoaded(PREVIEW_PREPARE_TIMEOUT_MS);
+    if (!loaded) {
+        console.warn(`[Audio] ${playbackInstrumentId} の音源準備がタイムアウトしました。`);
     }
     return chain.sampler;
 }

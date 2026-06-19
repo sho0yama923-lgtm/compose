@@ -4,7 +4,7 @@ import { normalizeUnitValue } from '../../core/number-utils.js';
 import { getTrackPlaybackInstrument, syncTrackPlaybackChains } from '../tracks/instrument-map.js';
 import { getDrumSampleDefinition } from '../tracks/instruments/instrument-config.js';
 import { prepareTrackPlaybackInstrument } from '../tracks/instruments/playback-chains.js';
-import { Tone, ensureToneAudioReady } from './tone-runtime.js';
+import { Tone, ensureToneAudioReady, waitForToneLoaded } from './tone-runtime.js';
 
 // ==========================================================
 // スコアのデータ形式
@@ -25,6 +25,7 @@ let _part = null;
 const DRUM_PREVIEW_DURATION_SECONDS = 0.35;
 const PREVIEW_SAMPLER_READY_TIMEOUT_MS = 2000;
 const PREVIEW_SAMPLER_POLL_MS = 50;
+const PLAYBACK_WARMUP_TIMEOUT_MS = 2500;
 
 async function waitForSamplerReady(sampler, timeoutMs = PREVIEW_SAMPLER_READY_TIMEOUT_MS) {
     if (!sampler) return false;
@@ -66,8 +67,9 @@ export async function warmupPlaybackTracks(tracks = []) {
     try {
         await ensureToneAudioReady();
         syncTrackPlaybackChains(tracks);
-        if (typeof Tone.loaded === 'function') {
-            await Tone.loaded();
+        const loaded = await waitForToneLoaded(PLAYBACK_WARMUP_TIMEOUT_MS);
+        if (!loaded) {
+            console.warn('[Audio] 再生用音源の先読みがタイムアウトしました。再生時に再確認します。');
         }
         return true;
     } catch (error) {

@@ -8,6 +8,13 @@ const CANON_INTRO_CHORDS = [
     { root: 'E', type: 'm', octave: 3 },
 ];
 
+const CANON_INTRO_ARPEGGIO = [
+    ['C4', 'E4', 'G4', 'E4'],
+    ['G3', 'B3', 'D4', 'B3'],
+    ['A3', 'C4', 'E4', 'C4'],
+    ['E3', 'G#3', 'B3', 'G#3'],
+];
+
 function fillDrums(track) {
     const rows = Object.fromEntries((track.rows || []).map((row) => [row.sampleId, row.steps]));
     if (!rows.kick || !rows.snare || !rows.hihat) return;
@@ -38,10 +45,23 @@ function fillChords(track) {
     });
 }
 
+function fillMelody(track) {
+    CANON_INTRO_ARPEGGIO.forEach((notes, chordIndex) => {
+        const start = chordIndex * (STEPS_PER_MEASURE / 2);
+        notes.forEach((note, noteIndex) => {
+            const steps = track.stepsMap?.[note];
+            if (!steps) return;
+            placeNote(steps, start + noteIndex * (STEPS_PER_BEAT / 2), '8n', steps.length);
+        });
+    });
+}
+
 export function applyCanonSample() {
     const drumTrack = appState.tracks.find((track) => track.instrument === 'drums');
     const chordTrack = appState.tracks.find((track) => track.instrument === 'chord');
+    const melodyTrack = appState.tracks.find((track) => track.instrument === 'piano');
 
     if (drumTrack) fillDrums(drumTrack);
     if (chordTrack) fillChords(chordTrack);
+    if (melodyTrack) fillMelody(melodyTrack);
 }

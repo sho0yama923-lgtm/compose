@@ -7,6 +7,7 @@ import repeatLoopIconUrl from '../assets/repeat_loop_icon.svg';
 const ONBOARDING_KEY = 'compose_mobile_onboarding_v4';
 const GUIDE_SECTION_COUNT = 6;
 const TARGET_PADDING = 6;
+const PLAYER_HIGHLIGHT_GAP = 12;
 const MELODY_GUIDE_ROW_SELECTOR = '.melody-grid-row.has-chord-tone';
 const PLAYBACK_LISTEN_DELAY_MS = 2000;
 
@@ -125,8 +126,8 @@ function buildGuideSteps(session) {
         guideStep({
             section: 1,
             title: 'トラックエリア',
-            body: '中央のトラックエリアには、ドラムやコードなどのトラックが並びます。ここで、それぞれのトラックに何が入っているか確認できます。',
-            target: () => getElementsRect('.preview-card'),
+            body: '中央のトラックエリアには、ドラムやコードなどのトラックが並びます。',
+            target: getPreviewCardsRectAbovePlayer,
             highlight: true,
             cardPosition: 'top',
         }),
@@ -1064,6 +1065,21 @@ function getElementsRect(selector) {
     return combineRects([...document.querySelectorAll(selector)]
         .filter((element) => element instanceof HTMLElement)
         .map((element) => element.getBoundingClientRect()));
+}
+
+function getPreviewCardsRectAbovePlayer() {
+    const rect = getElementsRect('.preview-card');
+    if (!rect) return null;
+
+    const player = document.querySelector('.measure-seek-card');
+    if (!(player instanceof HTMLElement)) return rect;
+
+    const playerRect = player.getBoundingClientRect();
+    const maxBottom = playerRect.top - TARGET_PADDING - PLAYER_HIGHLIGHT_GAP;
+    return {
+        ...rect,
+        bottom: Math.max(rect.top, Math.min(rect.bottom, maxBottom)),
+    };
 }
 
 function combineRects(rects) {
