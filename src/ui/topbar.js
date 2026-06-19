@@ -2,7 +2,6 @@ import { appState, callbacks } from '../core/state.js';
 import { INST_LABEL, INST_TYPE } from '../features/tracks/instrument-map.js';
 
 const TAB_REORDER_HOLD_MS = 420;
-const TAB_REORDER_CANCEL_MOVE_PX = 18;
 
 let tabDragState = null;
 
@@ -68,14 +67,18 @@ function startTabDrag(button, event) {
         pointerId: event.pointerId,
         trackId,
         moved: false,
+        scrollLeft: tabsEl.scrollLeft,
     };
     button.dataset.dragSuppress = 'true';
     tabsEl.classList.add('is-reordering');
     button.classList.add('is-dragging');
+    tabsEl.scrollLeft = tabDragState.scrollLeft;
 }
 
 function updateTabDrag(event) {
     if (!tabDragState || event.pointerId !== tabDragState.pointerId) return;
+    const tabsEl = document.getElementById('topbarTabs');
+    if (tabsEl) tabsEl.scrollLeft = tabDragState.scrollLeft;
     const targetTab = getTrackTabAtPoint(event.clientX, event.clientY);
     if (!targetTab) return;
     const targetId = Number(targetTab.dataset.trackId);
@@ -130,20 +133,12 @@ function bindTrackTabReorder(button) {
         if (event.pointerType === 'mouse' && event.button !== 0) return;
         clearHold();
         clearPointerListeners();
-        const startX = event.clientX;
-        const startY = event.clientY;
         const pointerId = event.pointerId;
         const onMove = (moveEvent) => {
             if (moveEvent.pointerId !== pointerId) return;
             if (tabDragState?.button === button) {
                 moveEvent.preventDefault();
                 updateTabDrag(moveEvent);
-                return;
-            }
-            const distance = Math.hypot(moveEvent.clientX - startX, moveEvent.clientY - startY);
-            if (distance > TAB_REORDER_CANCEL_MOVE_PX) {
-                clearHold();
-                clearPointerListeners();
             }
         };
         const onUp = (upEvent) => {

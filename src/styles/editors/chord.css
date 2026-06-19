@@ -1,6 +1,6 @@
 /* ======= コードエディタ ======= */
 .chord-panel-body {
-    padding: 4px 8px 8px;
+    padding: 4px 0 8px;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -92,7 +92,10 @@
 }
 .chord-sequencer-section {
     gap: 6px;
-    padding: 6px 8px;
+    padding: 6px 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
 }
 .chord-sequencer-grid {
     display: flex;
