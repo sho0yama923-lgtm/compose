@@ -49,9 +49,8 @@ export function initOnboarding({
             <button type="button" class="onboarding-btn primary" data-onboarding-next="true">次へ</button>
         </div>
         <div class="onboarding-card">
-            <div class="onboarding-kicker">はじめての方へ</div>
             <h2 class="onboarding-title">操作説明を受けますか？</h2>
-            <p class="onboarding-description">再生、繰り返し、コード、メロディの基本を体験します。</p>
+            <p class="onboarding-description">基本操作をひと通り試します。</p>
             <div class="onboarding-actions">
                 <button type="button" class="onboarding-btn secondary" data-onboarding-skip="true">今はしない</button>
                 <button type="button" class="onboarding-btn primary" data-onboarding-start="true">説明を見る</button>
@@ -109,7 +108,7 @@ function buildGuideSteps(session) {
         guideStep({
             section: 1,
             title: '画面の説明',
-            body: 'まず、画面の説明をします。',
+            body: '画面の全体を見ます。',
             target: '#trackEditor',
             prepare: () => {
                 showPreviewMeasure(0);
@@ -119,14 +118,14 @@ function buildGuideSteps(session) {
         guideStep({
             section: 1,
             title: '上部エリア',
-            body: '上部では、表示するトラックの切り替え、BPM、曲のルートやスケールを確認できます。',
+            body: '上部でトラック切り替え、BPM、キーを確認します。',
             target: ['.topbar', '.preview-song-settings'],
             highlight: true,
         }),
         guideStep({
             section: 1,
             title: 'トラックエリア',
-            body: '中央のトラックエリアには、ドラムやコードなどのトラックが並びます。',
+            body: '中央にドラムやコードのトラックが並びます。',
             target: getPreviewCardsRectAbovePlayer,
             highlight: true,
             cardPosition: 'top',
@@ -134,14 +133,14 @@ function buildGuideSteps(session) {
         guideStep({
             section: 1,
             title: '再生エリア',
-            body: '最後に、下部では曲の再生、停止、小節移動、再生範囲の変更ができます。',
+            body: '下部で再生、停止、小節移動、範囲変更をします。',
             target: '.measure-seek-card',
             highlight: true,
         }),
         guideStep({
             section: 1,
             title: 'トラックの詳細を見る',
-            body: 'トラックをタップすると、そのトラックの編集画面を開けます。まず、Drumsを開いてみましょう！',
+            body: 'トラックをタップすると編集画面を開けます。Drumsを開きます。',
             target: '.preview-card[data-instrument="drums"] .preview-card-header',
             allowed: ['.preview-card[data-instrument="drums"] .preview-card-header'],
             action: 'track-selected',
@@ -151,14 +150,14 @@ function buildGuideSteps(session) {
         guideStep({
             section: 1,
             title: 'エディタ画面',
-            body: 'ここでは、どこで音を鳴らすかを決めます。',
+            body: 'ここで音を鳴らす位置を決めます。',
             target: '.drum-editor',
             cardPosition: 'editor-lower',
         }),
         guideStep({
             section: 1,
             title: '1小節の見方',
-            body: '1画面には1小節分が表示されます。通常のリズムでは、1小節が16分割されています。',
+            body: '1画面に1小節を表示します。通常は16分割です。',
             target: '.timeline-header',
             highlight: true,
             cardPosition: 'editor-lower',
@@ -166,7 +165,7 @@ function buildGuideSteps(session) {
         guideStep({
             section: 1,
             title: '音の長さ',
-            body: '音符のボタンでは、これから置く音の長さを選びます。',
+            body: '音符ボタンで音の長さを選びます。',
             target: '.duration-toolbar',
             highlight: true,
             cardPosition: 'editor-lower',
@@ -174,7 +173,7 @@ function buildGuideSteps(session) {
         guideStep({
             section: 1,
             title: '音を置く場所',
-            body: 'グリッドでは、どの音をどのタイミングで鳴らすかを決めます。',
+            body: 'グリッドで音とタイミングを決めます。',
             target: '.drum-roll-scroll',
             highlight: true,
             cardPosition: 'editor-lower',
@@ -182,7 +181,7 @@ function buildGuideSteps(session) {
         guideStep({
             section: 1,
             title: '全体画面へ戻る',
-            body: 'エディタ画面の説明は以上です。トラック全体の画面に戻りましょう！',
+            body: '全体画面に戻ります。',
             target: '#viewToggleBtn',
             allowed: ['#viewToggleBtn'],
             action: 'preview-view-opened',
@@ -191,14 +190,14 @@ function buildGuideSteps(session) {
         guideStep({
             section: 2,
             title: 'ミュート操作',
-            body: '次は、トラックの音をオン・オフする操作を試してみましょう。',
+            body: 'トラックの音をオン・オフします。',
             target: '.preview-card[data-instrument="drums"]',
             cardPosition: 'drums-anchor',
         }),
         guideStep({
             section: 2,
             title: 'ミュート操作',
-            body: 'トラック左上のチェックで、そのトラックの音をオン・オフできます。まず、Drumsのチェックを外してみましょう！',
+            body: 'Drumsのチェックを外します。',
             target: '.preview-card[data-instrument="drums"] .preview-track-toggle',
             allowed: ['.preview-card[data-instrument="drums"] .preview-track-toggle'],
             action: 'track-muted-changed',
@@ -208,7 +207,7 @@ function buildGuideSteps(session) {
         guideStep({
             section: 2,
             title: 'ミュート操作',
-            body: '次に、もう一度チェックを入れてドラムの音を戻しましょう！',
+            body: 'もう一度チェックして音を戻します。',
             target: '.preview-card[data-instrument="drums"] .preview-track-toggle',
             allowed: ['.preview-card[data-instrument="drums"] .preview-track-toggle'],
             action: 'track-muted-changed',
@@ -218,14 +217,14 @@ function buildGuideSteps(session) {
         guideStep({
             section: 3,
             title: '再生操作',
-            body: '次は、曲の再生と停止を試してみましょう。',
+            body: '曲の再生と停止を試します。',
             target: '[data-play-toggle="true"]',
             cardPosition: 'player-top',
         }),
         guideStep({
             section: 3,
             title: '再生操作',
-            body: '再生ボタンを押して、曲を聴いてみましょう！',
+            body: '再生ボタンで曲を聴きます。',
             target: '[data-play-toggle="true"]',
             allowed: ['[data-play-toggle="true"]'],
             action: 'playback-requested',
@@ -234,7 +233,7 @@ function buildGuideSteps(session) {
         guideStep({
             section: 3,
             title: '再生操作',
-            body: '少し聴いたら、同じボタンを押して停止しましょう。',
+            body: '同じボタンで停止します。',
             target: '[data-play-toggle="true"]',
             allowed: ['[data-play-toggle="true"]'],
             action: 'playback-stopped',
@@ -242,14 +241,14 @@ function buildGuideSteps(session) {
         guideStep({
             section: 3,
             title: '再生操作',
-            body: '次は、再生する範囲を変えてみましょう。',
+            body: '再生範囲を変えます。',
             target: '.measure-seek-card',
             cardPosition: 'player-top',
         }),
         guideStep({
             section: 3,
             title: '再生操作',
-            body: '下部の再生エリアにある小さなつまみをタップして、再生範囲の操作を表示します。',
+            body: '下部のつまみで範囲操作を開きます。',
             target: '.measure-seek-handle',
             allowed: ['.measure-seek-handle'],
             action: 'seek-bar-expanded',
@@ -257,7 +256,7 @@ function buildGuideSteps(session) {
         guideStep({
             section: 3,
             title: '再生操作',
-            body: '青いバーが再生範囲です。右端の青いつまみが、再生を終える位置です。黄色い「ここまで」の線まで動かしてみましょう！',
+            body: '右端の青いつまみを黄色い線まで動かします。',
             target: '.measure-range-rail',
             allowed: ['.measure-point-marker.end'],
             action: 'play-range-changed',
@@ -268,7 +267,7 @@ function buildGuideSteps(session) {
         guideStep({
             section: 3,
             title: '再生操作',
-            body: '再生範囲が1〜2小節目になりました。再生ボタンを押して、狭めた範囲を聴いてみましょう！',
+            body: '1〜2小節目だけ再生します。',
             target: '[data-play-toggle="true"]',
             allowed: ['[data-play-toggle="true"]'],
             action: 'playback-requested',
@@ -278,7 +277,7 @@ function buildGuideSteps(session) {
         guideStep({
             section: 3,
             title: '再生操作',
-            body: '少し聴いたら、同じボタンを押して停止しましょう。',
+            body: '同じボタンで停止します。',
             target: '[data-play-toggle="true"]',
             allowed: ['[data-play-toggle="true"]'],
             action: 'playback-stopped',
@@ -287,7 +286,7 @@ function buildGuideSteps(session) {
         guideStep({
             section: 3,
             title: '再生操作',
-            body: '最後に、右端の青いつまみを黄色い「ここまで」の線まで動かし、再生範囲を1〜4小節目へ戻しましょう。',
+            body: '右端のつまみを黄色い線へ戻します。',
             target: '.measure-range-rail',
             allowed: ['.measure-point-marker.end'],
             action: 'play-range-changed',
@@ -298,7 +297,7 @@ function buildGuideSteps(session) {
         guideStep({
             section: 3,
             title: '繰り返し設定',
-            body: 'ここからは、残りの3〜4小節を実際に作っていきます。',
+            body: '3〜4小節目を作ります。',
             target: '.preview-card[data-instrument="drums"]',
             nextLabel: '次のステップへ',
             prepare: () => setMeasureSeekExpanded(false),
@@ -306,7 +305,7 @@ function buildGuideSteps(session) {
         guideStep({
             section: 4,
             title: '繰り返し設定',
-            body: '1〜2小節目のドラムを、3〜4小節目まで繰り返してみましょう！',
+            body: '1〜2小節目のドラムを3〜4小節目へ繰り返します。',
             target: '.preview-card[data-instrument="drums"]',
             prepare: () => {
                 setMeasureSeekExpanded(false);
@@ -317,7 +316,7 @@ function buildGuideSteps(session) {
         guideStep({
             section: 4,
             title: '開始位置を決める',
-            body: 'まず、繰り返す元になる範囲の開始位置を決めます。1小節目の左端のバーをタップしてみましょう！',
+            body: '1小節目の左端バーをタップします。',
             target: '.preview-card[data-instrument="drums"] .preview-repeat-rail.start',
             allowed: ['.preview-card[data-instrument="drums"] .preview-repeat-rail.start'],
             action: 'repeat-source-started',
@@ -327,7 +326,7 @@ function buildGuideSteps(session) {
         guideStep({
             section: 4,
             title: null,
-            body: '次に、繰り返す元になる範囲の終了位置を決めます。2小節目に移動しましょう。',
+            body: '2小節目へ移動します。',
             target: '.mb-nav-btn[data-direction="1"]',
             allowed: ['.mb-nav-btn[data-direction="1"]'],
             action: 'measure-changed',
@@ -337,7 +336,7 @@ function buildGuideSteps(session) {
         guideStep({
             section: 4,
             title: '終了位置を決める',
-            body: '2小節目の右端のバーをタップしてみましょう！',
+            body: '2小節目の右端バーをタップします。',
             target: '.preview-card[data-instrument="drums"] .preview-repeat-rail.end',
             allowed: ['.preview-card[data-instrument="drums"] .preview-repeat-rail.end'],
             action: 'repeat-source-completed',
@@ -349,14 +348,14 @@ function buildGuideSteps(session) {
         guideStep({
             section: 4,
             title: '繰り返す範囲',
-            body: '繰り返す元の範囲が黄色で表示されました。この1〜2小節目を、後ろの小節へ繰り返します。',
+            body: '黄色が繰り返し元の範囲です。',
             target: '.preview-card[data-instrument="drums"]',
             cardPosition: 'player-top',
         }),
         guideStep({
             section: 4,
             title: null,
-            body: '次は、どこまで繰り返すかを決めます。3小節目に移動しましょう。',
+            body: '3小節目へ移動します。',
             target: '.mb-nav-btn[data-direction="1"]',
             allowed: ['.mb-nav-btn[data-direction="1"]'],
             action: 'measure-changed',
@@ -366,7 +365,7 @@ function buildGuideSteps(session) {
         guideStep({
             section: 4,
             title: 'トラックを繰り返す',
-            body: 'トラック右上の繰り返しボタンを押すと、黄色の範囲が今の小節まで繰り返されます。押してみましょう！',
+            body: '右上の繰り返しボタンを押します。',
             target: '.preview-card[data-instrument="drums"] .preview-track-repeat-btn',
             allowed: ['.preview-card[data-instrument="drums"] .preview-track-repeat-btn'],
             action: 'repeat-applied',
@@ -377,7 +376,7 @@ function buildGuideSteps(session) {
         guideStep({
             section: 4,
             title: null,
-            body: '次に、4小節目へ移動しましょう。',
+            body: '4小節目へ移動します。',
             target: '.mb-nav-btn[data-direction="1"]',
             allowed: ['.mb-nav-btn[data-direction="1"]'],
             action: 'measure-changed',
@@ -387,7 +386,7 @@ function buildGuideSteps(session) {
         guideStep({
             section: 4,
             title: 'トラックを繰り返す',
-            body: 'もう一度、繰り返しボタンを押してみましょう！',
+            body: 'もう一度、繰り返しボタンを押します。',
             target: '.preview-card[data-instrument="drums"] .preview-track-repeat-btn',
             allowed: ['.preview-card[data-instrument="drums"] .preview-track-repeat-btn'],
             action: 'repeat-applied',
@@ -398,7 +397,7 @@ function buildGuideSteps(session) {
         guideStep({
             section: 4,
             title: '繰り返し設定',
-            body: '繰り返しが入った小節は緑色で表示されます。これで、1〜2小節目のドラムを3〜4小節目まで使えるようになりました！',
+            body: '緑が反映済みの範囲です。',
             target: '.preview-card[data-instrument="drums"]',
             nextLabel: '次のステップへ',
             cardPosition: 'player-top',
@@ -408,7 +407,7 @@ function buildGuideSteps(session) {
     steps.push(guideStep({
         section: 5,
         title: 'コード設定',
-        body: '次は、コードを置いて曲の流れを作ってみましょう。',
+        body: 'コードを置いて曲の流れを作ります。',
         target: '.preview-card[data-instrument="chord"]',
         nextLabel: '次へ',
         prepare: () => {
@@ -419,13 +418,13 @@ function buildGuideSteps(session) {
     steps.push(guideStep({
         section: 5,
         title: 'コード設定',
-        body: '前半にはC → G → Am → Emのコードが入っています。ここでは後半をF → C → F → Gにして、カノン進行を完成させます。',
+        body: '後半をF → C → F → Gにします。',
         target: '.preview-card[data-instrument="chord"]',
     }));
     steps.push(guideStep({
         section: 5,
         title: 'コードエディタを開く',
-        body: 'まず、「コード / Piano」を開きましょう！',
+        body: '「コード / Piano」を開きます。',
         target: '.preview-card[data-instrument="chord"] .preview-card-header',
         allowed: ['.preview-card[data-instrument="chord"] .preview-card-header'],
         action: 'track-selected',
@@ -443,13 +442,13 @@ function buildGuideSteps(session) {
             steps.push(guideStep({
                 section: 5,
                 title: 'コード設定',
-                body: '3小節目がF → Cになりました。次は、4小節目をF → Gにします。',
+                body: '次は4小節目をF → Gにします。',
                 target: '.chord-sequencer-progress',
             }));
             steps.push(guideStep({
                 section: 5,
                 title: null,
-                body: 'まず、4小節目へ移動しましょう。',
+                body: '4小節目へ移動します。',
                 target: '.mb-nav-btn[data-direction="1"]',
                 allowed: ['.mb-nav-btn[data-direction="1"]'],
                 action: 'measure-changed',
@@ -458,12 +457,10 @@ function buildGuideSteps(session) {
         }
 
         if (expected.select) {
-            const orderWord = index === 0 ? 'まず' : index === 2 ? '次に' : index === 6 ? '最後に' : '';
-            const prefix = orderWord ? `${orderWord}、` : '';
             steps.push(guideStep({
                 section: 5,
                 title: 'コードを選ぶ',
-                body: `${prefix}上のコード選択で${expected.label}を選びます。`,
+                body: `コード選択で${expected.label}を選びます。`,
                 target: '.chord-select-input[aria-label="コードトラックのルート"]',
                 allowed: ['.chord-select-input[aria-label="コードトラックのルート"]'],
                 action: 'chord-selection-changed',
@@ -479,8 +476,8 @@ function buildGuideSteps(session) {
             section: 5,
             title: 'コードを置く',
             body: pairStartBeat
-                ? `${expected.label}を${expected.beat + 1}〜${pairEndBeat}拍目に置きます。${expected.beat + 1}拍目をタップしましょう！`
-                : `続けて、${expected.beat + 1}拍目をタップしましょう！`,
+                ? `${expected.label}を${expected.beat + 1}〜${pairEndBeat}拍目に置きます。`
+                : `${expected.beat + 1}拍目にも置きます。`,
             target: `.chord-progress-cell[data-step="${expected.measure * STEPS_PER_MEASURE + expected.beat * STEPS_PER_BEAT}"]`,
             allowed: [`.chord-progress-cell[data-step="${expected.measure * STEPS_PER_MEASURE + expected.beat * STEPS_PER_BEAT}"]`],
             action: 'chord-changed',
@@ -496,7 +493,7 @@ function buildGuideSteps(session) {
     steps.push(guideStep({
         section: 5,
         title: 'コード設定',
-        body: '後半がF → C → F → Gになりました。これでコード進行がつながりました！次は、コードを鳴らすタイミングを決めてみましょう。',
+        body: 'コード進行ができました。次は鳴らすタイミングです。',
         target: '.chord-sequencer-progress',
         nextLabel: '次へ',
         cardPosition: 'player-top',
@@ -506,14 +503,14 @@ function buildGuideSteps(session) {
         guideStep({
             section: 5,
             title: 'ドラムとコードを合わせる',
-            body: 'ドラムと同じタイミングでコードを鳴らすと、リズムにまとまりが生まれます。まず、3小節目のコードをKickとSnareに合わせてみましょう！',
+            body: '3小節目のコードをKickとSnareに合わせます。',
             target: '.chord-rhythm-summary',
             prepare: () => showTrackMeasure('chord', 2),
         }),
         guideStep({
             section: 5,
             title: 'ドラムを参照する',
-            body: 'まず、ドラムのリズムを見るために「ドラムを参照」をタップしましょう！',
+            body: '「ドラムを参照」をタップします。',
             target: '.chord-rhythm-summary',
             allowed: ['.chord-rhythm-summary'],
             action: 'chord-drum-reference-opened',
@@ -521,7 +518,7 @@ function buildGuideSteps(session) {
         guideStep({
             section: 5,
             title: 'キックを選ぶ',
-            body: 'まず、Kick（キック）にチェックを入れましょう！',
+            body: 'Kickにチェックを入れます。',
             target: '.chord-rhythm-row[data-drum-row="Kick"]',
             allowed: ['.chord-rhythm-row[data-drum-row="Kick"]'],
             action: 'chord-drum-row-changed',
@@ -531,7 +528,7 @@ function buildGuideSteps(session) {
         guideStep({
             section: 5,
             title: 'スネアを選ぶ',
-            body: '次に、Snare（スネア）にもチェックを入れましょう！',
+            body: 'Snareにもチェックを入れます。',
             target: '.chord-rhythm-row[data-drum-row="Snare"]',
             allowed: ['.chord-rhythm-row[data-drum-row="Snare"]'],
             action: 'chord-drum-row-changed',
@@ -541,7 +538,7 @@ function buildGuideSteps(session) {
         guideStep({
             section: 5,
             title: 'ドラムに同期する',
-            body: '最後に「同期」を押すと、KickとSnareの位置でコードが鳴るようになります！',
+            body: '「同期」でコードをドラムに合わせます。',
             target: '.chord-drum-sheet .chord-sync-all-btn',
             allowed: ['.chord-drum-sheet .chord-sync-all-btn'],
             action: 'chord-drum-synced',
@@ -552,14 +549,14 @@ function buildGuideSteps(session) {
         guideStep({
             section: 5,
             title: '同期できました',
-            body: '3小節目のコードが、ドラムと同じタイミングで鳴るようになりました。再生して確認してみましょう。',
+            body: '再生して重なりを確認します。',
             target: '[data-play-toggle="true"]',
             cardPosition: 'player-top',
         }),
         guideStep({
             section: 5,
             title: '再生する',
-            body: '再生ボタンを押して、ドラムとコードが重なるところを聴いてみましょう！',
+            body: '再生ボタンを押します。',
             target: '[data-play-toggle="true"]',
             allowed: ['[data-play-toggle="true"]'],
             action: 'playback-requested',
@@ -568,7 +565,7 @@ function buildGuideSteps(session) {
         guideStep({
             section: 5,
             title: '停止する',
-            body: '確認できたら停止しましょう。',
+            body: '確認したら停止します。',
             target: '[data-play-toggle="true"]',
             allowed: ['[data-play-toggle="true"]'],
             action: 'playback-stopped',
@@ -577,14 +574,14 @@ function buildGuideSteps(session) {
         guideStep({
             section: 5,
             title: '重なりを確認できました',
-            body: '3小節目では、キックに合わせてコードを鳴らせました。次は4小節目で、自分で鳴らす場所を選んでみましょう。',
+            body: '次は4小節目で鳴らす場所を選びます。',
             target: '[data-play-toggle="true"]',
             cardPosition: 'player-top',
         }),
         guideStep({
             section: 5,
             title: null,
-            body: 'まず、4小節目へ移動しましょう。',
+            body: '4小節目へ移動します。',
             target: '.mb-nav-btn[data-direction="1"]',
             allowed: ['.mb-nav-btn[data-direction="1"]'],
             action: 'measure-changed',
@@ -594,7 +591,7 @@ function buildGuideSteps(session) {
         guideStep({
             section: 5,
             title: '鳴らす場所を選ぶ',
-            body: '4小節目でコードを鳴らしたい場所を一つタップしてみましょう！',
+            body: '鳴らしたい場所を1つタップします。',
             target: '.chord-timing-grid',
             allowed: ['.chord-timing-grid'],
             action: 'chord-sound-added',
@@ -603,14 +600,14 @@ function buildGuideSteps(session) {
         guideStep({
             section: 5,
             title: 'コード設定',
-            body: 'コード進行と、コードを鳴らすタイミングを設定できました！次は、コードに合わせてメロディを作ってみましょう。',
+            body: '次はコードに合わせてメロディを作ります。',
             target: '.chord-timing-grid',
             nextLabel: '次のステップへ',
         }),
         guideStep({
             section: 6,
             title: 'メロディ作成',
-            body: '最後に、コードに合わせてメロディを作ります。色が付いたコードトーンを使うと、曲になじみやすくなります。',
+            body: '色付きのコードトーンを使うと、曲になじみます。',
             target: MELODY_GUIDE_ROW_SELECTOR,
             prepare: () => {
                 setMeasureSeekExpanded(false);
@@ -620,7 +617,7 @@ function buildGuideSteps(session) {
         guideStep({
             section: 6,
             title: '音を置く',
-            body: 'まず、色が付いたコードトーンから一つ選んで置いてみましょう！',
+            body: '色付きの音を1つ置きます。',
             target: MELODY_GUIDE_ROW_SELECTOR,
             allowed: [MELODY_GUIDE_ROW_SELECTOR],
             action: 'melody-note-added',
@@ -631,13 +628,13 @@ function buildGuideSteps(session) {
         guideStep({
             section: 6,
             title: '音を置けました',
-            body: '音を置けました。次は、置いた音を移動してみましょう。',
+            body: '置いた音を移動します。',
             target: () => melodyNoteSelector(session.lastMelodyNote),
         }),
         guideStep({
             section: 6,
             title: '音を移動する',
-            body: '音の高さやタイミングを変えたいときは、長押しして移動できます。置いた音を長押しして、上下または左右へ動かしてみましょう！',
+            body: '音を長押しして上下左右へ動かします。',
             target: () => melodyNoteSelector(session.lastMelodyNote),
             allowed: () => [melodyNoteSelector(session.lastMelodyNote), '.melody-roll-content'],
             action: 'melody-note-moved',
@@ -650,13 +647,13 @@ function buildGuideSteps(session) {
         guideStep({
             section: 6,
             title: '音を移動できました',
-            body: '音を移動できました。最後に、いらない音を削除してみましょう。',
+            body: '最後に音を削除します。',
             target: () => melodyNoteSelector(session.lastMelodyNote),
         }),
         guideStep({
             section: 6,
             title: '音を削除する',
-            body: '音を置き直したいときは削除できます。移動した音をタップして削除してみましょう！',
+            body: '移動した音をタップして削除します。',
             target: () => melodyNoteSelector(session.lastMelodyNote),
             allowed: () => [melodyNoteSelector(session.lastMelodyNote)],
             action: 'melody-note-removed',
@@ -665,7 +662,7 @@ function buildGuideSteps(session) {
         guideStep({
             section: 6,
             title: 'メロディ作成',
-            body: '音の配置、移動、削除ができました。これで基本的な作曲の流れは完了です！',
+            body: '基本操作は完了です。',
             target: MELODY_GUIDE_ROW_SELECTOR,
             nextLabel: '完了',
         })
@@ -738,8 +735,6 @@ function renderGuideCard(session) {
     if (step.cardPosition !== 'editor-lower') card.style.removeProperty('--onboarding-editor-lower-top');
     card.innerHTML = `
         <div class="onboarding-progress" style="--onboarding-progress: ${step.section}"></div>
-        <div class="onboarding-kicker">${step.section} / ${GUIDE_SECTION_COUNT}${step.substep ? ` ・ ${step.substep}` : ''}</div>
-        ${step.title ? `<h2 class="onboarding-title">${step.title}</h2>` : ''}
         ${step.icon ? `<div class="onboarding-guide-icon"><img src="${step.icon}" alt="繰り返し"></div>` : ''}
         <p class="onboarding-description">${step.body}</p>
     `;
@@ -756,7 +751,6 @@ function showGuideComplete(session) {
     const card = session.overlay.querySelector('.onboarding-card');
     card.innerHTML = `
         <div class="onboarding-progress" style="--onboarding-progress: ${GUIDE_SECTION_COUNT}"></div>
-        <div class="onboarding-kicker">完了</div>
         <h2 class="onboarding-title">基本操作を体験できました</h2>
         <div class="onboarding-actions">
             <button type="button" class="onboarding-btn primary" data-onboarding-finish="true">作曲を続ける</button>

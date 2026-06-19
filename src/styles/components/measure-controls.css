@@ -805,7 +805,7 @@
 .onboarding-description {
     margin: 0;
     font-size: 13px;
-    line-height: 1.65;
+    line-height: 1.55;
     color: #555;
 }
 .onboarding-guide-icon {
@@ -835,6 +835,9 @@
             #e7e7e7 calc(var(--onboarding-progress) / var(--onboarding-progress-steps) * 100%),
             #e7e7e7 100%
         );
+}
+.onboarding-overlay.is-guide .onboarding-progress {
+    margin-bottom: 10px;
 }
 .onboarding-actions {
     display: flex;
