@@ -439,17 +439,6 @@ function openMeasureActionsSheet(renderEditor) {
     const sheet = document.createElement('div');
     sheet.className = 'measure-actions-sheet';
 
-    const resetBtn = document.createElement('button');
-    resetBtn.className = 'measure-sheet-btn';
-    resetBtn.type = 'button';
-    resetBtn.textContent = '範囲をリセット';
-    resetBtn.addEventListener('click', () => {
-        appState.playRangeStartMeasure = 0;
-        appState.playRangeEndMeasure = Math.max(0, appState.numMeasures - 1);
-        overlay.remove();
-        renderEditor();
-    });
-
     const removeBtn = document.createElement('button');
     removeBtn.className = 'measure-sheet-btn danger';
     removeBtn.type = 'button';
@@ -483,7 +472,7 @@ function openMeasureActionsSheet(renderEditor) {
         if (event.target === overlay) overlay.remove();
     });
 
-    sheet.append(resetBtn, removeBtn, cancelBtn);
+    sheet.append(removeBtn, cancelBtn);
     overlay.appendChild(sheet);
     document.body.appendChild(overlay);
 }

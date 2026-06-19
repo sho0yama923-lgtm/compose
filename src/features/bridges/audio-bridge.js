@@ -7,7 +7,9 @@ import {
     previewTrackNote as previewSchedulerTrackNote,
     stop as stopSchedulerScore,
     warmupPlaybackInstrument as warmupSchedulerInstrument,
+    warmupPlaybackTracks as warmupSchedulerTracks,
 } from '../playback/scheduler.js';
+import { ensureToneAudioReady } from '../playback/tone-runtime.js';
 import { buildNativePlaybackManifest, buildNativePlaybackManifestForInstrumentIds } from '../playback/score-serializer.js';
 import { getDrumSampleDefinition } from '../tracks/instrument-map.js';
 import { canUseIosNativePlayback } from './device-bridge.js';
@@ -109,7 +111,21 @@ async function waitForNativePlaybackReady({
 }
 
 export async function prepareAudioPlayback(tracks = []) {
+    if (!canUseNativePlayback()) {
+        return warmupSchedulerTracks(tracks);
+    }
     return prepareNativePlaybackManifests(buildNativePlaybackManifest(tracks));
+}
+
+export async function prepareAudioContextForUserGesture() {
+    if (canUseNativePlayback()) return true;
+    try {
+        await ensureToneAudioReady();
+        return true;
+    } catch (error) {
+        console.warn('[Audio] Web Audio context warmup skipped.', error);
+        return false;
+    }
 }
 
 export async function playScore(playbackData, options = {}) {

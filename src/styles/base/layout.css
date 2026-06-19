@@ -22,6 +22,7 @@ html[data-app-runtime="web"] {
     height: var(--app-viewport-height);
     overflow: hidden;
     overscroll-behavior: none;
+    touch-action: pan-x pan-y;
 }
 
 html[data-app-runtime="web"] body {
@@ -58,6 +59,9 @@ html[data-app-runtime="web"] body {
 .topbar-tabs::-webkit-scrollbar {
     display: none;
 }
+.topbar-tabs.is-reordering {
+    cursor: grabbing;
+}
 .btn-menu {
     font-size: 20px;
     background: none;
@@ -87,7 +91,7 @@ html[data-app-runtime="web"] body {
 }
 .bpm-input {
     width: 50px;
-    font-size: 13px;
+    font-size: 16px;
     padding: 5px 6px;
     border-radius: 3px;
     border: 1px solid #444;
@@ -131,11 +135,17 @@ html[data-app-runtime="web"] body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    user-select: none;
+    -webkit-user-select: none;
 }
 .topbar-tab-btn.is-active {
     background: #fff;
     color: #111;
     border-color: #fff;
+}
+.topbar-tab-btn.is-dragging {
+    opacity: 0.72;
+    transform: scale(0.96);
 }
 .btn-play.is-playing {
     background: #333;

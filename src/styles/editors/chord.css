@@ -1225,6 +1225,9 @@
     flex-shrink: 0;
     padding-left: 10px;
     padding-right: 10px;
+    --preview-repeat-rail-overhang: 0px;
+    --preview-repeat-rail-bg: #bfdbfe;
+    --preview-repeat-rail-color: #1d4ed8;
 }
 .preview-card.repeat-source {
     background: #fffdf3;

@@ -62,6 +62,20 @@ export async function warmupPlaybackInstrument(track, playbackInstrumentId) {
     }
 }
 
+export async function warmupPlaybackTracks(tracks = []) {
+    try {
+        await ensureToneAudioReady();
+        syncTrackPlaybackChains(tracks);
+        if (typeof Tone.loaded === 'function') {
+            await Tone.loaded();
+        }
+        return true;
+    } catch (error) {
+        console.warn('[Audio] 再生用音源の先読みをスキップしました。', error);
+        return false;
+    }
+}
+
 /**
  * 音楽を再生する
  * @param {Array} score  - ステップのスコア配列

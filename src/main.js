@@ -21,7 +21,7 @@ import {
     renameProject,
     saveState,
 } from './features/project/project-storage.js';
-import { prepareAudioPlayback } from './features/bridges/audio-bridge.js';
+import { prepareAudioContextForUserGesture, prepareAudioPlayback } from './features/bridges/audio-bridge.js';
 import { renderProjectHome, setProjectHomeVisible } from './ui/project-home.js';
 import { requestProjectImport } from './features/bridges/file-share-bridge.js';
 import { getAppRuntime, isWebApp } from './features/bridges/device-bridge.js';
@@ -47,7 +47,26 @@ function setupWebViewportHeight() {
     window.visualViewport?.addEventListener('scroll', syncViewportHeight, { passive: true });
 }
 
+function setupWebZoomGuard() {
+    if (!isWebApp()) return;
+
+    const preventZoomGesture = (event) => {
+        event.preventDefault();
+    };
+    const preventMultiTouchZoom = (event) => {
+        if (event.touches?.length > 1) {
+            event.preventDefault();
+        }
+    };
+
+    document.addEventListener('gesturestart', preventZoomGesture, { passive: false });
+    document.addEventListener('gesturechange', preventZoomGesture, { passive: false });
+    document.addEventListener('gestureend', preventZoomGesture, { passive: false });
+    document.addEventListener('touchmove', preventMultiTouchZoom, { passive: false });
+}
+
 setupWebViewportHeight();
+setupWebZoomGuard();
 
 function showBootOverlay() {
     const overlay = document.getElementById('bootOverlay');
@@ -210,7 +229,9 @@ async function createDefaultProject(name, {
     forceOnboarding = false,
     startOnboardingImmediately = false,
 } = {}) {
+    const audioContextWarmup = prepareAudioContextForUserGesture();
     await createProject(name);
+    await audioContextWarmup;
     resetComposerState();
     addTrack('drums');
     addTrack('chord');
@@ -226,11 +247,13 @@ async function createDefaultProject(name, {
 }
 
 async function openExistingProject(projectId) {
+    const audioContextWarmup = prepareAudioContextForUserGesture();
     if (!(await openProject(projectId))) {
         alert('プロジェクトを読み込めませんでした');
         callbacks.renderProjectHome?.();
         return;
     }
+    await audioContextWarmup;
     await showProjectEditor();
 }
 
