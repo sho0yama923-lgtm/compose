@@ -1,8 +1,10 @@
 let currentAction = null;
 let actionSequence = 0;
+let lastControl = null;
+let lastControlClickedAt = 0;
 
 const DEFAULT_MIN_LOCK_MS = 350;
-const TRANSIENT_LOCK_MS = 250;
+const SAME_CONTROL_DEBOUNCE_MS = 250;
 
 function getActionControl(target) {
     if (!(target instanceof Element)) return null;
@@ -39,14 +41,6 @@ function beginActionLock() {
     return sequence;
 }
 
-function scheduleTransientActionLock() {
-    queueMicrotask(() => {
-        if (isActionGuardBusy()) return;
-        const sequence = beginActionLock();
-        window.setTimeout(() => releaseAction(sequence), TRANSIENT_LOCK_MS);
-    });
-}
-
 export async function runExclusiveAction(action, {
     minLockMs = DEFAULT_MIN_LOCK_MS,
 } = {}) {
@@ -72,10 +66,13 @@ export function initActionGuard() {
     document.addEventListener('click', (event) => {
         const control = getActionControl(event.target);
         if (!control || shouldIgnoreControl(control) || canUseControlWhileBusy(control)) return;
-        if (!isActionGuardBusy()) {
-            scheduleTransientActionLock();
-            return;
-        }
+        const now = performance.now();
+        const isSameControlRepeat = control === lastControl
+            && now - lastControlClickedAt < SAME_CONTROL_DEBOUNCE_MS;
+        lastControl = control;
+        lastControlClickedAt = now;
+
+        if (!isActionGuardBusy() && !isSameControlRepeat) return;
 
         event.preventDefault();
         event.stopImmediatePropagation();
