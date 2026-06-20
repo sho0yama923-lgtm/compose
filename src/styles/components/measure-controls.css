@@ -598,13 +598,15 @@
 }
 
 .onboarding-overlay {
-    --onboarding-progress-steps: 6;
+    --onboarding-progress-steps: 5;
     --onboarding-progress-height: 4px;
     --onboarding-card-max-width: 420px;
     --onboarding-card-radius: 18px;
     --onboarding-card-padding-x: 16px;
     --onboarding-card-padding-top: 18px;
     --onboarding-card-padding-bottom: 16px;
+    --onboarding-start-primary-height: 52px;
+    --onboarding-section-option-height: 56px;
     --onboarding-guide-edge-gap: 12px;
     --onboarding-player-card-gap: 12px;
     --onboarding-guide-top-offset: calc(64px + env(safe-area-inset-top, 0px));
@@ -847,6 +849,18 @@
 .onboarding-actions-split {
     margin-top: 16px;
 }
+.onboarding-start-actions {
+    display: grid;
+    gap: 8px;
+    margin-top: 14px;
+}
+.onboarding-btn.onboarding-start-primary {
+    min-height: var(--onboarding-start-primary-height);
+}
+.onboarding-btn.onboarding-start-detail {
+    min-height: 44px;
+    border-color: transparent;
+}
 .onboarding-section-list {
     display: grid;
     gap: 8px;
@@ -855,7 +869,7 @@
 .onboarding-section-option {
     display: grid;
     gap: 3px;
-    min-height: 56px;
+    min-height: var(--onboarding-section-option-height);
     padding: 10px 12px;
     border: 1px solid #dedede;
     border-radius: 10px;
