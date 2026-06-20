@@ -1,4 +1,4 @@
-﻿// editor-router.js - editor renderer/router
+﻿// 現在の表示モードと選択トラックに応じて、各エディタを描画する。
 
 import { appState, callbacks } from '../core/state.js';
 import { INST_TYPE, getTrackDisplayLabel } from '../features/tracks/instrument-map.js';

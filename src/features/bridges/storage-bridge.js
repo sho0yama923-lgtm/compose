@@ -96,7 +96,7 @@ async function deleteNativeTextFile(path) {
             directory: Directory.Library,
         });
     } catch {
-        // 初回や未保存時は削除対象がないので無視する
+        // 初回起動や未保存プロジェクトでは、削除対象がなくても正常扱いにする。
     }
 }
 

@@ -110,7 +110,12 @@
     overscroll-behavior: contain;
 }
 .preview-editor .preview-wrap {
-    padding-bottom: calc(var(--seek-overlay-space) + var(--safe-bottom));
+    padding-bottom: 0;
+}
+.preview-editor .preview-bottom-spacer {
+    flex: 0 0 calc((var(--seek-overlay-space) * 3) + var(--safe-bottom));
+    min-height: calc((var(--seek-overlay-space) * 3) + var(--safe-bottom));
+    pointer-events: none;
 }
 .drum-track-editor .drum-add-panel {
     margin-bottom: calc(var(--seek-overlay-space) + var(--safe-bottom));

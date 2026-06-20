@@ -59,6 +59,11 @@ html[data-app-runtime="web"] body {
 .topbar-tabs::-webkit-scrollbar {
     display: none;
 }
+.topbar-preview-slot {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+}
 .topbar-tabs.is-reordering {
     cursor: grabbing;
     touch-action: none;
@@ -138,6 +143,9 @@ html[data-app-runtime="web"] body {
     text-overflow: ellipsis;
     user-select: none;
     -webkit-user-select: none;
+}
+.topbar-preview-slot .topbar-tab-btn {
+    min-width: 72px;
 }
 .topbar-tab-btn.is-active {
     background: #fff;

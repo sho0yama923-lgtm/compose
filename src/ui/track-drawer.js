@@ -1,4 +1,4 @@
-// sidebar.js — サイドバー開閉 + トラックリスト描画
+// トラックドロワーの開閉と、トラック一覧の描画。
 
 import { appState } from '../core/state.js';
 import { INST_LABEL } from '../features/tracks/instrument-map.js';

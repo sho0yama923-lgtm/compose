@@ -171,10 +171,12 @@ export function setTopbarTitle() {
 }
 
 export function renderTopbarTabs() {
+    const previewSlotEl = document.getElementById('topbarPreviewSlot');
     const tabsEl = document.getElementById('topbarTabs');
-    if (!tabsEl) return;
+    if (!previewSlotEl || !tabsEl) return;
 
     const previewSelected = appState.previewMode || appState.activeTrackId === null;
+    previewSlotEl.innerHTML = '';
     tabsEl.innerHTML = '';
 
     const previewButton = document.createElement('button');
@@ -185,7 +187,7 @@ export function renderTopbarTabs() {
     previewButton.setAttribute('aria-pressed', String(previewSelected));
     previewButton.setAttribute('aria-label', previewSelected ? '全体表示中' : '全体表示へ切替');
     previewButton.textContent = '全体';
-    tabsEl.appendChild(previewButton);
+    previewSlotEl.appendChild(previewButton);
 
     appState.tracks.forEach((track) => {
         const selected = !previewSelected && appState.activeTrackId === track.id;

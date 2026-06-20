@@ -1,4 +1,4 @@
-// state.js — 共有状態管理
+// アプリ全体で共有する状態と、状態操作の小さなヘルパー。
 
 export const STEPS_PER_BEAT = 12;
 export const STEPS_PER_MEASURE = STEPS_PER_BEAT * 4;
@@ -46,13 +46,13 @@ export const appState = {
     songHarmony: 'major',
     songScaleFamily: 'diatonic',
     editorGridMode: 'normal',
-    // デュレーション
-    selectedDuration: '16n',   // ツールバーで選択中の音価
+    // 音価ツールバーの状態
+    selectedDuration: '16n',
     lastNormalDuration: '16n',
     lastTripletDuration: '8t',
-    dottedMode: false,         // 付点トグル
-    tripletMode: false,        // 3連符配置モード
-    // 3連符: beatConfig[measure] = [4,4,4,4] (拍ごとのサブディビジョン数)
+    dottedMode: false,
+    tripletMode: false,
+    // beatConfig[measure] は各拍のサブディビジョン数を持つ。
     beatConfig: [],
 };
 
@@ -131,8 +131,7 @@ export function clearRepeatState(trackId = null) {
     delete appState.repeatStates[trackId];
 }
 
-// 循環依存を回避するためのコールバック登録
-// app.js の初期化時に実際の関数が代入される
+// 循環 import を避けるため、main.js の初期化時に実体を差し込む。
 export const callbacks = {
     renderEditor: null,
     renderSidebar: null,

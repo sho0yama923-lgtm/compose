@@ -179,7 +179,7 @@ private final class NativePlaybackEngine {
             stepsPerBeat: payload.stepsPerBeat
         )
 
-        // volume=0 の状態でグラフ変更（stopLockedで0設定済み）
+        // stopLocked() で音量を落としてから、再生グラフを組み直す。
         clearVoicePoolsLocked()
         try prepareVoicePoolsLocked(payload: payload)
         if !audioEngine.isRunning {
@@ -633,7 +633,7 @@ private final class NativePlaybackEngine {
         let scheduleCutoffHostTime = nowHostTime + AVAudioTime.hostTime(forSeconds: scheduleHorizonSeconds)
         let rangeStart = scheduledUpToHostTime
 
-        // rangeStart 時刻が属するサイクルを起点にする
+        // 直前にスケジュールした時刻が属するループ周期から再開する。
         var cycleIndex = 0
         if rangeStart > state.renderBaseHostTime {
             let elapsed = secondsForHostTimeDelta(rangeStart - state.renderBaseHostTime)

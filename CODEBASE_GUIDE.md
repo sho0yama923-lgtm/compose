@@ -69,6 +69,10 @@
 - `node_modules/`
 - `playwright-report/`
 - `test-results/`
+- `test-results 2/`
+- `compose-web-*.zip`
+- `.claude/`
+- `.vscode/`
 - `ios/App/App/public/`
 - `ios/App/App/capacitor.config.json`
 - `ios/App/App/config [0-9]*.xml`

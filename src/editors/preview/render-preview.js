@@ -136,6 +136,11 @@ export function renderPreview(containerEl) {
         wrapEl.appendChild(card);
     });
 
+    const spacerEl = document.createElement('div');
+    spacerEl.className = 'preview-bottom-spacer';
+    spacerEl.setAttribute('aria-hidden', 'true');
+    wrapEl.appendChild(spacerEl);
+
     containerEl.appendChild(wrapEl);
 
     const toneTrack = appState.tracks.find((track) => track.id === appState.previewToneTrackId);

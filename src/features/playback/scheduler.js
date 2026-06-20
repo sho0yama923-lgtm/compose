@@ -1,4 +1,4 @@
-// player.js
+// Web Audio での試聴と再生スケジューリング。
 import { appState, STEPS_PER_BEAT, STEPS_PER_MEASURE } from '../../core/state.js';
 import { normalizeUnitValue } from '../../core/number-utils.js';
 import { getTrackPlaybackInstrument, syncTrackPlaybackChains } from '../tracks/instrument-map.js';
@@ -6,20 +6,8 @@ import { getDrumSampleDefinition } from '../tracks/instruments/instrument-config
 import { prepareTrackPlaybackInstrument } from '../tracks/instruments/playback-chains.js';
 import { Tone, ensureToneAudioReady, ensureToneAudioReadyWithTimeout, waitForToneLoaded } from './tone-runtime.js';
 
-// ==========================================================
-// スコアのデータ形式
-// ==========================================================
-//
-// score: 長さ N の配列（インデックスが各ステップに対応）
-//
-// 各ステップ:
-//   null            → 無音
-//   [ イベント, ... ] → 同時に鳴らす音のリスト
-//
-// イベントの形式:
-//   { instrument: '楽器名', notes: '音階', duration: '4n' }
-//
-// ==========================================================
+// score はステップ数ぶんの配列。各要素は null か、同時に鳴るイベント配列。
+// イベント例: { trackId, instrument, notes, duration, volume }
 
 let _part = null;
 const DRUM_PREVIEW_DURATION_SECONDS = 0.35;
@@ -39,7 +27,7 @@ async function waitForSamplerReady(sampler, timeoutMs = PREVIEW_SAMPLER_READY_TI
                 new Promise((resolve) => window.setTimeout(resolve, timeoutMs)),
             ]);
         } catch {
-            // 個別サンプルが失敗した場合は下の loaded 判定へフォールバックする
+            // Tone.loaded() が失敗しても、sampler.loaded の個別判定へ進む。
         }
         if (sampler.loaded) return true;
     }
@@ -88,8 +76,8 @@ export async function warmupPlaybackTracks(tracks = []) {
 }
 
 /**
- * 音楽を再生する
- * @param {Array} score  - ステップのスコア配列
+ * Web Audio でスコアを再生する。
+ * @param {Array} score - ステップ単位のスコア配列
  * @param {Object} options
  *   @param {number}  options.bpm  - テンポ（デフォルト: 120）
  *   @param {boolean} options.loop - ループ再生（デフォルト: true）
@@ -114,7 +102,7 @@ export async function play(score, {
         return false;
     }
 
-    // 前の再生を停止
+    // 多重再生を避けるため、前回の Transport / Part を止めてから組み直す。
     stop();
 
     Tone.Transport.bpm.value = bpm;

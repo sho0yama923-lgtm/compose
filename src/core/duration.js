@@ -1,22 +1,22 @@
-// duration-utils.js — ノート配置・削除のユーティリティ
+// ステップグリッド上のノート配置、タイ、削除を扱う。
 
 import { DURATION_CELLS } from './constants.js';
 
 /**
- * 付点を適用した実効デュレーションを返す
+ * 付点モードを反映した実効音価を返す。
  * @param {string} base - 基本音価 ('16n','8n','4n','2n','1n')
  * @param {boolean} dotted - 付点モード
  * @returns {string} 実効音価
  */
 export function getEffectiveDuration(base, dotted) {
     if (!dotted) return base;
-    // 付点可能: 8n→8d, 4n→4d, 2n→2d
+    // 付点に対応している音価だけ置き換える。
     const map = { '8n': '8d', '4n': '4d', '2n': '2d' };
-    return map[base] || base;  // 16n, 1n は付点不可 → そのまま
+    return map[base] || base;
 }
 
 /**
- * ノートを配置する
+ * 指定位置にノートを置き、占有範囲を `_tie` で埋める。
  * @param {Array} steps - ステップ配列
  * @param {number} index - 配置開始インデックス
  * @param {string} duration - 音価 ('16n','8n','4d' 等)
@@ -26,25 +26,25 @@ export function getEffectiveDuration(base, dotted) {
 export function placeNote(steps, index, duration, maxIndex) {
     const span = DURATION_CELLS[duration] || 1;
 
-    // 範囲チェック: ノートが maxIndex を超える場合は配置不可
+    // 編集できる範囲を超えるノートは置かない。
     if (index + span > maxIndex) return false;
 
-    // 範囲内の既存ノートをクリア
+    // 新しいノートと重なる既存ノートを先に消す。
     for (let i = index; i < index + span; i++) {
         const val = steps[i];
         if (val && val !== '_tie') {
-            // ヘッドセル → そのノート全体をクリア
+            // ノート開始セルなら、そのノート全体を消す。
             clearNote(steps, i);
         } else if (val === '_tie') {
-            // タイセル → 親ヘッドを探してクリア
+            // 継続セルなら、開始セルまで戻ってノート全体を消す。
             clearFromTie(steps, i);
         }
     }
 
-    // ヘッドセルを設定
+    // 開始セルには音価を置く。
     steps[index] = duration;
 
-    // 後続セルにタイを設定
+    // 継続セルは `_tie` で表す。
     for (let i = 1; i < span; i++) {
         steps[index + i] = '_tie';
     }
@@ -73,7 +73,7 @@ export function clearNote(steps, index) {
  * @param {number} index - タイセルのインデックス
  */
 export function clearFromTie(steps, index) {
-    // 逆方向にヘッドを探索
+    // 継続セルから左へ戻り、開始セルを探す。
     let head = index;
     while (head > 0 && steps[head] === '_tie') {
         head--;
@@ -84,7 +84,7 @@ export function clearFromTie(steps, index) {
 }
 
 /**
- * ステップをトグルする（タップ時の統合ロジック）
+ * タップ位置の状態に応じて、ノートの追加または削除を行う。
  * @param {Array} steps - ステップ配列
  * @param {number} index - タップ位置
  * @param {string} duration - 配置する音価
@@ -95,15 +95,15 @@ export function toggleStep(steps, index, duration, maxIndex) {
     const val = steps[index];
 
     if (val === '_tie') {
-        // タイセル → 親ノートを削除
+        // 継続セルを押した時は、元のノート全体を削除する。
         clearFromTie(steps, index);
         return false;
     } else if (val && val !== '_tie') {
-        // ヘッドセル → このノートを削除
+        // 開始セルを押した時は、そのノート全体を削除する。
         clearNote(steps, index);
         return false;
     } else {
-        // 空セル → ノートを配置
+        // 空セルなら、現在選択中の音価で配置する。
         return placeNote(steps, index, duration, maxIndex);
     }
 }

@@ -975,7 +975,7 @@
     background: #111;
     cursor: pointer;
     box-shadow: 0 1px 4px rgba(0,0,0,0.3);
-    margin-top: -8px; /* 中央揃え */
+    margin-top: -8px; /* thumbをトラック中央に合わせる */
 }
 .measure-slider::-moz-range-thumb {
     width: 22px;
@@ -987,7 +987,7 @@
     box-shadow: 0 1px 4px rgba(0,0,0,0.3);
 }
 
-/* 1. 全体の縦スクロールを完全に禁止し、Flexboxで高さを管理 */
+/* 画面全体は縦スクロールさせず、各エディタ内でスクロールを管理する */
 .main {
     flex: 1;
     overflow: hidden;
@@ -1043,8 +1043,7 @@
     margin-right: 8px;
 }
 
-/* 2. エディタ本体も縦スクロール禁止し、Flexbox化 */
-/* 鍵盤(左)とグリッド(右)の横並びを維持する */
+/* 鍵盤とグリッドの横並びを保ったまま、内部だけをスクロールさせる */
 .melodic-editor {
     flex: 1;
     display: flex;
@@ -1062,7 +1061,7 @@
     flex-shrink: 0;
 }
 
-/* コードエディタは縦並びのままでOK */
+/* コードエディタは縦方向のパネル構成を保つ */
 .chord-panel-body {
     flex: 1;
     display: flex;
@@ -1071,7 +1070,7 @@
     overscroll-behavior: contain;
     min-height: 0;
 }
-/* 3. アコーディオン（オクターブ選択）の中身を画面の高さに合わせて伸縮させる */
+/* オクターブ選択は残り高さに合わせて伸縮させる */
 .oct-accordion {
     flex: 1;
     display: flex;
@@ -1085,9 +1084,9 @@
     min-height: 0;
 }
 .oct-section.open {
-    flex: 1; /* 開いているセクションが余白をすべて埋める */
+    flex: 1; /* 開いているセクションが余白を埋める */
 }
-/* open時の表示を block から flex に上書き */
+/* details標準のblock表示をflexへ置き換える */
 .oct-section.open .oct-section-body {
     display: flex;
     flex: 1;
@@ -1096,7 +1095,7 @@
     min-height: 0;
 }
 
-/* 6. シークバーは潰れないようにサイズを固定 */
+/* 下部シークバーは潰れないように固定する */
 .measure-seek {
     flex-shrink: 0;
     padding: 4px 0 0 0;

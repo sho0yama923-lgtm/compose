@@ -1,4 +1,4 @@
-// app.js — エントリポイント: コールバック登録 + 各モジュール初期化
+// アプリ起動、画面間コールバック登録、主要モジュール初期化の入口。
 
 import { appState, callbacks, clearPendingDeleteNote } from './core/state.js';
 import { APP_VERSION } from './core/app-info.js';
@@ -79,7 +79,7 @@ function hideBootOverlay() {
     const overlay = document.getElementById('bootOverlay');
     if (!overlay) return;
     overlay.classList.add('hide');
-    // transitionend で完全に消す
+    // フェードアウト後にレイアウトから外す。
     const onEnd = () => {
         overlay.style.display = 'none';
         overlay.removeEventListener('transitionend', onEnd);
@@ -87,7 +87,7 @@ function hideBootOverlay() {
     overlay.addEventListener('transitionend', onEnd);
 }
 
-// 循環依存を回避するコールバック登録（自動保存フック付き）
+// UI や feature 間の循環 import を避けるため、共有コールバックに登録する。
 callbacks.renderEditor = (...args) => {
     renderEditor(...args);
     if (!appState.isPlaying) void saveState();
@@ -331,13 +331,13 @@ const projectHomeHandlers = {
 };
 
 async function boot() {
-    // 各モジュール初期化
+    // DOM と保存状態の準備後に、各 UI / feature モジュールを初期化する。
     initSidebar();
     initPlayback();
     initModal();
     initSaveLoad();
 
-    document.getElementById('topbarTabs')?.addEventListener('click', (event) => {
+    document.querySelector('.topbar')?.addEventListener('click', (event) => {
         const target = event.target;
         if (!(target instanceof Element)) return;
         const tab = target.closest('.topbar-tab-btn');
@@ -365,10 +365,10 @@ async function boot() {
     await initProjectStorage();
     renderTopbarTabs();
 
-    // ライフサイクル監視はプロジェクト選択後の再表示で音源を温め直す
+    // 復帰時に再生できるよう、プロジェクト選択後の再表示で音源を温め直す。
     setupPlaybackWarmupLifecycle();
 
-    // ローディング表示を解除し、本来のempty-stateメッセージに切替
+    // 起動表示を解除し、通常の空状態メッセージへ戻す。
     const emptyIcon = document.getElementById('emptyStateIcon');
     const emptyText = document.getElementById('emptyStateText');
     if (emptyIcon) emptyIcon.classList.remove('loading');

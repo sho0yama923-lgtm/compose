@@ -1,4 +1,4 @@
-// playback.js — 再生/停止 + スコア構築
+// 再生ボタン操作、スコア構築、Web / iOS native 再生の切り替えを扱う。
 
 import { appState, STEPS_PER_MEASURE, totalSteps, callbacks, getNormalizedPlayRangeMeasures } from '../../core/state.js';
 import { getCurrentBpm } from '../../core/bpm.js';

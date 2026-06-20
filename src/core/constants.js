@@ -1,17 +1,17 @@
-// constants.js — アプリ全体で使う定数
+// 音価、音名、コード、スケールなどの共有定義。
 
-// 音価 → 占有セル数のマッピング
+// 音価ごとの占有ステップ数。1小節は48ステップ。
 export const DURATION_CELLS = {
-    '16t': 2,  // 半拍三連
+    '16t': 2,
     '16n': 3,
-    '8t':  4,  // 1拍三連
+    '8t':  4,
     '8n':  6,  '8d':  9,
     '4n':  12, '4d':  18,
     '2n':  24, '2d':  36,
     '1n':  48,
 };
 
-// ツールバー用ラベル（左から長い → 短い）
+// ツールバー表示順。3連は通常モードでは非表示になる。
 export const DURATION_LIST = [
     { value: '8t',  label: '1拍3連' },
     { value: '16t', label: '半拍3連' },
@@ -22,11 +22,11 @@ export const DURATION_LIST = [
     { value: '16n', label: '16分' },
 ];
 
-// クロマチック音名（C〜B）
+// 半音階の音名。
 export const CHROMATIC  = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 export const BLACK_KEYS = new Set(['C#','D#','F#','G#','A#']);
 
-// オクターブごとの色（低=青系、中=緑、高=黄〜橙）
+// オクターブごとの表示色。
 export const OCT_COLOR = {
     1: { on: '#5c6bc0', border: '#9fa8da', label: 'Oct 1' },
     2: { on: '#1976d2', border: '#64b5f6', label: 'Oct 2' },
@@ -37,7 +37,7 @@ export const OCT_COLOR = {
     7: { on: '#c62828', border: '#ef9a9a', label: 'Oct 7' },
 };
 
-// コード機能: ルート音とコードタイプ
+// 曲全体のキー / スケール設定。
 export const CHORD_ROOTS = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 export const HARMONY_TYPES = [
     { value: 'major', label: 'M' },
@@ -146,7 +146,7 @@ export function normalizeSongSettings(root, harmony, scaleFamily) {
     };
 }
 
-// ルート音ごとの固有色（コード範囲ステップボタンのON時背景色）
+// コード範囲ボタンのON色。
 export const ROOT_COLORS = {
     'C':  '#c62828',  // 赤
     'C#': '#ad1457',  // ピンク
@@ -162,7 +162,7 @@ export const ROOT_COLORS = {
     'B':  '#bf360c',  // 深オレンジ
 };
 
-// コードタイプ: 半音インターバル配列
+// コードタイプごとの半音インターバル。
 export const CHORD_TYPES = {
     'M':    [0, 4, 7],
     'm':    [0, 3, 7],
@@ -175,7 +175,7 @@ export const CHORD_TYPES = {
     'aug':  [0, 4, 8],
 };
 
-// コードの構成音を返す（例: getChordNotes('C', 'M', 4) → ['C4','E4','G4']）
+// ルート、コードタイプ、オクターブから構成音を作る。
 export function getChordNotes(root, type, octave) {
     const rootIdx = CHROMATIC.indexOf(root);
     return CHORD_TYPES[type].map(interval => {

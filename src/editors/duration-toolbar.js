@@ -1,4 +1,4 @@
-// duration-toolbar.js — デュレーション選択ツールバー
+// 音価、付点、通常 / 3連モードを選ぶツールバー。
 
 import { appState } from '../core/state.js';
 import { DURATION_LIST } from '../core/constants.js';
@@ -10,7 +10,7 @@ import eighthNoteIconUrl from '../assets/八分音符.svg';
 import sixteenthNoteIconUrl from '../assets/十六分音符.svg';
 
 /**
- * デュレーションツールバーを生成してコンテナに追加
+ * 音価ツールバーを生成してコンテナに追加する。
  * @param {HTMLElement} containerEl - ツールバーを追加する親要素
  * @param {Function} onUpdate - ツールバー変更時のコールバック（再描画用）
  */
@@ -55,7 +55,7 @@ export function renderDurationToolbar(containerEl, onUpdate) {
     const valueButtons = document.createElement('div');
     valueButtons.className = 'duration-value-buttons';
 
-    // --- 音価ボタン ---
+    // 音価ボタン
     getVisibleDurations().forEach(({ value, label }) => {
         const btn = document.createElement('button');
         btn.className = 'dur-btn' + (appState.selectedDuration === value ? ' selected' : '');
@@ -85,14 +85,14 @@ export function renderDurationToolbar(containerEl, onUpdate) {
             if (value.endsWith('t')) {
                 appState.dottedMode = false;
             } else {
-                appState.dottedMode = false; // 音価変更時は付点リセット
+                appState.dottedMode = false;
             }
             if (onUpdate) onUpdate();
         });
         valueButtons.appendChild(btn);
     });
 
-    // --- 付点ボタン ---
+    // 付点ボタン
     const canDot = appState.editorGridMode === 'normal' && ['8n', '4n', '2n'].includes(appState.selectedDuration);
     if (canDot) {
         const dotBtn = document.createElement('button');
@@ -116,7 +116,7 @@ export function renderDurationToolbar(containerEl, onUpdate) {
 }
 
 /**
- * 現在の実効デュレーションを返す
+ * 付点モードを反映した現在の音価を返す。
  * @returns {string} 実効音価
  */
 export function getCurrentDuration() {

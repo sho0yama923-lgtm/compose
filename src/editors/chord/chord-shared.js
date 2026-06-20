@@ -34,29 +34,6 @@ export function buildLabel(text) {
     return el;
 }
 
-export function buildEditorHint(title, body, onDismiss) {
-    const el = document.createElement('div');
-    el.className = 'editor-help';
-    if (typeof onDismiss === 'function') {
-        const closeBtn = document.createElement('button');
-        closeBtn.className = 'editor-help-close';
-        closeBtn.type = 'button';
-        closeBtn.setAttribute('aria-label', '案内を閉じる');
-        closeBtn.textContent = '×';
-        closeBtn.addEventListener('click', onDismiss);
-        el.appendChild(closeBtn);
-    }
-
-    const titleEl = document.createElement('strong');
-    titleEl.textContent = title;
-
-    const bodyEl = document.createElement('span');
-    bodyEl.textContent = body;
-
-    el.append(titleEl, bodyEl);
-    return el;
-}
-
 export function createPlayheadBar(measureStart) {
     const barEl = document.createElement('div');
     barEl.className = 'playhead-bar';

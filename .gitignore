@@ -3,7 +3,12 @@ node_modules/
 dist/
 playwright-report/
 test-results/
+test-results*/
 .tmp/
+.codex-tmp/
+.claude/
+.vscode/
+*.zip
 ios/**/xcuserdata/
 ios/**/*.xcuserstate
 ios/App/App/public/

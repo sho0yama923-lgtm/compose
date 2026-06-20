@@ -1,4 +1,4 @@
-// modal.js — 楽器選択モーダル
+// トラック追加時の楽器選択モーダル。
 
 import { INSTRUMENT_LIST } from '../features/tracks/instrument-map.js';
 import { addTrack } from '../features/tracks/tracks-controller.js';
@@ -8,7 +8,7 @@ export function initModal() {
     const modal = document.getElementById('modal');
     const modalOptions = document.getElementById('modalOptions');
 
-    // INSTRUMENT_LIST からモーダルボタンを動的生成
+    // 楽器定義から選択ボタンを生成する。
     INSTRUMENT_LIST.forEach(config => {
         const btn = document.createElement('button');
         btn.dataset.inst = config.id;

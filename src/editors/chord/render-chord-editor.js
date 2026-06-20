@@ -6,7 +6,7 @@ import { getEditorCells, getEditorGridLineGroup, getMeasureStart } from '../../c
 import { buildPaletteOctaveControls, buildProgressSection } from './render-chord-parts.js';
 import { buildDetailAndSheets } from './render-chord-shell.js';
 import { buildTimingSection } from './chord-timing-section.js';
-import { appendChordTypeOptions, buildEditorHint } from './chord-shared.js';
+import { appendChordTypeOptions } from './chord-shared.js';
 import { emitTutorialAction } from '../../core/tutorial-events.js';
 
 export function renderChordEditor(track, editorEl) {
@@ -23,16 +23,6 @@ export function renderChordEditor(track, editorEl) {
 
     const toolbarEl = renderDurationToolbar(topbarEl, () => callbacks.renderEditor());
     toolbarEl.classList.add('melody-duration-toolbar');
-    if (!appState.chordHintDismissed) {
-        topbarEl.appendChild(buildEditorHint(
-            'コードを決める',
-            '上でコードを選び、先に進行、その下で鳴らすタイミングを決めます。',
-            () => {
-                appState.chordHintDismissed = true;
-                callbacks.renderEditor();
-            }
-        ));
-    }
 
     const bodyEl = document.createElement('div');
     bodyEl.className = 'chord-panel-body';
