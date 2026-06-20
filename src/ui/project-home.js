@@ -140,7 +140,6 @@ export function renderProjectHome(handlers) {
                     <div class="project-home-menu" data-project-menu="true" hidden>
                         <button type="button" data-project-tutorial="true">チュートリアル</button>
                         <button type="button" data-project-import="true">インポート</button>
-                        <button type="button" data-project-export="true">エクスポート</button>
                         <button type="button" data-project-select-mode="true">複数選択</button>
                     </div>
                 </div>
@@ -212,9 +211,6 @@ export function renderProjectHome(handlers) {
     });
     home.querySelector('[data-project-import="true"]')?.addEventListener('click', () => {
         runMenuAction(handlers.onImportProject);
-    });
-    home.querySelector('[data-project-export="true"]')?.addEventListener('click', () => {
-        runMenuAction(handlers.onExportProject);
     });
     home.querySelector('[data-project-select-mode="true"]')?.addEventListener('click', () => {
         runMenuAction(handlers.onEnterProjectSelectionMode);
