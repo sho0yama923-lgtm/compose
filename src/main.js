@@ -5,7 +5,7 @@ import { APP_VERSION } from './core/app-info.js';
 import { renderEditor } from './editors/editor-router.js';
 import { renderSidebar, closeSidebar, initSidebar } from './ui/track-drawer.js';
 import { addTrack, selectTrack } from './features/tracks/tracks-controller.js';
-import { initPlayback } from './features/playback/playback-controller.js';
+import { initPlayback, stopPlaybackForLifecycle } from './features/playback/playback-controller.js';
 import { initModal } from './ui/instrument-modal.js';
 import { initOnboarding } from './ui/onboarding.js';
 import { renderTopbarTabs, syncViewToggleButton } from './ui/topbar.js';
@@ -163,20 +163,29 @@ async function warmupAudioForPlayback({ refreshNativePreparation = false, resume
 }
 
 function setupPlaybackWarmupLifecycle() {
+    const suspendPlaybackForExternalAudio = () => {
+        markWebAudioPlaybackRecoveryNeeded();
+        stopPlaybackForLifecycle();
+    };
+
     const warmupAfterResume = () => {
         if (!appState.activeProjectId || appState.projectHomeVisible) return;
+        if (appState.isPlaying) {
+            stopPlaybackForLifecycle();
+        }
         void warmupAudioForPlayback({
             refreshNativePreparation: true,
             resumeWebAudio: true,
         });
     };
 
+    window.addEventListener('pagehide', suspendPlaybackForExternalAudio);
     window.addEventListener('pageshow', warmupAfterResume);
     window.addEventListener('focus', warmupAfterResume);
 
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState !== 'visible') {
-            markWebAudioPlaybackRecoveryNeeded();
+            suspendPlaybackForExternalAudio();
             return;
         }
         warmupAfterResume();

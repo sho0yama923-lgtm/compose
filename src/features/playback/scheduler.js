@@ -4,7 +4,14 @@ import { normalizeUnitValue } from '../../core/number-utils.js';
 import { getTrackPlaybackInstrument, syncTrackPlaybackChains } from '../tracks/instrument-map.js';
 import { getDrumSampleDefinition } from '../tracks/instruments/instrument-config.js';
 import { prepareTrackPlaybackInstrument, resetPlaybackChains } from '../tracks/instruments/playback-chains.js';
-import { Tone, ensureToneAudioReady, ensureToneAudioReadyWithTimeout, waitForToneLoaded } from './tone-runtime.js';
+import {
+    Tone,
+    ensureToneAudioReady,
+    ensureToneAudioReadyWithTimeout,
+    markToneAudioContextResetNeeded,
+    resetToneAudioContextIfNeeded,
+    waitForToneLoaded,
+} from './tone-runtime.js';
 
 // score はステップ数ぶんの配列。各要素は null か、同時に鳴るイベント配列。
 // イベント例: { trackId, instrument, notes, duration, volume }
@@ -44,12 +51,12 @@ async function waitForSamplerReady(sampler, timeoutMs = PREVIEW_SAMPLER_READY_TI
 export async function warmupPlaybackInstrument(track, playbackInstrumentId) {
     if (!track?.id || !playbackInstrumentId) return false;
     try {
+        resetPlaybackChainsIfNeeded();
         const audioReady = await ensureToneAudioReadyWithTimeout(WEB_AUDIO_CONTEXT_WARMUP_TIMEOUT_MS);
         if (!audioReady) {
             console.warn('[Audio] 試聴用Web Audio準備がタイムアウトしました。');
             return false;
         }
-        resetPlaybackChainsIfNeeded();
         const sampler = await prepareTrackPlaybackInstrument(track, playbackInstrumentId);
         return await waitForSamplerReady(sampler, PREVIEW_SAMPLER_READY_TIMEOUT_MS);
     } catch (error) {
@@ -60,12 +67,12 @@ export async function warmupPlaybackInstrument(track, playbackInstrumentId) {
 
 export async function warmupPlaybackTracks(tracks = []) {
     try {
+        resetPlaybackChainsIfNeeded();
         const audioReady = await ensureToneAudioReadyWithTimeout(WEB_AUDIO_CONTEXT_WARMUP_TIMEOUT_MS);
         if (!audioReady) {
             console.warn('[Audio] 再生用Web Audio準備がタイムアウトしました。');
             return false;
         }
-        resetPlaybackChainsIfNeeded();
         syncTrackPlaybackChains(tracks);
         const loaded = await waitForToneLoaded(PLAYBACK_WARMUP_TIMEOUT_MS);
         if (!loaded) {
@@ -81,17 +88,20 @@ export async function warmupPlaybackTracks(tracks = []) {
 export function resetWebPlayback() {
     stop();
     resetPlaybackChains();
+    markToneAudioContextResetNeeded();
     webPlaybackRecoveryNeeded = false;
 }
 
 export function markWebPlaybackRecoveryNeeded() {
     webPlaybackRecoveryNeeded = true;
+    markToneAudioContextResetNeeded();
 }
 
 function resetPlaybackChainsIfNeeded() {
     if (!webPlaybackRecoveryNeeded) return;
     stop();
     resetPlaybackChains();
+    resetToneAudioContextIfNeeded();
     webPlaybackRecoveryNeeded = false;
 }
 
@@ -114,6 +124,7 @@ export async function play(score, {
     startStep = 0,
     endStepExclusive = score.length,
 } = {}) {
+    resetPlaybackChainsIfNeeded();
     try {
         await ensureToneAudioReady();
     } catch (error) {
@@ -124,7 +135,6 @@ export async function play(score, {
 
     // 多重再生を避けるため、前回の Transport / Part を止めてから組み直す。
     stop();
-    resetPlaybackChainsIfNeeded();
 
     Tone.Transport.bpm.value = bpm;
     syncTrackPlaybackChains(tracks);
@@ -215,8 +225,8 @@ export async function previewDrumSample({
         rows: [{ sampleInstrumentId, sampleId }],
     };
 
-    await ensureToneAudioReady();
     resetPlaybackChainsIfNeeded();
+    await ensureToneAudioReady();
 
     let sampler = null;
     try {
@@ -256,8 +266,8 @@ export async function previewTrackNote({
     const playbackInstrumentId = track.playbackInstrument || track.instrument;
     if (!playbackInstrumentId) return false;
 
-    await ensureToneAudioReady();
     resetPlaybackChainsIfNeeded();
+    await ensureToneAudioReady();
 
     let sampler = null;
     try {

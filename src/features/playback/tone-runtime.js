@@ -1,5 +1,46 @@
 import * as Tone from 'tone';
 
+let toneAudioContextResetNeeded = false;
+
+export function markToneAudioContextResetNeeded() {
+    toneAudioContextResetNeeded = true;
+}
+
+export function resetToneAudioContextIfNeeded() {
+    if (!toneAudioContextResetNeeded) return false;
+    const previousContext = Tone.getContext?.() || null;
+    const previousRawContext = previousContext?.rawContext || null;
+
+    try {
+        Tone.Transport.stop();
+        Tone.Transport.cancel?.();
+    } catch {
+        // Transport がまだ初期化前でも、context の差し替えは続ける。
+    }
+
+    try {
+        const nextContext = new Tone.Context();
+        Tone.setContext(nextContext);
+        toneAudioContextResetNeeded = false;
+
+        if (
+            previousRawContext
+            && previousRawContext !== nextContext.rawContext
+            && previousRawContext.state !== 'closed'
+            && typeof previousRawContext.close === 'function'
+        ) {
+            void previousRawContext.close().catch((error) => {
+                console.warn('[Audio] Previous Web Audio context close skipped.', error);
+            });
+        }
+        console.info('[Audio] Web Audio context was recreated for recovery.');
+        return true;
+    } catch (error) {
+        console.warn('[Audio] Web Audio context recreation skipped.', error);
+        return false;
+    }
+}
+
 function kickRawAudioOutput(rawContext) {
     if (!rawContext || typeof rawContext.createBufferSource !== 'function') return;
     if (rawContext.state !== 'running') return;
@@ -23,6 +64,7 @@ function kickRawAudioOutput(rawContext) {
 }
 
 export async function ensureToneAudioReady() {
+    resetToneAudioContextIfNeeded();
     const context = Tone.getContext();
     await Tone.start();
 

@@ -66,6 +66,10 @@ async function togglePlayback(audioReadyPromise = null) {
     await startPlayback(audioReadyPromise);
 }
 
+export function stopPlaybackForLifecycle() {
+    stopPlayback({ emitTutorial: false });
+}
+
 function buildPlaybackContext() {
     const bpm = getCurrentBpm();
     const totalStepCount = totalSteps();
@@ -326,7 +330,7 @@ function syncPreviewScrollTop() {
     appState.previewScrollTop = previewWrap.scrollTop;
 }
 
-function stopPlayback() {
+function stopPlayback({ emitTutorial = true } = {}) {
     playbackRequestId += 1;
     stopScorePlayback();
     stopPlaybackAnimation();
@@ -337,7 +341,9 @@ function stopPlayback() {
     updatePlayheadIndicators(null);
     callbacks.renderEditor();
     setPlaybackButtonState();
-    emitTutorialAction('playback-stopped');
+    if (emitTutorial) {
+        emitTutorialAction('playback-stopped');
+    }
 }
 
 function setPlaybackButtonState() {
