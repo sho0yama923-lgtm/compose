@@ -83,6 +83,11 @@ async function prepareNativePlaybackManifests(manifests = []) {
     return true;
 }
 
+export function invalidateNativePlaybackPreparation() {
+    preparedManifestKey = null;
+    nativePlaybackStateErrorLogged = false;
+}
+
 function wait(ms) {
     if (ms <= 0) return Promise.resolve();
     return new Promise((resolve) => {

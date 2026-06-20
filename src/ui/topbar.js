@@ -5,6 +5,13 @@ const TAB_REORDER_HOLD_MS = 420;
 
 let tabDragState = null;
 
+function lockTabScroll(tabsEl) {
+    if (!tabDragState || !tabsEl) return;
+    if (tabsEl.scrollLeft !== tabDragState.scrollLeft) {
+        tabsEl.scrollLeft = tabDragState.scrollLeft;
+    }
+}
+
 function getTopbarTrackLabel(track) {
     if (!track) return 'トラック';
     if (INST_TYPE[track.instrument] === 'chord') return 'コード';
@@ -68,17 +75,20 @@ function startTabDrag(button, event) {
         trackId,
         moved: false,
         scrollLeft: tabsEl.scrollLeft,
+        onScroll: null,
     };
+    tabDragState.onScroll = () => lockTabScroll(tabsEl);
+    tabsEl.addEventListener('scroll', tabDragState.onScroll, { passive: true });
     button.dataset.dragSuppress = 'true';
     tabsEl.classList.add('is-reordering');
     button.classList.add('is-dragging');
-    tabsEl.scrollLeft = tabDragState.scrollLeft;
+    lockTabScroll(tabsEl);
 }
 
 function updateTabDrag(event) {
     if (!tabDragState || event.pointerId !== tabDragState.pointerId) return;
     const tabsEl = document.getElementById('topbarTabs');
-    if (tabsEl) tabsEl.scrollLeft = tabDragState.scrollLeft;
+    lockTabScroll(tabsEl);
     const targetTab = getTrackTabAtPoint(event.clientX, event.clientY);
     if (!targetTab) return;
     const targetId = Number(targetTab.dataset.trackId);
@@ -95,10 +105,15 @@ function updateTabDrag(event) {
 
 function finishTabDrag(event) {
     if (!tabDragState || event.pointerId !== tabDragState.pointerId) return;
-    const { button, moved } = tabDragState;
+    const { button, moved, onScroll } = tabDragState;
+    const tabsEl = document.getElementById('topbarTabs');
+    if (tabsEl && onScroll) {
+        tabsEl.removeEventListener('scroll', onScroll);
+        lockTabScroll(tabsEl);
+    }
     tabDragState = null;
     button.classList.remove('is-dragging');
-    document.getElementById('topbarTabs')?.classList.remove('is-reordering');
+    tabsEl?.classList.remove('is-reordering');
     if (moved) {
         callbacks.renderEditor?.();
     }

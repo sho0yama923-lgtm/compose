@@ -67,6 +67,9 @@ html[data-app-runtime="web"] body {
 .topbar-tabs.is-reordering {
     cursor: grabbing;
     touch-action: none;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: auto;
 }
 .btn-menu {
     font-size: 20px;

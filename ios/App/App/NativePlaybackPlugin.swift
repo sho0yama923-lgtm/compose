@@ -104,11 +104,25 @@ private final class NativePlaybackEngine {
     private var playbackSessionId = 0
     private var currentPlaybackState: NativePlaybackState?
     private var playbackReadyAtMs = 0
+    private var interruptionObserver: NSObjectProtocol?
 
     init() {
         audioEngine.attach(warmupPlayer)
         audioEngine.connect(warmupPlayer, to: audioEngine.mainMixerNode, fromBus: 0, toBus: 0, format: nil)
         audioEngine.mainMixerNode.outputVolume = 1
+        interruptionObserver = NotificationCenter.default.addObserver(
+            forName: AVAudioSession.interruptionNotification,
+            object: nil,
+            queue: nil
+        ) { [weak self] notification in
+            self?.handleAudioSessionInterruption(notification)
+        }
+    }
+
+    deinit {
+        if let interruptionObserver {
+            NotificationCenter.default.removeObserver(interruptionObserver)
+        }
     }
 
     func preload(manifests: [NativePlaybackInstrumentManifest]) throws {
@@ -165,6 +179,35 @@ private final class NativePlaybackEngine {
     func playbackStatus() -> [String: Any] {
         engineQueue.sync {
             playbackStatusLocked()
+        }
+    }
+
+    private func handleAudioSessionInterruption(_ notification: Notification) {
+        guard let rawType = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let type = AVAudioSession.InterruptionType(rawValue: rawType) else {
+            return
+        }
+
+        switch type {
+        case .began:
+            engineQueue.async { [self] in
+                stopLocked()
+                audioEngine.stop()
+                hasBeenPrimed = false
+                playbackReadyAtMs = 0
+            }
+        case .ended:
+            engineQueue.async { [self] in
+                do {
+                    try AVAudioSession.sharedInstance().setActive(true)
+                    try ensureEngineStarted()
+                    hasBeenPrimed = false
+                } catch {
+                    print("[NativePlayback] interruption recovery failed: \(error.localizedDescription)")
+                }
+            }
+        @unknown default:
+            break
         }
     }
 

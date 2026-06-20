@@ -21,7 +21,11 @@ import {
     renameProject,
     saveState,
 } from './features/project/project-storage.js';
-import { prepareAudioContextForUserGesture, prepareAudioPlayback } from './features/bridges/audio-bridge.js';
+import {
+    invalidateNativePlaybackPreparation,
+    prepareAudioContextForUserGesture,
+    prepareAudioPlayback,
+} from './features/bridges/audio-bridge.js';
 import { renderProjectHome, setProjectHomeVisible } from './ui/project-home.js';
 import { requestProjectImport } from './features/bridges/file-share-bridge.js';
 import { getAppRuntime, isWebApp } from './features/bridges/device-bridge.js';
@@ -127,8 +131,11 @@ function refreshPlaybackAvailabilityUi() {
     callbacks.renderEditor?.();
 }
 
-async function warmupAudioForPlayback() {
+async function warmupAudioForPlayback({ refreshNativePreparation = false, resumeWebAudio = false } = {}) {
     if (audioWarmupPromise) return audioWarmupPromise;
+    if (refreshNativePreparation) {
+        invalidateNativePlaybackPreparation();
+    }
 
     appState.isBooting = true;
     showBootOverlay();
@@ -136,6 +143,9 @@ async function warmupAudioForPlayback() {
 
     audioWarmupPromise = (async () => {
         try {
+            if (resumeWebAudio) {
+                await prepareAudioContextForUserGesture();
+            }
             await prepareAudioPlayback(appState.tracks);
         } catch (error) {
             console.warn('[Audio] playback warmup failed:', error);
@@ -151,15 +161,20 @@ async function warmupAudioForPlayback() {
 }
 
 function setupPlaybackWarmupLifecycle() {
-    window.addEventListener('pageshow', () => {
+    const warmupAfterResume = () => {
         if (!appState.activeProjectId || appState.projectHomeVisible) return;
-        void warmupAudioForPlayback();
-    });
+        void warmupAudioForPlayback({
+            refreshNativePreparation: true,
+            resumeWebAudio: true,
+        });
+    };
+
+    window.addEventListener('pageshow', warmupAfterResume);
+    window.addEventListener('focus', warmupAfterResume);
 
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState !== 'visible') return;
-        if (!appState.activeProjectId || appState.projectHomeVisible) return;
-        void warmupAudioForPlayback();
+        warmupAfterResume();
     });
 }
 

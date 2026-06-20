@@ -346,6 +346,13 @@ function openDrumRowDeleteDialog(track, row, label) {
         if (rowIndex >= 0) {
             track.rows.splice(rowIndex, 1);
         }
+        if ((track.rows || []).length === 0) {
+            const firstCandidateGroup = groupDrumRowCandidates(track)[0]?.[0];
+            appState.drumAddTrackId = track.id;
+            if (firstCandidateGroup) {
+                setDrumAddGroupOpen(track.id, firstCandidateGroup, true);
+            }
+        }
         overlayEl.remove();
         callbacks.renderEditor();
     });
