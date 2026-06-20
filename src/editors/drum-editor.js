@@ -56,6 +56,7 @@ export function renderDrumEditor(track, editorEl) {
     const cells = getEditorCells();
     const columns = getEditorGridColumns();
     const majorGroup = getEditorGridLineGroup();
+    const restoreDrumScrollTop = track.drumScrollTop || 0;
 
     const header = editorEl.querySelector('.editor-header');
     const topbarEl = document.createElement('section');
@@ -72,6 +73,7 @@ export function renderDrumEditor(track, editorEl) {
 
     const gridScrollEl = document.createElement('div');
     gridScrollEl.className = 'steps-grid-scroll drum-roll-scroll';
+    gridScrollEl.dataset.scrollRestorePending = 'true';
     const gridEl = document.createElement('div');
     gridEl.className = 'timeline-grid drum-roll-content';
     gridEl.dataset.measureStart = String(offset);
@@ -247,7 +249,8 @@ export function renderDrumEditor(track, editorEl) {
     bindDrumScroll(track, gridScrollEl);
     requestAnimationFrame(() => {
         const maxScroll = Math.max(0, gridScrollEl.scrollHeight - gridScrollEl.clientHeight);
-        gridScrollEl.scrollTop = Math.max(0, Math.min(track.drumScrollTop || 0, maxScroll));
+        gridScrollEl.scrollTop = Math.max(0, Math.min(restoreDrumScrollTop, maxScroll));
+        delete gridScrollEl.dataset.scrollRestorePending;
     });
 }
 

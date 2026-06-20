@@ -33,6 +33,7 @@ export function renderMelodicEditor(track, editorEl) {
     const maxIndex = offset + STEPS_PER_MEASURE;
     const cells = getEditorCells();
     const majorGroup = getEditorGridLineGroup();
+    const restoreMelodyScrollTop = track.melodyScrollTop || 0;
     const visibleOctaves = getVisibleOctaves(track.viewBase);
     const scalePitchClasses = getScalePitchClasses(
         appState.songRoot,
@@ -96,6 +97,7 @@ export function renderMelodicEditor(track, editorEl) {
 
     const scrollEl = document.createElement('div');
     scrollEl.className = 'melody-roll-scroll';
+    scrollEl.dataset.scrollRestorePending = 'true';
 
     const contentEl = document.createElement('div');
     contentEl.className = 'melody-roll-content';
@@ -258,7 +260,8 @@ export function renderMelodicEditor(track, editorEl) {
     bindMelodyScroll(track, scrollEl);
     requestAnimationFrame(() => {
         const maxScroll = Math.max(0, scrollEl.scrollHeight - scrollEl.clientHeight);
-        scrollEl.scrollTop = Math.max(0, Math.min(track.melodyScrollTop || 0, maxScroll));
+        scrollEl.scrollTop = Math.max(0, Math.min(restoreMelodyScrollTop, maxScroll));
+        delete scrollEl.dataset.scrollRestorePending;
     });
 }
 

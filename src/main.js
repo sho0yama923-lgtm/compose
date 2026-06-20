@@ -23,8 +23,10 @@ import {
 } from './features/project/project-storage.js';
 import {
     invalidateNativePlaybackPreparation,
+    markWebAudioPlaybackRecoveryNeeded,
     prepareAudioContextForUserGesture,
     prepareAudioPlayback,
+    recoverWebAudioPlaybackForResume,
 } from './features/bridges/audio-bridge.js';
 import { renderProjectHome, setProjectHomeVisible } from './ui/project-home.js';
 import { requestProjectImport } from './features/bridges/file-share-bridge.js';
@@ -144,7 +146,7 @@ async function warmupAudioForPlayback({ refreshNativePreparation = false, resume
     audioWarmupPromise = (async () => {
         try {
             if (resumeWebAudio) {
-                await prepareAudioContextForUserGesture();
+                await recoverWebAudioPlaybackForResume();
             }
             await prepareAudioPlayback(appState.tracks);
         } catch (error) {
@@ -173,7 +175,10 @@ function setupPlaybackWarmupLifecycle() {
     window.addEventListener('focus', warmupAfterResume);
 
     document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState !== 'visible') return;
+        if (document.visibilityState !== 'visible') {
+            markWebAudioPlaybackRecoveryNeeded();
+            return;
+        }
         warmupAfterResume();
     });
 }

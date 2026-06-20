@@ -14,6 +14,7 @@ export function renderEditor() {
     const emptyState = document.getElementById('emptyState');
     const editorEl = document.getElementById('trackEditor');
     syncPreviewScrollSnapshot(editorEl);
+    syncTrackEditorScrollSnapshot(editorEl);
     editorEl.classList.remove('melodic-track-editor', 'drum-track-editor', 'chord-track-editor', 'preview-editor');
     syncTrackRepeats();
 
@@ -76,6 +77,23 @@ function syncPreviewScrollSnapshot(editorEl) {
     const previewWrap = editorEl.querySelector('.preview-wrap');
     if (!previewWrap) return;
     appState.previewScrollTop = previewWrap.scrollTop;
+}
+
+function syncTrackEditorScrollSnapshot(editorEl) {
+    if (!editorEl) return;
+    if (editorEl.querySelector('[data-scroll-restore-pending="true"]')) return;
+    const track = appState.tracks.find((item) => item.id === appState.activeTrackId);
+    if (!track) return;
+
+    const melodyScrollEl = editorEl.querySelector('.melody-roll-scroll');
+    if (melodyScrollEl instanceof HTMLElement) {
+        track.melodyScrollTop = melodyScrollEl.scrollTop;
+    }
+
+    const drumScrollEl = editorEl.querySelector('.drum-roll-scroll');
+    if (drumScrollEl instanceof HTMLElement) {
+        track.drumScrollTop = drumScrollEl.scrollTop;
+    }
 }
 
 function restorePreviewScrollSnapshot(editorEl) {

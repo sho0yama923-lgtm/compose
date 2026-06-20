@@ -1,6 +1,7 @@
 import Foundation
 import Capacitor
 import AVFAudio
+import UIKit
 import Darwin
 
 private struct NativePlaybackInstrumentManifest: Decodable {
@@ -104,25 +105,17 @@ private final class NativePlaybackEngine {
     private var playbackSessionId = 0
     private var currentPlaybackState: NativePlaybackState?
     private var playbackReadyAtMs = 0
-    private var interruptionObserver: NSObjectProtocol?
+    private var lifecycleObservers: [NSObjectProtocol] = []
 
     init() {
         audioEngine.attach(warmupPlayer)
         audioEngine.connect(warmupPlayer, to: audioEngine.mainMixerNode, fromBus: 0, toBus: 0, format: nil)
         audioEngine.mainMixerNode.outputVolume = 1
-        interruptionObserver = NotificationCenter.default.addObserver(
-            forName: AVAudioSession.interruptionNotification,
-            object: nil,
-            queue: nil
-        ) { [weak self] notification in
-            self?.handleAudioSessionInterruption(notification)
-        }
+        registerAudioLifecycleObservers()
     }
 
     deinit {
-        if let interruptionObserver {
-            NotificationCenter.default.removeObserver(interruptionObserver)
-        }
+        lifecycleObservers.forEach { NotificationCenter.default.removeObserver($0) }
     }
 
     func preload(manifests: [NativePlaybackInstrumentManifest]) throws {
@@ -182,6 +175,71 @@ private final class NativePlaybackEngine {
         }
     }
 
+    func recoverAfterResume() throws {
+        try engineQueue.sync {
+            try recoverAudioRouteLocked(resetEngine: false)
+        }
+    }
+
+    private func registerAudioLifecycleObservers() {
+        let center = NotificationCenter.default
+        lifecycleObservers.append(center.addObserver(
+            forName: AVAudioSession.interruptionNotification,
+            object: nil,
+            queue: nil
+        ) { [weak self] notification in
+            self?.handleAudioSessionInterruption(notification)
+        })
+        lifecycleObservers.append(center.addObserver(
+            forName: AVAudioSession.routeChangeNotification,
+            object: nil,
+            queue: nil
+        ) { [weak self] _ in
+            self?.recoverAudioRouteAsync(resetEngine: false)
+        })
+        lifecycleObservers.append(center.addObserver(
+            forName: AVAudioSession.mediaServicesWereResetNotification,
+            object: nil,
+            queue: nil
+        ) { [weak self] _ in
+            self?.recoverAudioRouteAsync(resetEngine: true)
+        })
+        lifecycleObservers.append(center.addObserver(
+            forName: UIApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: nil
+        ) { [weak self] _ in
+            self?.recoverAudioRouteAsync(resetEngine: false)
+        })
+    }
+
+    private func recoverAudioRouteAsync(resetEngine: Bool) {
+        engineQueue.async { [self] in
+            do {
+                try recoverAudioRouteLocked(resetEngine: resetEngine)
+            } catch {
+                print("[NativePlayback] audio route recovery failed: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func recoverAudioRouteLocked(resetEngine: Bool) throws {
+        if resetEngine {
+            stopLocked()
+            clearVoicePoolsLocked()
+            audioEngine.stop()
+            audioEngine.reset()
+            hasBeenPrimed = false
+            playbackReadyAtMs = 0
+        }
+        try activateAudioSessionLocked()
+        if !audioEngine.isRunning {
+            audioEngine.prepare()
+            try audioEngine.start()
+            playbackReadyAtMs = currentTimeMs() + Int(warmupReadyLeadSeconds * 1000)
+        }
+    }
+
     private func handleAudioSessionInterruption(_ notification: Notification) {
         guard let rawType = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
               let type = AVAudioSession.InterruptionType(rawValue: rawType) else {
@@ -199,8 +257,7 @@ private final class NativePlaybackEngine {
         case .ended:
             engineQueue.async { [self] in
                 do {
-                    try AVAudioSession.sharedInstance().setActive(true)
-                    try ensureEngineStarted()
+                    try recoverAudioRouteLocked(resetEngine: false)
                     hasBeenPrimed = false
                 } catch {
                     print("[NativePlayback] interruption recovery failed: \(error.localizedDescription)")
@@ -225,9 +282,7 @@ private final class NativePlaybackEngine {
         // stopLocked() で音量を落としてから、再生グラフを組み直す。
         clearVoicePoolsLocked()
         try prepareVoicePoolsLocked(payload: payload)
-        if !audioEngine.isRunning {
-            try restartEngine()
-        }
+        try restartEngine()
 
         let renderBaseHostTime = mach_absolute_time() + AVAudioTime.hostTime(forSeconds: leadTimeSeconds)
         let outputLatencySeconds = estimatedOutputLatencySeconds()
@@ -274,6 +329,7 @@ private final class NativePlaybackEngine {
     }
 
     private func ensureEngineStarted() throws {
+        try activateAudioSessionLocked()
         if audioEngine.isRunning { return }
         audioEngine.prepare()
         try audioEngine.start()
@@ -281,9 +337,16 @@ private final class NativePlaybackEngine {
     }
 
     private func restartEngine() throws {
+        try activateAudioSessionLocked()
         if audioEngine.isRunning { return }
         audioEngine.prepare()
         try audioEngine.start()
+    }
+
+    private func activateAudioSessionLocked() throws {
+        let session = AVAudioSession.sharedInstance()
+        try session.setCategory(.playback, mode: .default, options: [])
+        try session.setActive(true)
     }
 
     private func primeOutputPathLocked() throws {
@@ -859,6 +922,7 @@ public class NativePlaybackPlugin: CAPPlugin, CAPBridgedPlugin {
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "preload", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "warmup", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "recover", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "play", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "preview", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getStatus", returnType: CAPPluginReturnPromise),
@@ -885,6 +949,15 @@ public class NativePlaybackPlugin: CAPPlugin, CAPBridgedPlugin {
             call.resolve(["warmed": true])
         } catch {
             call.reject("Failed to warm up native playback.", nil, error)
+        }
+    }
+
+    @objc func recover(_ call: CAPPluginCall) {
+        do {
+            try playbackEngine.recoverAfterResume()
+            call.resolve(["recovered": true])
+        } catch {
+            call.reject("Failed to recover native playback.", nil, error)
         }
     }
 

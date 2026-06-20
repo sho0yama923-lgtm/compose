@@ -3,8 +3,10 @@ import { normalizeFiniteNumber, normalizeUnitValue } from '../../core/number-uti
 import { appState } from '../../core/state.js';
 import {
     play as playSchedulerScore,
+    markWebPlaybackRecoveryNeeded,
     previewDrumSample as previewSchedulerDrumSample,
     previewTrackNote as previewSchedulerTrackNote,
+    resetWebPlayback,
     stop as stopSchedulerScore,
     warmupPlaybackInstrument as warmupSchedulerInstrument,
     warmupPlaybackTracks as warmupSchedulerTracks,
@@ -73,6 +75,9 @@ function buildNativePreviewManifest(extraInstrumentIds = []) {
 
 async function prepareNativePlaybackManifests(manifests = []) {
     if (!canUseNativePlayback()) return true;
+    if (typeof NativePlayback.recover === 'function') {
+        await NativePlayback.recover();
+    }
     const manifestKey = getManifestCacheKey(manifests);
     if (manifestKey !== preparedManifestKey) {
         await NativePlayback.preload({ instruments: manifests });
@@ -86,6 +91,17 @@ async function prepareNativePlaybackManifests(manifests = []) {
 export function invalidateNativePlaybackPreparation() {
     preparedManifestKey = null;
     nativePlaybackStateErrorLogged = false;
+}
+
+export async function recoverWebAudioPlaybackForResume() {
+    if (canUseNativePlayback()) return true;
+    resetWebPlayback();
+    return prepareAudioContextForUserGesture();
+}
+
+export function markWebAudioPlaybackRecoveryNeeded() {
+    if (canUseNativePlayback()) return;
+    markWebPlaybackRecoveryNeeded();
 }
 
 function wait(ms) {

@@ -1,5 +1,27 @@
 import * as Tone from 'tone';
 
+function kickRawAudioOutput(rawContext) {
+    if (!rawContext || typeof rawContext.createBufferSource !== 'function') return;
+    if (rawContext.state !== 'running') return;
+
+    try {
+        const buffer = rawContext.createBuffer(1, 1, Math.max(1, rawContext.sampleRate || 44100));
+        const source = rawContext.createBufferSource();
+        source.buffer = buffer;
+        source.connect(rawContext.destination);
+        source.onended = () => {
+            try {
+                source.disconnect();
+            } catch {
+                // すでに切断済みなら何もしない。
+            }
+        };
+        source.start(0);
+    } catch (error) {
+        console.warn('[Audio] Web Audio output kick skipped.', error);
+    }
+}
+
 export async function ensureToneAudioReady() {
     const context = Tone.getContext();
     await Tone.start();
@@ -15,6 +37,7 @@ export async function ensureToneAudioReady() {
     if (state !== 'running') {
         throw new Error(`Web Audio context is ${state || 'unavailable'}`);
     }
+    kickRawAudioOutput(context.rawContext);
     console.info(`[Audio] Web Audio context: ${state}`);
     return context;
 }

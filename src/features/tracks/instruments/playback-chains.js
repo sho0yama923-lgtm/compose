@@ -287,6 +287,13 @@ export function syncTrackPlaybackChains(tracks = []) {
     if (activeChainKeys.size === 0) disposeMasterBus();
 }
 
+export function resetPlaybackChains() {
+    Array.from(playbackChains.keys()).forEach((chainKey) => {
+        disposePlaybackChain(chainKey);
+    });
+    disposeMasterBus();
+}
+
 export function getTrackPlaybackInstrument(trackId, instrumentId) {
     const chain = playbackChains.get(getPlaybackChainKey(trackId, instrumentId));
     return chain?.sampler || null;
