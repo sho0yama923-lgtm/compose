@@ -1,5 +1,6 @@
 // トラック追加時の楽器選択モーダル。
 
+import { runExclusiveAction } from '../core/action-guard.js';
 import { INSTRUMENT_LIST } from '../features/tracks/instrument-map.js';
 import { addTrack } from '../features/tracks/tracks-controller.js';
 import { closeSidebar } from './track-drawer.js';
@@ -15,7 +16,9 @@ export function initModal() {
         const [emoji, ...rest] = config.label.split(' ');
         btn.innerHTML = `${emoji}<br>${rest.join(' ')}`;
         btn.addEventListener('click', () => {
-            addTrack(config.id);
+            void runExclusiveAction(() => {
+                addTrack(config.id);
+            });
             modal.classList.remove('open');
         });
         modalOptions.appendChild(btn);

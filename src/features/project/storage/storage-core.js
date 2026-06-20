@@ -1,4 +1,5 @@
 import { appState, callbacks, clearPreviewCopyState, clearRepeatState } from '../../../core/state.js';
+import { runExclusiveAction } from '../../../core/action-guard.js';
 import {
     createSaveData,
     restoreFromData,
@@ -343,18 +344,21 @@ export function showProjectList() {
 
 export function initSaveLoad() {
     document.getElementById('exportBtn').addEventListener('click', async () => {
-        if (await exportJSON()) {
+        const exported = await runExclusiveAction(() => exportJSON());
+        if (exported) {
             callbacks.closeSidebar();
         }
     });
 
     document.getElementById('importBtn').addEventListener('click', () => {
-        requestProjectImport(document.getElementById('importFile'));
+        void runExclusiveAction(() => {
+            requestProjectImport(document.getElementById('importFile'));
+        });
     });
 
     document.getElementById('importFile').addEventListener('change', async (e) => {
         const file = e.target.files[0];
-        if (file) await importJSON(file);
+        if (file) await runExclusiveAction(() => importJSON(file));
         e.target.value = '';
         callbacks.closeSidebar();
     });

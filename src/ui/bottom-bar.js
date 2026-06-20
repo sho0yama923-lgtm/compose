@@ -4,6 +4,7 @@ import {
 } from '../core/state.js';
 import { clampNumber } from '../core/number-utils.js';
 import { emitTutorialAction } from '../core/tutorial-events.js';
+import { runExclusiveAction } from '../core/action-guard.js';
 import { addMeasure, clearTrackMeasure, removeMeasure } from '../features/tracks/tracks-controller.js';
 
 let isSeekBarExpanded = false;
@@ -52,6 +53,7 @@ export function buildSeekBar(renderEditor) {
     playToggleBtn.className = 'btn btn-play mb-play-btn';
     playToggleBtn.type = 'button';
     playToggleBtn.dataset.playToggle = 'true';
+    playToggleBtn.dataset.actionGuardAllowWhileBusy = 'true';
     playToggleBtn.setAttribute('aria-label', appState.isPlaying ? '停止' : '再生');
     playToggleBtn.setAttribute('aria-pressed', String(appState.isPlaying));
     playToggleBtn.textContent = appState.isPlaying ? '||' : '▶';
@@ -414,8 +416,10 @@ function buildMeasureActions(renderEditor) {
     addBtn.innerHTML = '<span class="measure-action-icon">+</span><span class="measure-action-text">小節追加</span>';
     addBtn.title = '小節を追加';
     addBtn.addEventListener('click', () => {
-        addMeasure();
-        renderEditor();
+        void runExclusiveAction(() => {
+            addMeasure();
+            renderEditor();
+        });
     });
 
     const moreBtn = document.createElement('button');
@@ -454,12 +458,18 @@ function openMeasureActionsSheet(renderEditor) {
             : `今見ている ${appState.currentMeasure + 1} 小節目を削除しますか？`;
         if (!confirm(message)) return;
         if (clearsTrackOnly) {
-            clearTrackMeasure(activeTrack, appState.currentMeasure);
+            void runExclusiveAction(() => {
+                clearTrackMeasure(activeTrack, appState.currentMeasure);
+                overlay.remove();
+                renderEditor();
+            });
         } else {
-            removeMeasure();
+            void runExclusiveAction(() => {
+                removeMeasure();
+                overlay.remove();
+                renderEditor();
+            });
         }
-        overlay.remove();
-        renderEditor();
     });
 
     const cancelBtn = document.createElement('button');

@@ -1,6 +1,7 @@
 // トラックドロワーの開閉と、トラック一覧の描画。
 
 import { appState } from '../core/state.js';
+import { runExclusiveAction } from '../core/action-guard.js';
 import { INST_LABEL } from '../features/tracks/instrument-map.js';
 import { selectTrack, deleteTrack } from '../features/tracks/tracks-controller.js';
 
@@ -39,7 +40,9 @@ export function renderSidebar() {
         });
         li.querySelector('.track-item-delete').addEventListener('click', e => {
             e.stopPropagation();
-            deleteTrack(track.id);
+            void runExclusiveAction(() => {
+                deleteTrack(track.id);
+            });
         });
         list.appendChild(li);
     });

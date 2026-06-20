@@ -12,6 +12,7 @@ import {
     setPendingDeleteNote,
     suppressNextNoteClick,
 } from '../core/state.js';
+import { runExclusiveAction } from '../core/action-guard.js';
 import { DURATION_CELLS } from '../core/constants.js';
 import { clearNote, placeNote, toggleStep, isStepHead, isStepTie } from '../core/duration.js';
 import { renderDurationToolbar, getCurrentDuration } from './duration-toolbar.js';
@@ -127,11 +128,11 @@ export function renderDrumEditor(track, editorEl) {
         let deleteHoldTriggered = false;
         const previewRowSample = () => {
             if (!row.sampleId) return false;
-            return previewDrumSample({
+            return runExclusiveAction(() => previewDrumSample({
                 sampleInstrumentId: row.sampleInstrumentId || 'drums_default',
                 sampleId: row.sampleId,
                 trackId: track.id,
-            });
+            }));
         };
         const clearDeleteHoldTimer = () => {
             if (!deleteHoldTimer) return;
@@ -473,11 +474,11 @@ function buildDrumAddCandidateRow(track, candidate) {
     previewBtn.addEventListener('click', async () => {
         previewBtn.disabled = true;
         try {
-            await previewDrumSample({
+            await runExclusiveAction(() => previewDrumSample({
                 sampleInstrumentId: candidate.sampleInstrumentId,
                 sampleId: candidate.sampleId,
                 trackId: track.id,
-            });
+            }));
         } finally {
             previewBtn.disabled = false;
         }

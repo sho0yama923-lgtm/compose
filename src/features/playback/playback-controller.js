@@ -8,6 +8,7 @@ import { buildPlaybackScore, resolvePlaybackWindow } from './score-builder.js';
 import { ensureToneAudioReady } from './tone-runtime.js';
 import { canUseIosNativePlayback } from '../bridges/device-bridge.js';
 import { emitTutorialAction } from '../../core/tutorial-events.js';
+import { runExclusiveAction } from '../../core/action-guard.js';
 
 let playbackRequestId = 0;
 let playheadAnimationFrameId = null;
@@ -53,7 +54,13 @@ export function initPlayback() {
         const audioReadyPromise = canUseIosNativePlayback()
             ? null
             : ensureToneAudioReady();
-        void togglePlayback(audioReadyPromise);
+        if (appState.isPlaying) {
+            void togglePlayback(audioReadyPromise);
+            return;
+        }
+        void runExclusiveAction(() => togglePlayback(audioReadyPromise), {
+            minLockMs: 250,
+        });
     });
 }
 
@@ -158,6 +165,7 @@ async function startPlayback(audioReadyPromise = null) {
         endStepExclusive,
     });
     if (requestId !== playbackRequestId) {
+        stopScorePlayback();
         stopPlaybackAnimation();
         return;
     }
@@ -341,6 +349,7 @@ function stopPlayback({ emitTutorial = true } = {}) {
     updatePlayheadIndicators(null);
     callbacks.renderEditor();
     setPlaybackButtonState();
+    callbacks.saveState?.();
     if (emitTutorial) {
         emitTutorialAction('playback-stopped');
     }

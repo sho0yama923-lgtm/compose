@@ -1,3 +1,5 @@
+import { runExclusiveAction } from '../core/action-guard.js';
+
 const NOTICE_ID = 'saveErrorNotice';
 const NOTICE_WIDTH_PX = 420;
 const NOTICE_SIDE_GAP_PX = 16;
@@ -48,7 +50,7 @@ export function showSaveErrorNotice({ onExport } = {}) {
     exportButton.type = 'button';
     exportButton.textContent = 'JSONを書き出す';
     exportButton.addEventListener('click', () => {
-        void onExport?.();
+        void runExclusiveAction(() => onExport?.());
     });
 
     notice.append(heading, message, exportButton);

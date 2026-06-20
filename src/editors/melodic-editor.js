@@ -12,6 +12,7 @@
     setPendingDeleteNote,
     suppressNextNoteClick,
 } from '../core/state.js';
+import { runExclusiveAction } from '../core/action-guard.js';
 import { CHROMATIC, BLACK_KEYS, DURATION_CELLS, ROOT_COLORS } from '../core/constants.js';
 import { clearNote, placeNote, toggleStep, isStepHead, isStepTie } from '../core/duration.js';
 import { renderDurationToolbar, getCurrentDuration } from './duration-toolbar.js';
@@ -145,18 +146,18 @@ export function renderMelodicEditor(track, editorEl) {
             keyEl.title = `${fullNote} を試聴`;
             keyEl.addEventListener('click', (event) => {
                 event.preventDefault();
-                void previewTrackNote({
+                void runExclusiveAction(() => previewTrackNote({
                     track,
                     note: fullNote,
-                });
+                }));
             });
             keyEl.addEventListener('keydown', (event) => {
                 if (event.key !== 'Enter' && event.key !== ' ') return;
                 event.preventDefault();
-                void previewTrackNote({
+                void runExclusiveAction(() => previewTrackNote({
                     track,
                     note: fullNote,
-                });
+                }));
             });
 
             const rowEl = document.createElement('div');

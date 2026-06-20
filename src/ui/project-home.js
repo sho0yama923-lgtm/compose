@@ -46,14 +46,20 @@ function createProjectCard(project, handlers) {
     renameButton.type = 'button';
     renameButton.setAttribute('aria-label', `${project.name} の名前を変更`);
     renameButton.textContent = '✎';
-    renameButton.addEventListener('click', () => handlers.onRenameProject(project));
+    renameButton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        handlers.onRenameProject(project);
+    });
 
     const deleteButton = document.createElement('button');
     deleteButton.className = 'project-home-icon-btn danger';
     deleteButton.type = 'button';
     deleteButton.setAttribute('aria-label', `${project.name} を削除`);
     deleteButton.textContent = '×';
-    deleteButton.addEventListener('click', () => handlers.onDeleteProject(project));
+    deleteButton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        handlers.onDeleteProject(project);
+    });
 
     tools.append(renameButton, deleteButton);
     item.append(openButton);

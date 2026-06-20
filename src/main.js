@@ -2,6 +2,7 @@
 
 import { appState, callbacks, clearPendingDeleteNote } from './core/state.js';
 import { APP_VERSION } from './core/app-info.js';
+import { initActionGuard, runExclusiveAction } from './core/action-guard.js';
 import { renderEditor } from './editors/editor-router.js';
 import { renderSidebar, closeSidebar, initSidebar } from './ui/track-drawer.js';
 import { addTrack, selectTrack } from './features/tracks/tracks-controller.js';
@@ -169,6 +170,7 @@ function setupPlaybackWarmupLifecycle() {
     };
 
     const warmupAfterResume = () => {
+        if (document.visibilityState && document.visibilityState !== 'visible') return;
         if (!appState.activeProjectId || appState.projectHomeVisible) return;
         if (appState.isPlaying) {
             stopPlaybackForLifecycle();
@@ -180,6 +182,9 @@ function setupPlaybackWarmupLifecycle() {
     };
 
     window.addEventListener('pagehide', suspendPlaybackForExternalAudio);
+    window.addEventListener('blur', suspendPlaybackForExternalAudio);
+    window.addEventListener('beforeunload', suspendPlaybackForExternalAudio);
+    document.addEventListener('freeze', suspendPlaybackForExternalAudio);
     window.addEventListener('pageshow', warmupAfterResume);
     window.addEventListener('focus', warmupAfterResume);
 
@@ -300,26 +305,26 @@ async function openExistingProject(projectId) {
 
 const projectHomeHandlers = {
     onCreateProject: (name) => {
-        void createDefaultProject(name);
+        void runExclusiveAction(() => createDefaultProject(name));
     },
     onOpenProject: (projectId) => {
-        void openExistingProject(projectId);
+        void runExclusiveAction(() => openExistingProject(projectId));
     },
     onStartTutorial: () => {
-        void createDefaultProject('チュートリアル', {
+        void runExclusiveAction(() => createDefaultProject('チュートリアル', {
             forceOnboarding: true,
             startOnboardingImmediately: true,
             chooseOnboardingStartSection: true,
-        });
+        }));
     },
     onRenameProject: (project) => {
         const nextName = window.prompt('プロジェクト名を入力してください', project.name);
         if (nextName === null) return;
-        void renameProject(project.id, nextName);
+        void runExclusiveAction(() => renameProject(project.id, nextName));
     },
     onDeleteProject: (project) => {
         if (!confirm(`「${project.name}」を削除しますか？`)) return;
-        void deleteProject(project.id);
+        void runExclusiveAction(() => deleteProject(project.id));
     },
     onEnterProjectSelectionMode: () => {
         appState.projectSelectionMode = true;
@@ -345,22 +350,25 @@ const projectHomeHandlers = {
         const count = appState.selectedProjectIds.length;
         if (count === 0) return;
         if (!confirm(`選択した${count}件のプロジェクトを削除しますか？`)) return;
-        void deleteProjects(appState.selectedProjectIds);
+        void runExclusiveAction(() => deleteProjects(appState.selectedProjectIds));
     },
     onExportSelectedProjects: () => {
         if (appState.selectedProjectIds.length === 0) return;
-        void exportProjectsJSON(appState.selectedProjectIds);
+        void runExclusiveAction(() => exportProjectsJSON(appState.selectedProjectIds));
     },
     onImportProject: () => {
-        requestProjectImport(document.getElementById('importFile'));
+        void runExclusiveAction(() => {
+            requestProjectImport(document.getElementById('importFile'));
+        });
     },
     onExportProject: () => {
-        void exportJSON();
+        void runExclusiveAction(() => exportJSON());
     },
 };
 
 async function boot() {
     // DOM と保存状態の準備後に、各 UI / feature モジュールを初期化する。
+    initActionGuard();
     initSidebar();
     initPlayback();
     initModal();
