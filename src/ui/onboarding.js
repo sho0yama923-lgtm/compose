@@ -1,15 +1,25 @@
 import { appState, callbacks, STEPS_PER_BEAT, STEPS_PER_MEASURE } from '../core/state.js';
 import { TUTORIAL_ACTION_EVENT } from '../core/tutorial-events.js';
+import { isStepHead, placeNote } from '../core/duration.js';
 import { INST_TYPE } from '../features/tracks/instrument-map.js';
+import { copyTrackMeasureRange, repeatTrackMeasureRange } from '../features/tracks/tracks-controller.js';
 import { setMeasureSeekExpanded } from './bottom-bar.js';
 import repeatLoopIconUrl from '../assets/repeat_loop_icon.svg';
 
 const ONBOARDING_KEY = 'compose_mobile_onboarding_v4';
-const GUIDE_SECTION_COUNT = 6;
+const GUIDE_SECTION_COUNT = 5;
 const TARGET_PADDING = 6;
 const PLAYER_HIGHLIGHT_GAP = 12;
 const MELODY_GUIDE_ROW_SELECTOR = '.melody-grid-row.has-chord-tone';
 const PLAYBACK_LISTEN_DELAY_MS = 2000;
+
+const GUIDE_SECTIONS = [
+    { section: 1, label: '画面の見方', description: '画面の基本を見ます。' },
+    { section: 2, label: '再生', description: '再生、停止、範囲変更を試します。' },
+    { section: 3, label: '繰り返し', description: '1〜2小節目を後ろへコピーします。' },
+    { section: 4, label: 'コード', description: '後半コードと鳴らす位置を作ります。' },
+    { section: 5, label: 'メロディ', description: 'コードトーンで音を置きます。' },
+];
 
 const CHORD_EXERCISE = [
     { measure: 2, beat: 0, root: 'F', type: 'M', label: 'F', select: true },
@@ -25,6 +35,7 @@ const CHORD_EXERCISE = [
 export function initOnboarding({
     force = false,
     startImmediately = false,
+    chooseStartSection = false,
     onStart = null,
 } = {}) {
     if (document.querySelector('.onboarding-overlay')) return;
@@ -61,8 +72,17 @@ export function initOnboarding({
 
     const session = createGuideSession(overlay, { onStart });
     overlay.querySelector('[data-onboarding-skip="true"]').addEventListener('click', session.dismiss);
-    overlay.querySelector('[data-onboarding-start="true"]').addEventListener('click', session.start);
-    if (startImmediately) session.start();
+    overlay.querySelector('[data-onboarding-start="true"]').addEventListener('click', () => {
+        if (chooseStartSection) {
+            showSectionPicker(session);
+            return;
+        }
+        session.start(1);
+    });
+    if (startImmediately) {
+        if (chooseStartSection) showSectionPicker(session);
+        else session.start(1);
+    }
 }
 
 function createGuideSession(overlay, { onStart = null } = {}) {
@@ -87,20 +107,133 @@ function createGuideSession(overlay, { onStart = null } = {}) {
     session.actionHandler = (event) => handleTutorialAction(session, event.detail || {});
     session.interactionBlocker = (event) => blockOutsideInteraction(session, event);
     session.dismiss = () => dismissGuide(session);
-    session.start = () => {
+    session.start = (startSection = 1) => {
         if (!session.startedHookCalled) {
             session.startedHookCalled = true;
             onStart?.();
         }
+        prepareGuideStartState(startSection);
         session.active = true;
         session.overlay.classList.add('is-guide');
         document.addEventListener(TUTORIAL_ACTION_EVENT, session.actionHandler);
         document.addEventListener('pointerdown', session.interactionBlocker, true);
         document.addEventListener('click', session.interactionBlocker, true);
         window.addEventListener('resize', session.resizeHandler, { passive: true });
-        showGuideStep(session, 0);
+        showGuideStep(session, getSectionStartIndex(session, startSection));
     };
     return session;
+}
+
+function showSectionPicker(session) {
+    const card = session.overlay.querySelector('.onboarding-card');
+    card.innerHTML = `
+        <h2 class="onboarding-title">どこから始めますか？</h2>
+        <div class="onboarding-section-list">
+            ${GUIDE_SECTIONS.map((section) => `
+                <button type="button" class="onboarding-section-option" data-onboarding-section="${section.section}">
+                    <span class="onboarding-section-label">${section.label}</span>
+                    <span class="onboarding-section-desc">${section.description}</span>
+                </button>
+            `).join('')}
+        </div>
+        <div class="onboarding-actions">
+            <button type="button" class="onboarding-btn secondary" data-onboarding-skip="true">閉じる</button>
+        </div>
+    `;
+    card.querySelector('[data-onboarding-skip="true"]').addEventListener('click', session.dismiss);
+    card.querySelectorAll('[data-onboarding-section]').forEach((button) => {
+        button.addEventListener('click', () => {
+            session.start(Number(button.dataset.onboardingSection) || 1);
+        });
+    });
+}
+
+function getSectionStartIndex(session, startSection) {
+    const normalizedSection = Math.max(1, Math.min(GUIDE_SECTION_COUNT, startSection));
+    const index = session.steps.findIndex((step) => step.section === normalizedSection);
+    return index >= 0 ? index : 0;
+}
+
+function prepareGuideStartState(startSection) {
+    const section = Math.max(1, Math.min(GUIDE_SECTION_COUNT, startSection));
+    setMeasureSeekExpanded(false);
+    appState.playRangeStartMeasure = 0;
+    appState.playRangeEndMeasure = 3;
+    appState.isPlaying = false;
+    appState.playheadStep = null;
+
+    if (section >= 4) {
+        completeRepeatTutorialState();
+    }
+    if (section >= 5) {
+        completeChordProgressState(true);
+    }
+
+    if (section >= 5) {
+        showTrackMeasure('melody', 2);
+    } else if (section >= 4) {
+        showPreviewMeasure(2);
+    } else {
+        showPreviewMeasure(0);
+    }
+    callbacks.renderEditor?.();
+    callbacks.saveState?.();
+}
+
+function completeRepeatTutorialState() {
+    const drumTrack = appState.tracks.find((track) => track.instrument === 'drums');
+    if (!drumTrack) return;
+    repeatTrackMeasureRange(drumTrack, 0, 1, 3);
+    appState.repeatStates[drumTrack.id] = {
+        sourceStartMeasure: 0,
+        sourceEndMeasure: 1,
+        targetEndMeasure: 3,
+        modeStep: 'ready',
+        restoreMeasures: {},
+        sourceSnapshot: copyTrackMeasureRange(drumTrack, 0, 1),
+    };
+}
+
+function completeChordProgressState(includeFinalSound = false) {
+    const chordTrack = appState.tracks.find((track) => track.instrument === 'chord');
+    if (!chordTrack) return;
+    CHORD_EXERCISE.forEach((expected) => {
+        const start = expected.measure * STEPS_PER_MEASURE + expected.beat * STEPS_PER_BEAT;
+        const end = start + STEPS_PER_BEAT;
+        for (let step = start; step < end; step += 1) {
+            chordTrack.chordMap[step] = {
+                root: expected.root,
+                type: expected.type,
+                octave: 4,
+                customNotes: null,
+            };
+        }
+    });
+    syncChordToDrums(chordTrack, 2);
+    if (includeFinalSound) {
+        placeNote(chordTrack.soundSteps, 3 * STEPS_PER_MEASURE, '8n', chordTrack.soundSteps.length);
+    }
+    chordTrack.selectedDrumRows = new Set(['Kick', 'Snare']);
+    chordTrack.selectedChordRoot = 'G';
+    chordTrack.selectedChordType = 'M';
+}
+
+function syncChordToDrums(chordTrack, measure) {
+    const start = measure * STEPS_PER_MEASURE;
+    const end = start + STEPS_PER_MEASURE;
+    const drumTrack = appState.tracks.find((track) => track.instrument === 'drums');
+    chordTrack.soundSteps.fill(null, start, end);
+    if (!drumTrack) return;
+    drumTrack.rows
+        .filter((row) => row.label === 'Kick' || row.label === 'Snare')
+        .forEach((row) => {
+            for (let step = start; step < end; step += 1) {
+                const value = row.steps[step];
+                if (isStepHead(value)) {
+                    placeNote(chordTrack.soundSteps, step, value, chordTrack.soundSteps.length);
+                }
+            }
+        });
 }
 
 function buildGuideSteps(session) {
@@ -188,41 +321,26 @@ function buildGuideSteps(session) {
             cardPosition: 'drums-anchor',
         }),
         guideStep({
-            section: 2,
-            title: 'ミュート操作',
-            body: 'トラックの音をオン・オフします。',
-            target: '.preview-card[data-instrument="drums"]',
-            cardPosition: 'drums-anchor',
+            section: 1,
+            title: '画面の見方',
+            body: '次は再生を試します。',
+            target: '#trackEditor',
+            nextLabel: '次のステップへ',
+            chapterEnd: true,
+            prepare: () => {
+                showPreviewMeasure(0);
+                setMeasureSeekExpanded(false);
+            },
         }),
         guideStep({
             section: 2,
-            title: 'ミュート操作',
-            body: 'Drumsのチェックを外します。',
-            target: '.preview-card[data-instrument="drums"] .preview-track-toggle',
-            allowed: ['.preview-card[data-instrument="drums"] .preview-track-toggle'],
-            action: 'track-muted-changed',
-            matches: (detail) => detail.trackType === 'rhythm' && detail.muted,
-            cardPosition: 'drums-anchor',
-        }),
-        guideStep({
-            section: 2,
-            title: 'ミュート操作',
-            body: 'もう一度チェックして音を戻します。',
-            target: '.preview-card[data-instrument="drums"] .preview-track-toggle',
-            allowed: ['.preview-card[data-instrument="drums"] .preview-track-toggle'],
-            action: 'track-muted-changed',
-            matches: (detail) => detail.trackType === 'rhythm' && !detail.muted,
-            cardPosition: 'drums-anchor',
-        }),
-        guideStep({
-            section: 3,
             title: '再生操作',
             body: '曲の再生と停止を試します。',
             target: '[data-play-toggle="true"]',
             cardPosition: 'player-top',
         }),
         guideStep({
-            section: 3,
+            section: 2,
             title: '再生操作',
             body: '再生ボタンで曲を聴きます。',
             target: '[data-play-toggle="true"]',
@@ -231,7 +349,7 @@ function buildGuideSteps(session) {
             advanceDelayMs: PLAYBACK_LISTEN_DELAY_MS,
         }),
         guideStep({
-            section: 3,
+            section: 2,
             title: '再生操作',
             body: '同じボタンで停止します。',
             target: '[data-play-toggle="true"]',
@@ -239,14 +357,14 @@ function buildGuideSteps(session) {
             action: 'playback-stopped',
         }),
         guideStep({
-            section: 3,
+            section: 2,
             title: '再生操作',
             body: '再生範囲を変えます。',
             target: '.measure-seek-card',
             cardPosition: 'player-top',
         }),
         guideStep({
-            section: 3,
+            section: 2,
             title: '再生操作',
             body: '下部のつまみで範囲操作を開きます。',
             target: '.measure-seek-handle',
@@ -254,7 +372,7 @@ function buildGuideSteps(session) {
             action: 'seek-bar-expanded',
         }),
         guideStep({
-            section: 3,
+            section: 2,
             title: '再生操作',
             body: '右端の青いつまみを黄色い線まで動かします。',
             target: '.measure-range-rail',
@@ -265,7 +383,7 @@ function buildGuideSteps(session) {
             rangeDestinationMeasure: 2,
         }),
         guideStep({
-            section: 3,
+            section: 2,
             title: '再生操作',
             body: '1〜2小節目だけ再生します。',
             target: '[data-play-toggle="true"]',
@@ -275,7 +393,7 @@ function buildGuideSteps(session) {
             advanceDelayMs: PLAYBACK_LISTEN_DELAY_MS,
         }),
         guideStep({
-            section: 3,
+            section: 2,
             title: '再生操作',
             body: '同じボタンで停止します。',
             target: '[data-play-toggle="true"]',
@@ -284,7 +402,7 @@ function buildGuideSteps(session) {
             cardPosition: 'player-top',
         }),
         guideStep({
-            section: 3,
+            section: 2,
             title: '再生操作',
             body: '右端のつまみを黄色い線へ戻します。',
             target: '.measure-range-rail',
@@ -295,15 +413,16 @@ function buildGuideSteps(session) {
             rangeDestinationMeasure: 4,
         }),
         guideStep({
-            section: 3,
+            section: 2,
             title: '繰り返し設定',
             body: '3〜4小節目を作ります。',
             target: '.preview-card[data-instrument="drums"]',
             nextLabel: '次のステップへ',
+            chapterEnd: true,
             prepare: () => setMeasureSeekExpanded(false),
         }),
         guideStep({
-            section: 4,
+            section: 3,
             title: '繰り返し設定',
             body: '1〜2小節目のドラムを3〜4小節目へ繰り返します。',
             target: '.preview-card[data-instrument="drums"]',
@@ -314,7 +433,7 @@ function buildGuideSteps(session) {
             cardPosition: 'player-top',
         }),
         guideStep({
-            section: 4,
+            section: 3,
             title: '開始位置を決める',
             body: '1小節目の左端バーをタップします。',
             target: '.preview-card[data-instrument="drums"] .preview-repeat-rail.start',
@@ -324,7 +443,7 @@ function buildGuideSteps(session) {
             cardPosition: 'player-top',
         }),
         guideStep({
-            section: 4,
+            section: 3,
             title: null,
             body: '2小節目へ移動します。',
             target: '.mb-nav-btn[data-direction="1"]',
@@ -334,7 +453,7 @@ function buildGuideSteps(session) {
             cardPosition: 'player-top',
         }),
         guideStep({
-            section: 4,
+            section: 3,
             title: '終了位置を決める',
             body: '2小節目の右端バーをタップします。',
             target: '.preview-card[data-instrument="drums"] .preview-repeat-rail.end',
@@ -346,14 +465,14 @@ function buildGuideSteps(session) {
             cardPosition: 'player-top',
         }),
         guideStep({
-            section: 4,
+            section: 3,
             title: '繰り返す範囲',
             body: '黄色が繰り返し元の範囲です。',
             target: '.preview-card[data-instrument="drums"]',
             cardPosition: 'player-top',
         }),
         guideStep({
-            section: 4,
+            section: 3,
             title: null,
             body: '3小節目へ移動します。',
             target: '.mb-nav-btn[data-direction="1"]',
@@ -363,7 +482,7 @@ function buildGuideSteps(session) {
             cardPosition: 'player-top',
         }),
         guideStep({
-            section: 4,
+            section: 3,
             title: 'トラックを繰り返す',
             body: '右上の繰り返しボタンを押します。',
             target: '.preview-card[data-instrument="drums"] .preview-track-repeat-btn',
@@ -374,7 +493,7 @@ function buildGuideSteps(session) {
             cardPosition: 'player-top',
         }),
         guideStep({
-            section: 4,
+            section: 3,
             title: null,
             body: '4小節目へ移動します。',
             target: '.mb-nav-btn[data-direction="1"]',
@@ -384,7 +503,7 @@ function buildGuideSteps(session) {
             cardPosition: 'player-top',
         }),
         guideStep({
-            section: 4,
+            section: 3,
             title: 'トラックを繰り返す',
             body: 'もう一度、繰り返しボタンを押します。',
             target: '.preview-card[data-instrument="drums"] .preview-track-repeat-btn',
@@ -395,17 +514,18 @@ function buildGuideSteps(session) {
             cardPosition: 'player-top',
         }),
         guideStep({
-            section: 4,
+            section: 3,
             title: '繰り返し設定',
             body: '緑が反映済みの範囲です。',
             target: '.preview-card[data-instrument="drums"]',
             nextLabel: '次のステップへ',
+            chapterEnd: true,
             cardPosition: 'player-top',
         }),
     ];
 
     steps.push(guideStep({
-        section: 5,
+        section: 4,
         title: 'コード設定',
         body: 'コードを置いて曲の流れを作ります。',
         target: '.preview-card[data-instrument="chord"]',
@@ -416,13 +536,13 @@ function buildGuideSteps(session) {
         },
     }));
     steps.push(guideStep({
-        section: 5,
+        section: 4,
         title: 'コード設定',
         body: '後半をF → C → F → Gにします。',
         target: '.preview-card[data-instrument="chord"]',
     }));
     steps.push(guideStep({
-        section: 5,
+        section: 4,
         title: 'コードエディタを開く',
         body: '「コード / Piano」を開きます。',
         target: '.preview-card[data-instrument="chord"] .preview-card-header',
@@ -431,7 +551,7 @@ function buildGuideSteps(session) {
         matches: (detail) => detail.trackType === 'chord',
     }));
     steps.push(guideStep({
-        section: 5,
+        section: 4,
         title: 'コード設定',
         body: '3小節目をF → Cにします。',
         target: '.chord-sequencer-progress',
@@ -440,13 +560,13 @@ function buildGuideSteps(session) {
     CHORD_EXERCISE.forEach((expected, index) => {
         if (index === 4) {
             steps.push(guideStep({
-                section: 5,
+                section: 4,
                 title: 'コード設定',
                 body: '次は4小節目をF → Gにします。',
                 target: '.chord-sequencer-progress',
             }));
             steps.push(guideStep({
-                section: 5,
+                section: 4,
                 title: null,
                 body: '4小節目へ移動します。',
                 target: '.mb-nav-btn[data-direction="1"]',
@@ -458,7 +578,7 @@ function buildGuideSteps(session) {
 
         if (expected.select) {
             steps.push(guideStep({
-                section: 5,
+                section: 4,
                 title: 'コードを選ぶ',
                 body: `コード選択で${expected.label}を選びます。`,
                 target: '.chord-select-input[aria-label="コードトラックのルート"]',
@@ -473,7 +593,7 @@ function buildGuideSteps(session) {
         const pairStartBeat = expected.beat % 2 === 0;
         const pairEndBeat = expected.beat + (pairStartBeat ? 2 : 1);
         steps.push(guideStep({
-            section: 5,
+            section: 4,
             title: 'コードを置く',
             body: pairStartBeat
                 ? `${expected.label}を${expected.beat + 1}〜${pairEndBeat}拍目に置きます。`
@@ -491,7 +611,7 @@ function buildGuideSteps(session) {
         }));
     });
     steps.push(guideStep({
-        section: 5,
+        section: 4,
         title: 'コード設定',
         body: 'コード進行ができました。次は鳴らすタイミングです。',
         target: '.chord-sequencer-progress',
@@ -501,14 +621,14 @@ function buildGuideSteps(session) {
 
     steps.push(
         guideStep({
-            section: 5,
+            section: 4,
             title: 'ドラムとコードを合わせる',
             body: '3小節目のコードをKickとSnareに合わせます。',
             target: '.chord-rhythm-summary',
             prepare: () => showTrackMeasure('chord', 2),
         }),
         guideStep({
-            section: 5,
+            section: 4,
             title: 'ドラムを参照する',
             body: '「ドラムを参照」をタップします。',
             target: '.chord-rhythm-summary',
@@ -516,7 +636,7 @@ function buildGuideSteps(session) {
             action: 'chord-drum-reference-opened',
         }),
         guideStep({
-            section: 5,
+            section: 4,
             title: 'キックを選ぶ',
             body: 'Kickにチェックを入れます。',
             target: '.chord-rhythm-row[data-drum-row="Kick"]',
@@ -526,7 +646,7 @@ function buildGuideSteps(session) {
             cardPosition: 'sheet-top',
         }),
         guideStep({
-            section: 5,
+            section: 4,
             title: 'スネアを選ぶ',
             body: 'Snareにもチェックを入れます。',
             target: '.chord-rhythm-row[data-drum-row="Snare"]',
@@ -536,7 +656,7 @@ function buildGuideSteps(session) {
             cardPosition: 'sheet-top',
         }),
         guideStep({
-            section: 5,
+            section: 4,
             title: 'ドラムに同期する',
             body: '「同期」でコードをドラムに合わせます。',
             target: '.chord-drum-sheet .chord-sync-all-btn',
@@ -547,14 +667,14 @@ function buildGuideSteps(session) {
             cardPosition: 'sheet-top',
         }),
         guideStep({
-            section: 5,
+            section: 4,
             title: '同期できました',
             body: '再生して重なりを確認します。',
             target: '[data-play-toggle="true"]',
             cardPosition: 'player-top',
         }),
         guideStep({
-            section: 5,
+            section: 4,
             title: '再生する',
             body: '再生ボタンを押します。',
             target: '[data-play-toggle="true"]',
@@ -563,7 +683,7 @@ function buildGuideSteps(session) {
             cardPosition: 'player-top',
         }),
         guideStep({
-            section: 5,
+            section: 4,
             title: '停止する',
             body: '確認したら停止します。',
             target: '[data-play-toggle="true"]',
@@ -572,14 +692,14 @@ function buildGuideSteps(session) {
             cardPosition: 'player-top',
         }),
         guideStep({
-            section: 5,
+            section: 4,
             title: '重なりを確認できました',
             body: '次は4小節目で鳴らす場所を選びます。',
             target: '[data-play-toggle="true"]',
             cardPosition: 'player-top',
         }),
         guideStep({
-            section: 5,
+            section: 4,
             title: null,
             body: '4小節目へ移動します。',
             target: '.mb-nav-btn[data-direction="1"]',
@@ -589,7 +709,7 @@ function buildGuideSteps(session) {
             cardPosition: 'player-top',
         }),
         guideStep({
-            section: 5,
+            section: 4,
             title: '鳴らす場所を選ぶ',
             body: '鳴らしたい場所を1つタップします。',
             target: '.chord-timing-grid',
@@ -598,16 +718,17 @@ function buildGuideSteps(session) {
             matches: (detail) => Math.floor(detail.step / STEPS_PER_MEASURE) === 3,
         }),
         guideStep({
-            section: 5,
+            section: 4,
             title: 'コード設定',
             body: '次はコードに合わせてメロディを作ります。',
             target: '.chord-timing-grid',
             nextLabel: '次のステップへ',
+            chapterEnd: true,
         }),
         guideStep({
-            section: 6,
+            section: 5,
             title: 'メロディ作成',
-            body: '色付きのコードトーンを使うと、曲になじみます。',
+            body: 'コードトーンには色でガイドがついています。',
             target: MELODY_GUIDE_ROW_SELECTOR,
             prepare: () => {
                 setMeasureSeekExpanded(false);
@@ -615,9 +736,9 @@ function buildGuideSteps(session) {
             },
         }),
         guideStep({
-            section: 6,
+            section: 5,
             title: '音を置く',
-            body: '色付きの音を1つ置きます。',
+            body: '試しにコードトーンに音を置いてみましょう。',
             target: MELODY_GUIDE_ROW_SELECTOR,
             allowed: [MELODY_GUIDE_ROW_SELECTOR],
             action: 'melody-note-added',
@@ -626,13 +747,13 @@ function buildGuideSteps(session) {
             },
         }),
         guideStep({
-            section: 6,
+            section: 5,
             title: '音を置けました',
             body: '置いた音を移動します。',
             target: () => melodyNoteSelector(session.lastMelodyNote),
         }),
         guideStep({
-            section: 6,
+            section: 5,
             title: '音を移動する',
             body: '音を長押しして上下左右へ動かします。',
             target: () => melodyNoteSelector(session.lastMelodyNote),
@@ -645,13 +766,13 @@ function buildGuideSteps(session) {
             },
         }),
         guideStep({
-            section: 6,
+            section: 5,
             title: '音を移動できました',
             body: '最後に音を削除します。',
             target: () => melodyNoteSelector(session.lastMelodyNote),
         }),
         guideStep({
-            section: 6,
+            section: 5,
             title: '音を削除する',
             body: '移動した音をタップして削除します。',
             target: () => melodyNoteSelector(session.lastMelodyNote),
@@ -660,7 +781,7 @@ function buildGuideSteps(session) {
             matches: (detail) => isSameMelodyNote(detail, session.lastMelodyNote),
         }),
         guideStep({
-            section: 6,
+            section: 5,
             title: 'メロディ作成',
             body: '基本操作は完了です。',
             target: MELODY_GUIDE_ROW_SELECTOR,
@@ -685,6 +806,7 @@ function guideStep(config) {
         substep: config.substep || null,
         icon: config.icon || null,
         nextLabel: config.nextLabel || '次へ',
+        chapterEnd: Boolean(config.chapterEnd),
         cardPosition: config.cardPosition || 'bottom',
         rangeDestinationMeasure: config.rangeDestinationMeasure || null,
         highlight: Boolean(config.highlight),
@@ -714,6 +836,7 @@ function renderGuideCard(session) {
     const nextBar = session.overlay.querySelector('.onboarding-next-bar');
     const nextButton = nextBar.querySelector('[data-onboarding-next="true"]');
     const waitsForNext = !step.action;
+    const waitsForChapterChoice = waitsForNext && step.chapterEnd;
     const hasVisualHighlight = Boolean(step.highlight || step.action);
     card.classList.toggle('is-guide-top', step.cardPosition === 'top');
     card.classList.toggle('is-guide-player-top', step.cardPosition === 'player-top');
@@ -721,8 +844,9 @@ function renderGuideCard(session) {
     card.classList.toggle('is-guide-sheet-top', step.cardPosition === 'sheet-top');
     card.classList.toggle('is-guide-editor-lower', step.cardPosition === 'editor-lower');
     session.overlay.classList.toggle('is-guide-waiting-next', waitsForNext);
+    session.overlay.classList.toggle('is-guide-chapter-choice', waitsForChapterChoice);
     session.overlay.classList.toggle('is-guide-has-highlight', hasVisualHighlight);
-    nextBar.hidden = !waitsForNext;
+    nextBar.hidden = !waitsForNext || waitsForChapterChoice;
     nextButton.textContent = step.nextLabel;
     card.classList.remove('is-guide-avoid-target');
     card.style.removeProperty('--onboarding-avoid-target-top');
@@ -737,10 +861,17 @@ function renderGuideCard(session) {
         <div class="onboarding-progress" style="--onboarding-progress: ${step.section}"></div>
         ${step.icon ? `<div class="onboarding-guide-icon"><img src="${step.icon}" alt="繰り返し"></div>` : ''}
         <p class="onboarding-description">${step.body}</p>
+        ${waitsForChapterChoice ? `
+            <div class="onboarding-actions onboarding-actions-split">
+                <button type="button" class="onboarding-btn secondary" data-onboarding-finish-section="true">終わる</button>
+                <button type="button" class="onboarding-btn primary" data-onboarding-next-section="true">${step.nextLabel}</button>
+            </div>
+        ` : ''}
     `;
-    nextButton.onclick = () => {
-        showGuideStep(session, session.stepIndex + 1);
-    };
+    const next = () => showGuideStep(session, session.stepIndex + 1);
+    nextButton.onclick = next;
+    card.querySelector('[data-onboarding-finish-section="true"]')?.addEventListener('click', session.dismiss);
+    card.querySelector('[data-onboarding-next-section="true"]')?.addEventListener('click', next);
 }
 
 function showGuideComplete(session) {

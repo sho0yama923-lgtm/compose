@@ -210,6 +210,7 @@ async function showProjectEditor({
     offerOnboarding = false,
     forceOnboarding = false,
     startOnboardingImmediately = false,
+    chooseOnboardingStartSection = false,
     prepareTutorialSample = false,
 } = {}) {
     setProjectHomeVisible(false);
@@ -222,6 +223,7 @@ async function showProjectEditor({
         initOnboarding({
             force: forceOnboarding,
             startImmediately: startOnboardingImmediately,
+            chooseStartSection: chooseOnboardingStartSection,
             onStart: prepareTutorialSample
                 ? () => {
                     applyCanonSample();
@@ -236,6 +238,7 @@ async function showProjectEditor({
 async function createDefaultProject(name, {
     forceOnboarding = false,
     startOnboardingImmediately = false,
+    chooseOnboardingStartSection = false,
 } = {}) {
     const audioContextWarmup = prepareAudioContextForUserGesture();
     await createProject(name);
@@ -250,6 +253,7 @@ async function createDefaultProject(name, {
         offerOnboarding: true,
         forceOnboarding,
         startOnboardingImmediately,
+        chooseOnboardingStartSection,
         prepareTutorialSample: true,
     });
 }
@@ -276,6 +280,7 @@ const projectHomeHandlers = {
         void createDefaultProject('チュートリアル', {
             forceOnboarding: true,
             startOnboardingImmediately: true,
+            chooseOnboardingStartSection: true,
         });
     },
     onRenameProject: (project) => {

@@ -663,7 +663,7 @@
     margin: 0 auto;
     pointer-events: auto;
 }
-.onboarding-overlay.is-guide.is-guide-waiting-next .onboarding-card:not(.is-guide-top):not(.is-guide-player-top):not(.is-guide-drums-anchor):not(.is-guide-sheet-top):not(.is-guide-editor-lower):not(.is-guide-avoid-target) {
+.onboarding-overlay.is-guide.is-guide-waiting-next:not(.is-guide-chapter-choice) .onboarding-card:not(.is-guide-top):not(.is-guide-player-top):not(.is-guide-drums-anchor):not(.is-guide-sheet-top):not(.is-guide-editor-lower):not(.is-guide-avoid-target) {
     bottom: var(--onboarding-card-bottom-with-next);
 }
 .onboarding-overlay.is-guide .onboarding-card.is-guide-top {
@@ -843,6 +843,37 @@
     display: flex;
     gap: 8px;
     margin-top: 14px;
+}
+.onboarding-actions-split {
+    margin-top: 16px;
+}
+.onboarding-section-list {
+    display: grid;
+    gap: 8px;
+    margin-top: 12px;
+}
+.onboarding-section-option {
+    display: grid;
+    gap: 3px;
+    min-height: 56px;
+    padding: 10px 12px;
+    border: 1px solid #dedede;
+    border-radius: 10px;
+    background: #fff;
+    color: #111;
+    text-align: left;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.onboarding-section-label {
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+.onboarding-section-desc {
+    font-size: 12px;
+    line-height: 1.35;
+    color: #666;
 }
 .onboarding-btn {
     flex: 1;
