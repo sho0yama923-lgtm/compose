@@ -82,7 +82,7 @@ export function addTrack(instrument) {
             soundSteps: Array(steps).fill(null),
             selectedChordRoot: 'C',
             selectedChordType: 'M',
-            selectedChordOctave: 4,
+            selectedChordOctave: 3,
             dividers: [0, STEPS_PER_MEASURE / 2],
             selectedDivPos: null,
             selectedDrumRows: new Set(),

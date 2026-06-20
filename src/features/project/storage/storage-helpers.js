@@ -160,7 +160,7 @@ function normalizeTrack(track, length) {
             return {
                 root: entry.root ?? 'C',
                 type: entry.type ?? 'M',
-                octave: typeof entry.octave === 'number' ? entry.octave : 4,
+                octave: typeof entry.octave === 'number' ? entry.octave : 3,
                 customNotes: normalizeChordCustomNotes(entry.customNotes),
             };
         });
@@ -170,7 +170,7 @@ function normalizeTrack(track, length) {
             : 'piano';
         track.selectedChordRoot = track.selectedChordRoot ?? 'C';
         track.selectedChordType = track.selectedChordType ?? 'M';
-        track.selectedChordOctave = track.selectedChordOctave ?? 4;
+        track.selectedChordOctave = track.selectedChordOctave ?? 3;
         if (Array.isArray(track.dividers) && track.dividers.length > 0) {
             track.dividers = track.dividers
                 .filter((divider) => typeof divider === 'number');

@@ -2,6 +2,7 @@ import {
     appState,
     totalSteps,
     callbacks,
+    STEPS_PER_BEAT,
     STEPS_PER_MEASURE,
     clearPendingDeleteNote,
     clearNoteDrag,
@@ -55,10 +56,14 @@ export function buildTimingSection(track, offset, mEnd, cells, majorGroup, optio
         const column = Math.floor((x / rect.width) * cells.length);
         const cellInfo = cells[Math.max(0, Math.min(cells.length - 1, column))];
         const step = offset + cellInfo.localStep;
-        const wasEmpty = !isStepHead(track.soundSteps[step]);
-        toggleStep(track.soundSteps, step, getCurrentDuration(), mEnd);
+        const wasEmpty = !track.soundSteps[step];
+        const nextOn = toggleStep(track.soundSteps, step, getCurrentDuration(), mEnd);
+        const didAdd = wasEmpty && nextOn;
+        if (didAdd) {
+            fillMissingChordBeatFromSelection(track, step);
+        }
         callbacks.renderEditor();
-        emitTutorialAction(wasEmpty ? 'chord-sound-added' : 'chord-sound-removed', {
+        emitTutorialAction(didAdd ? 'chord-sound-added' : 'chord-sound-removed', {
             trackId: track.id,
             step,
         });
@@ -269,4 +274,22 @@ function getInheritedChordAtStep(track, step) {
         if (track.chordMap[i]) inherited = track.chordMap[i];
     }
     return inherited;
+}
+
+function fillMissingChordBeatFromSelection(track, step) {
+    const beatStart = Math.floor(step / STEPS_PER_BEAT) * STEPS_PER_BEAT;
+    const beatEnd = Math.min(track.chordMap.length, beatStart + STEPS_PER_BEAT);
+    for (let i = beatStart; i < beatEnd; i++) {
+        if (track.chordMap[i]) return;
+    }
+
+    const selected = {
+        root: track.selectedChordRoot,
+        type: track.selectedChordType,
+        octave: track.selectedChordOctave,
+        customNotes: null,
+    };
+    for (let i = beatStart; i < beatEnd; i++) {
+        track.chordMap[i] = { ...selected };
+    }
 }
