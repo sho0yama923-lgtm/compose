@@ -43,6 +43,7 @@
 
 ## 変更履歴
 
+- 2026-06-20: READMEを通常のプロジェクトREADMEとして読みやすい構成へ整理した。Web版URLは `https://ezmelon.com` に更新し、概要、主な機能、使用技術、開発/ビルド手順、よく使うコマンド、ディレクトリ構成だけを簡潔に記載した
 - 2026-06-20: Safari版で別アプリの音声再生後に戻ると音が出なくなる問題へ追加対応した。Web版では `visibilitychange` で非表示になった時点でWeb音源チェーンを要復旧にし、復帰時・次回再生時・試聴時にTone.jsの再生チェーンとmaster busを破棄して作り直す。`ensureToneAudioReady()` ではSafari向けに無音バッファを短く流してAudioContextの出力経路を起こす。native側も `recover` を追加し、復帰時に `AVAudioSession` / engine を再アクティブ化できるよう補強した。`npm run build` と iOS Simulator 向け `xcodebuild ... build` が成功した
 - 2026-06-20: メロディエディタで下へスクロールした状態から再生すると、再描画でピアノロールが最上部へ戻る問題を修正した。`renderEditor()` の入口でメロディ/ドラムの現在スクロールを保存し、各エディタの復元値は描画開始時に固定する。復元前の新規スクロール要素が `0` を通知して保存値を上書きしないよう、復元中フラグを見てスナップショットをスキップする。`npm run build` と Playwright のローカル確認で、再生後も `scrollTop 180px` が保持されることを確認した
 - 2026-06-20: 長時間ほかのアプリへ移動した後や、別アプリで音を出した後に再生音が戻らないことがある問題へ対応した。復帰時の `pageshow` / `focus` / `visibilitychange` で native 再生の準備済みキャッシュを破棄し、Safari 向けに Web Audio context の再開も試す。iOS native 側は `AVAudioSession` の interruption を監視し、割り込み開始で engine を停止、割り込み終了で session と engine を再始動できるようにした。ドラムトラックの最後の音源行を削除した時は、追加候補シートを開いて `音源を追加` へ戻るようにした。`npm run build` と iOS Simulator 向け `xcodebuild ... build` が成功した
