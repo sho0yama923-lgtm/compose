@@ -43,6 +43,8 @@
 
 ## 変更履歴
 
+- 2026-06-21: `AGENTS.md` に、修正を入れたら `package.json` の `version` を更新し、小さい修正やUI微調整は三桁目のpatch versionを上げ、`package-lock.json` のルートversionもそろえるルールを追記した
+- 2026-06-21: プロジェクト一覧の下部に小さく `v${APP_VERSION}` を表示するようにした。表示はフォント `11px`、行高 `16px`、上余白 `2px` をCSS変数へ集約した。小さい変更は今後patch番号を更新する方針にし、今回のバージョンを `1.0.1` へ更新した。`npm run build` が成功した
 - 2026-06-21: Safari版で他アプリ復帰後のログに `The AudioContext is "suspended"` と `InvalidStateError: Context is closed` が出る原因を追加調査した。復帰時のWeb Audio warmupがタイムアウトした後も裏で古い `Tone.start()` / `resume()` が残り、次の復旧で旧AudioContextをcloseしたことで遅延処理が閉じたcontextへ触っていた。復旧時は旧contextを即closeせず参照から外すだけにし、context世代チェックで差し替え済みの遅延処理を無効化、timeout後の遅延エラーも握るようにした。`npm run build` が成功した
 - 2026-06-21: Safari版で再生できず、コンソールに `[Audio] piano の音源ロードに失敗しました。TypeError: Load failed` が大量に出る問題へ対応した。原因はPianoの全音域サンプルを `Tone.Sampler` へまとめて渡しており、Safariで多数の `.bin` を同時fetchして失敗することだった。再生時はscore内で実際に使う音だけ、試聴時は対象音だけから近いサンプルを選んで読み込むようにし、既存chainもサンプル集合が変わった時だけ作り直す。`npm run build` が成功した
 - 2026-06-21: Safari版でホームへ戻った後に確定で無音になり、リロードまで戻らない問題を追加調査した。根本原因は復帰イベント `pageshow` / `focus` / `visibilitychange` でユーザー操作なしに `Tone.start()` と音源先読みを実行し、Safariが復帰直後に壊れた出力経路のAudioContextを `running` 扱いで保持してしまうことだった。Web版では復帰イベント中にAudioContextを再開/再生成せず、復旧フラグだけ立てて次の再生タップ内でcontextと音源チェーンを完全再構築する形へ変更した。iOS native版の復帰ウォームアップは維持し、`npm run build` が成功した

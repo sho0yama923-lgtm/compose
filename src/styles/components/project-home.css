@@ -6,6 +6,9 @@
     --project-action-height: 48px;
     --project-icon-size: 44px;
     --project-dialog-input-height: 48px;
+    --project-version-font-size: 11px;
+    --project-version-line-height: 16px;
+    --project-version-margin-top: 2px;
 }
 
 body.project-home-active .topbar,
@@ -330,6 +333,17 @@ body.project-home-active .main {
 
 .project-home-action.wide {
     width: 100%;
+}
+
+.project-home-version {
+    min-height: var(--project-version-line-height);
+    margin-top: var(--project-version-margin-top);
+    color: #94a3b8;
+    font-size: var(--project-version-font-size);
+    font-weight: 700;
+    line-height: var(--project-version-line-height);
+    text-align: center;
+    letter-spacing: 0;
 }
 
 .project-create-dialog {

@@ -1,3 +1,4 @@
+import { APP_VERSION } from '../core/app-info.js';
 import { appState } from '../core/state.js';
 
 function formatProjectUpdatedAt(value) {
@@ -164,6 +165,7 @@ export function renderProjectHome(handlers) {
                     <button class="project-home-action wide primary" type="button" data-project-new="true">＋ 新規プロジェクト</button>
                 `}
             </div>
+            <div class="project-home-version">v${APP_VERSION}</div>
             <div class="project-create-dialog" data-project-create-dialog="true" hidden>
                 <div class="project-create-panel" role="dialog" aria-modal="true" aria-labelledby="projectCreateTitle">
                     <h2 id="projectCreateTitle">プロジェクト名</h2>
