@@ -93,13 +93,6 @@ export async function warmupPlaybackTracks(tracks = []) {
     }
 }
 
-export function resetWebPlayback() {
-    stop();
-    resetPlaybackChains();
-    markToneAudioContextResetNeeded();
-    webPlaybackRecoveryNeeded = false;
-}
-
 export function markWebPlaybackRecoveryNeeded() {
     webPlaybackRecoveryNeeded = true;
     markToneAudioContextResetNeeded();

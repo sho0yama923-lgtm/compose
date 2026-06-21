@@ -27,11 +27,10 @@ import {
     markWebAudioPlaybackRecoveryNeeded,
     prepareAudioContextForUserGesture,
     prepareAudioPlayback,
-    recoverWebAudioPlaybackForResume,
 } from './features/bridges/audio-bridge.js';
 import { renderProjectHome, setProjectHomeVisible } from './ui/project-home.js';
 import { requestProjectImport } from './features/bridges/file-share-bridge.js';
-import { getAppRuntime, isWebApp } from './features/bridges/device-bridge.js';
+import { canUseIosNativePlayback, getAppRuntime, isWebApp } from './features/bridges/device-bridge.js';
 import { applyCanonSample } from './features/project/canon-sample.js';
 import { emitTutorialAction } from './core/tutorial-events.js';
 
@@ -134,7 +133,7 @@ function refreshPlaybackAvailabilityUi() {
     callbacks.renderEditor?.();
 }
 
-async function warmupAudioForPlayback({ refreshNativePreparation = false, resumeWebAudio = false } = {}) {
+async function warmupAudioForPlayback({ refreshNativePreparation = false } = {}) {
     if (audioWarmupPromise) return audioWarmupPromise;
     if (refreshNativePreparation) {
         invalidateNativePlaybackPreparation();
@@ -146,18 +145,10 @@ async function warmupAudioForPlayback({ refreshNativePreparation = false, resume
 
     audioWarmupPromise = (async () => {
         try {
-            if (resumeWebAudio) {
-                await recoverWebAudioPlaybackForResume();
-            }
             await prepareAudioPlayback(appState.tracks);
         } catch (error) {
             console.warn('[Audio] playback warmup failed:', error);
         } finally {
-            if (resumeWebAudio) {
-                // Safari は復帰直後の自動再開が running でも無音になることがある。
-                // 次のユーザー操作内で AudioContext と音源チェーンをもう一度作り直す。
-                markWebAudioPlaybackRecoveryNeeded();
-            }
             appState.isBooting = false;
             audioWarmupPromise = null;
             hideBootOverlay();
@@ -180,9 +171,13 @@ function setupPlaybackWarmupLifecycle() {
         if (appState.isPlaying) {
             stopPlaybackForLifecycle();
         }
+        if (!canUseIosNativePlayback()) {
+            markWebAudioPlaybackRecoveryNeeded();
+            refreshPlaybackAvailabilityUi();
+            return;
+        }
         void warmupAudioForPlayback({
             refreshNativePreparation: true,
-            resumeWebAudio: true,
         });
     };
 

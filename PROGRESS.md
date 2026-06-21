@@ -43,6 +43,7 @@
 
 ## 変更履歴
 
+- 2026-06-21: Safari版でホームへ戻った後に確定で無音になり、リロードまで戻らない問題を追加調査した。根本原因は復帰イベント `pageshow` / `focus` / `visibilitychange` でユーザー操作なしに `Tone.start()` と音源先読みを実行し、Safariが復帰直後に壊れた出力経路のAudioContextを `running` 扱いで保持してしまうことだった。Web版では復帰イベント中にAudioContextを再開/再生成せず、復旧フラグだけ立てて次の再生タップ内でcontextと音源チェーンを完全再構築する形へ変更した。iOS native版の復帰ウォームアップは維持し、`npm run build` が成功した
 - 2026-06-21: Safari版で他アプリ復帰後に無音になる問題の根因を追加調査した。Tone.jsの `Tone.Transport` / `Tone.Draw` はimport時点のAudioContextに結びつく固定参照のため、復帰時に `Tone.setContext(new Tone.Context())` した後も古いTransportを開始しており、新しいcontext側に作ったPart/音源チェーンが再生されない状態になっていた。再生・停止・描画同期は `Tone.getTransport()` / `Tone.getDraw()` で現在contextのものを取得するよう修正し、`npm run build` が成功した
 - 2026-06-21: Web SafariでYouTubeなど別音声を再生した後に戻ると音が出なくなる問題へ追加対応した。復帰直後の自動ウォームアップでWeb Audio復旧フラグを消費しきらず、次回の再生タップなどユーザー操作内でもAudioContextとTone.js音源チェーンを作り直すようにした。再生ボタンのWeb Audio準備も共通の復旧入口へ寄せ、古い音源チェーンを残したままcontextだけ再開しないようにした。`npm run build` が成功した
 - 2026-06-21: ボタン連打や処理中の別ボタン操作で予想外の処理が重なる問題へ対策した。`src/core/action-guard.js` に共通の排他アクションガードを追加し、同じボタンの短い連打吸収、作成/読込/削除/インポート/エクスポート/再生開始/音源試聴/トラック追加削除/小節追加削除には処理完了までの排他ロックを入れた。再生ボタンは開始待ち中の停止操作だけ通せるようにした

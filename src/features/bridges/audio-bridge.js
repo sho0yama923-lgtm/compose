@@ -7,7 +7,6 @@ import {
     prepareWebPlaybackForUserGesture,
     previewDrumSample as previewSchedulerDrumSample,
     previewTrackNote as previewSchedulerTrackNote,
-    resetWebPlayback,
     stop as stopSchedulerScore,
     warmupPlaybackInstrument as warmupSchedulerInstrument,
     warmupPlaybackTracks as warmupSchedulerTracks,
@@ -91,12 +90,6 @@ async function prepareNativePlaybackManifests(manifests = []) {
 export function invalidateNativePlaybackPreparation() {
     preparedManifestKey = null;
     nativePlaybackStateErrorLogged = false;
-}
-
-export async function recoverWebAudioPlaybackForResume() {
-    if (canUseNativePlayback()) return true;
-    resetWebPlayback();
-    return prepareAudioContextForUserGesture();
 }
 
 export function markWebAudioPlaybackRecoveryNeeded() {
