@@ -24,6 +24,14 @@ const PREVIEW_SAMPLER_POLL_MS = 50;
 const PLAYBACK_WARMUP_TIMEOUT_MS = 2500;
 const WEB_AUDIO_CONTEXT_WARMUP_TIMEOUT_MS = 1500;
 
+function getToneTransport() {
+    return Tone.getTransport?.() || Tone.Transport;
+}
+
+function getToneDraw() {
+    return Tone.getDraw?.() || Tone.Draw;
+}
+
 async function waitForSamplerReady(sampler, timeoutMs = PREVIEW_SAMPLER_READY_TIMEOUT_MS) {
     if (!sampler) return false;
     if (sampler.loaded) return true;
@@ -141,7 +149,8 @@ export async function play(score, {
     // 多重再生を避けるため、前回の Transport / Part を止めてから組み直す。
     stop();
 
-    Tone.Transport.bpm.value = bpm;
+    const transport = getToneTransport();
+    transport.bpm.value = bpm;
     syncTrackPlaybackChains(tracks);
     if (typeof Tone.loaded === 'function') {
         try {
@@ -170,7 +179,7 @@ export async function play(score, {
     }
 
     _part = new Tone.Part((time, idx) => {
-        if (onStep) Tone.Draw.schedule(() => onStep(idx), time);
+        if (onStep) getToneDraw().schedule(() => onStep(idx), time);
 
         const step = score[idx];
         if (!step) return;
@@ -201,8 +210,8 @@ export async function play(score, {
     _part.loopEnd = ((normalizedEnd - normalizedStart) / STEPS_PER_BEAT) * beatDur;
     _part.start(0);
 
-    Tone.Transport.position = 0;
-    Tone.Transport.start(Tone.now() + 0.05);
+    transport.position = 0;
+    transport.start(Tone.now() + 0.05);
     return true;
 }
 
@@ -212,7 +221,7 @@ export async function previewDrumSample({
     trackId,
     tracks = [],
 } = {}) {
-    if (Tone.Transport.state === 'started') {
+    if (getToneTransport().state === 'started') {
         console.warn('[Audio] 曲再生中のため、ドラム試聴をスキップしました。');
         return false;
     }
@@ -296,7 +305,7 @@ export async function previewTrackNote({
  * 再生を停止する
  */
 export function stop() {
-    Tone.Transport.stop();
+    getToneTransport().stop();
     if (_part) {
         _part.stop();
         _part.dispose();

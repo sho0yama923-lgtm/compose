@@ -12,8 +12,9 @@ export function resetToneAudioContextIfNeeded() {
     const previousRawContext = previousContext?.rawContext || null;
 
     try {
-        Tone.Transport.stop();
-        Tone.Transport.cancel?.();
+        const transport = Tone.getTransport?.() || Tone.Transport;
+        transport.stop();
+        transport.cancel?.();
     } catch {
         // Transport がまだ初期化前でも、context の差し替えは続ける。
     }
