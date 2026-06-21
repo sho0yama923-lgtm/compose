@@ -9,6 +9,7 @@ test-results*/
 .claude/
 .vscode/
 *.zip
+/CNAME
 ios/**/xcuserdata/
 ios/**/*.xcuserstate
 ios/App/App/public/

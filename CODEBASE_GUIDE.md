@@ -43,10 +43,10 @@
   - Codex app の project actions。Run / Build / WebKit smoke / iOS sync などの共有導線
 - `.github/workflows/web-release-check.yml`
   - Web公開前の依存監査、成果物検査、WebKit smoke
-- `netlify.toml`、`public/_headers`
-  - Web静的配信のbuild設定、security headers、cache policy
+- `public/CNAME`
+  - GitHub Pages artifact に同梱する custom domain 設定。root 直下の `CNAME` は追跡しない
 - `scripts/verify-web-release.mjs`
-  - `dist/` の外部script、headers、音源、容量を検査する公開判定script
+  - `dist/` の外部script、音源、容量を検査する公開判定script
 - `.xcodebuildmcp/config.yaml`
   - XcodeBuildMCP の iOS Simulator session defaults。Codex から `build_run_sim` する時の正本
 - `scripts/run-ios-simulator.mjs`
@@ -56,10 +56,14 @@
 
 - `CLAUDE.md`
   - `CLAUDE.md` を読むツール向けの互換入口。実装ルールの正本は `AGENTS.md`
-- `dev-server.py`
+- `legacy/local-dev/dev-server.py`
   - Vite 以前/補助確認用の簡易サーバー。通常は `npm run dev` を使う
-- `start.command`
+- `legacy/local-dev/start.command`
   - macOS で開発サーバーを起動してブラウザを開く補助導線
+- `legacy/netlify/netlify.toml`、`legacy/netlify/_headers`
+  - Netlify 配信用に使っていた旧設定。現在の公開先は GitHub Pages
+- `docs/reports/security_best_practices_report.md`
+  - 公開前セキュリティ確認の過去レポート
 
 ### 生成物 / 依存物
 

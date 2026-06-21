@@ -3,12 +3,6 @@ import { extname, join, resolve } from 'node:path';
 
 const DIST_DIR = resolve('dist');
 const MAX_DIST_BYTES = 100 * 1024 * 1024;
-const REQUIRED_HEADERS = [
-  'Content-Security-Policy',
-  'X-Content-Type-Options',
-  'Referrer-Policy',
-  'Permissions-Policy',
-];
 
 async function listFiles(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -31,13 +25,6 @@ assert(distBytes <= MAX_DIST_BYTES, `dist exceeds 100 MiB: ${distBytes} bytes`);
 const indexHtml = await readFile(join(DIST_DIR, 'index.html'), 'utf8');
 assert(!/<script[^>]+src=["']https?:\/\//i.test(indexHtml), 'External script found in dist/index.html');
 assert(/<script[^>]+type=["']module["'][^>]+src=["'](?:\.\/|\/)assets\//i.test(indexHtml), 'Bundled module script not found');
-
-const headers = await readFile(join(DIST_DIR, '_headers'), 'utf8');
-for (const header of REQUIRED_HEADERS) {
-  assert(headers.includes(`${header}:`), `Missing security header: ${header}`);
-}
-assert(headers.includes("script-src 'self'"), "CSP must restrict scripts to 'self'");
-assert(headers.includes("frame-ancestors 'none'"), 'CSP must block framing');
 
 const samplePaths = [
   join(DIST_DIR, 'audio-buffers', 'sounds', 'piano', 'A1.mp3.bin'),

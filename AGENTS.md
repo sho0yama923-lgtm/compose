@@ -108,7 +108,7 @@
 - Web UI / DOM 回帰は、ブラウザ確認で足りる場合はそこで止め、既存 smoke は回帰リスクがある時だけ使う。
 - ただし既存の確認基盤が必要な変更では、既存の `playwright` / スモークテスト資産を読む。
 - WebKit smoke は Web 回帰の確認に使い、iOS 内部ロジックや native 挙動の代替にはしない。
-- 実ブラウザや WebKit 確認が必要になった場合は、`playwright.config.js` `tests/webkit-smoke.spec.js` `start.command` を参照する。
+- 実ブラウザや WebKit 確認が必要になった場合は、`playwright.config.js` `tests/webkit-smoke.spec.js` を参照する。古いローカル起動補助は `legacy/local-dev/start.command` に退避済み。
 - Codex 内 Browser 確認の基本手順は、`npm run dev -- --host 127.0.0.1` を起動し、in-app Browser でローカル URL を開いて対象画面を操作する。
 - iOS Simulator 確認の基本手順は、`npm run mobile:run:ios:sim` または XcodeBuildMCP `build_run_sim` でアプリを起動し、必要に応じて screenshot / logs を確認する。
 

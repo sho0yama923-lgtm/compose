@@ -1,6 +1,6 @@
 # PROGRESS.md
 
-最終更新: 2026-06-20
+最終更新: 2026-06-21
 
 ## 進捗ルール
 
@@ -43,6 +43,7 @@
 
 ## 変更履歴
 
+- 2026-06-21: リポジトリ整理として、GitHub Pages移行後に不要な root `CNAME` を追跡対象から外し、Netlify旧設定を `legacy/netlify/`、古いローカル起動補助を `legacy/local-dev/`、過去のセキュリティレポートを `docs/reports/` へ退避した。GitHub Pagesでは `_headers` が効かないため `release:verify` のheader検査を外し、公開手順ドキュメントをGitHub Pages前提へ更新した。小変更としてバージョンを `1.0.3` へ更新した
 - 2026-06-21: Netlify の build credit 切れで `ezmelon.com` が古いデプロイに残るため、GitHub Pages へ向ける準備として `public/CNAME` に `ezmelon.com` を追加した。配信設定の小変更としてバージョンを `1.0.2` へ更新した
 - 2026-06-21: `AGENTS.md` に、修正を入れたら `package.json` の `version` を更新し、小さい修正やUI微調整は三桁目のpatch versionを上げ、`package-lock.json` のルートversionもそろえるルールを追記した
 - 2026-06-21: プロジェクト一覧の下部に小さく `v${APP_VERSION}` を表示するようにした。表示はフォント `11px`、行高 `16px`、上余白 `2px` をCSS変数へ集約した。小さい変更は今後patch番号を更新する方針にし、今回のバージョンを `1.0.1` へ更新した。`npm run build` が成功した
