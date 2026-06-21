@@ -1,6 +1,7 @@
 import * as Tone from 'tone';
 
 let toneAudioContextResetNeeded = false;
+let toneAudioContextGeneration = 0;
 
 export function markToneAudioContextResetNeeded() {
     toneAudioContextResetNeeded = true;
@@ -23,17 +24,12 @@ export function resetToneAudioContextIfNeeded() {
         const nextContext = new Tone.Context();
         Tone.setContext(nextContext);
         toneAudioContextResetNeeded = false;
+        toneAudioContextGeneration += 1;
 
-        if (
-            previousRawContext
-            && previousRawContext !== nextContext.rawContext
-            && previousRawContext.state !== 'closed'
-            && typeof previousRawContext.close === 'function'
-        ) {
-            void previousRawContext.close().catch((error) => {
-                console.warn('[Audio] Previous Web Audio context close skipped.', error);
-            });
-        }
+        // Safari では timeout 済みの Tone.start()/resume() が遅れて戻ることがある。
+        // ここで旧 context を閉じると、その遅延処理が InvalidStateError: Context is closed
+        // を投げて復旧後の再生まで壊すため、旧 context は参照から外すだけにする。
+        void previousRawContext;
         console.info('[Audio] Web Audio context was recreated for recovery.');
         return true;
     } catch (error) {
@@ -66,14 +62,21 @@ function kickRawAudioOutput(rawContext) {
 
 export async function ensureToneAudioReady() {
     resetToneAudioContextIfNeeded();
+    const generation = toneAudioContextGeneration;
     const context = Tone.getContext();
     await Tone.start();
 
+    if (generation !== toneAudioContextGeneration || context !== Tone.getContext()) {
+        throw new Error('Web Audio context was replaced while starting.');
+    }
     if (context.state !== 'running') {
         await context.resume();
     }
     if (context.rawContext?.state !== 'running' && typeof context.rawContext?.resume === 'function') {
         await context.rawContext.resume();
+    }
+    if (generation !== toneAudioContextGeneration || context !== Tone.getContext()) {
+        throw new Error('Web Audio context was replaced while resuming.');
     }
 
     const state = context.rawContext?.state || context.state;
@@ -92,8 +95,15 @@ export async function ensureToneAudioReadyWithTimeout(timeoutMs = 1500) {
         return true;
     }
 
+    const readyPromise = ensureToneAudioReady()
+        .then(() => true)
+        .catch((error) => {
+            console.warn('[Audio] Web Audio context warmup skipped.', error);
+            return false;
+        });
+
     return Promise.race([
-        ensureToneAudioReady().then(() => true),
+        readyPromise,
         new Promise((resolve) => {
             globalThis.setTimeout(() => resolve(false), timeout);
         }),

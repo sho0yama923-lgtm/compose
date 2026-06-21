@@ -2,7 +2,6 @@ import {
     INSTRUMENT_CONFIG_MAP,
     getInstrumentBaseUrl,
     getInstrumentBufferBaseUrl,
-    getInstrumentBufferUrls,
     getInstrumentUrls,
 } from './instrument-config.js';
 import { clampNumber } from '../../../core/number-utils.js';
@@ -12,6 +11,8 @@ import { Tone, waitForToneLoaded } from '../../playback/tone-runtime.js';
 const playbackChains = new Map();
 let masterBus = null;
 const PREVIEW_PREPARE_TIMEOUT_MS = 2000;
+const NOTE_RE = /^([A-G])(#?)(-?\d+)$/;
+const CHROMATIC_NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
 const TRACK_BUS_CONFIG = {
     low: { frequency: 180, type: 'lowshelf' },
@@ -74,6 +75,85 @@ function getTrackMixPreset(instrumentId) {
 
 function getPlaybackChainKey(trackId, playbackInstrumentId) {
     return `${trackId}:${playbackInstrumentId}`;
+}
+
+function normalizeNoteList(notes = []) {
+    return Array.from(
+        new Set(
+            (Array.isArray(notes) ? notes : [notes])
+                .flat()
+                .filter((note) => typeof note === 'string' && note.trim())
+                .map((note) => note.trim())
+        )
+    );
+}
+
+function noteToMidi(note) {
+    const match = NOTE_RE.exec(note);
+    if (!match) return null;
+    const [, letter, sharp, octaveText] = match;
+    const noteIndex = CHROMATIC_NOTES.indexOf(`${letter}${sharp}`);
+    const octave = Number(octaveText);
+    if (noteIndex < 0 || !Number.isFinite(octave)) return null;
+    return (octave + 1) * 12 + noteIndex;
+}
+
+function getNearestAvailableNote(targetNote, availableNotes = []) {
+    const targetMidi = noteToMidi(targetNote);
+    if (targetMidi === null || availableNotes.length === 0) return null;
+    return availableNotes.reduce((nearest, note) => {
+        const nearestMidi = noteToMidi(nearest);
+        const noteMidi = noteToMidi(note);
+        if (noteMidi === null) return nearest;
+        if (nearestMidi === null) return note;
+        return Math.abs(noteMidi - targetMidi) < Math.abs(nearestMidi - targetMidi) ? note : nearest;
+    }, availableNotes[0]);
+}
+
+function selectInstrumentUrls(config, requiredNotes = []) {
+    const allUrls = getInstrumentUrls(config);
+    const entries = Object.entries(allUrls);
+    if (entries.length === 0) return {};
+
+    if (config.sampleType === 'manual') {
+        const notes = normalizeNoteList(requiredNotes);
+        if (notes.length === 0) return allUrls;
+        const selected = Object.fromEntries(
+            notes
+                .filter((note) => allUrls[note])
+                .map((note) => [note, allUrls[note]])
+        );
+        return Object.keys(selected).length > 0 ? selected : allUrls;
+    }
+
+    const availableNotes = entries.map(([note]) => note);
+    const notes = normalizeNoteList(requiredNotes);
+    const selectedNotes = new Set();
+    if (notes.length === 0) {
+        selectedNotes.add(getNearestAvailableNote('C4', availableNotes) || availableNotes[0]);
+    } else {
+        notes.forEach((note) => {
+            selectedNotes.add(allUrls[note] ? note : getNearestAvailableNote(note, availableNotes));
+        });
+    }
+
+    return Object.fromEntries(
+        Array.from(selectedNotes)
+            .filter((note) => note && allUrls[note])
+            .map((note) => [note, allUrls[note]])
+    );
+}
+
+function buildSampleKey(urls) {
+    return Object.entries(urls)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([note, fileName]) => `${note}:${fileName}`)
+        .join('|');
+}
+
+function getRequiredNotesForChain(requiredNotesByChain, chainKey) {
+    const notes = requiredNotesByChain?.get?.(chainKey) || requiredNotesByChain?.[chainKey] || [];
+    return normalizeNoteList(Array.from(notes));
 }
 
 function getTrackPlaybackInstrumentIds(track) {
@@ -166,7 +246,7 @@ function disposePlaybackChain(chainKey) {
     if (playbackChains.size === 0) disposeMasterBus();
 }
 
-function createPlaybackChain(track, playbackInstrumentId) {
+function createPlaybackChain(track, playbackInstrumentId, requiredNotes = []) {
     const master = ensureMasterBus();
     if (!master) return null;
 
@@ -174,7 +254,10 @@ function createPlaybackChain(track, playbackInstrumentId) {
     if (!config?.sampleType) return null;
     const mixPreset = getTrackMixPreset(track.instrument);
 
-    const urls = getInstrumentBufferUrls(config);
+    const selectedUrls = selectInstrumentUrls(config, requiredNotes);
+    const urls = Object.fromEntries(
+        Object.entries(selectedUrls).map(([note, fileName]) => [note, `${fileName}.bin`])
+    );
     if (Object.keys(urls).length === 0) {
         console.warn(`[Warning] ${playbackInstrumentId} の音源ファイルが見つかりませんでした。スキップします。`);
         return null;
@@ -185,7 +268,7 @@ function createPlaybackChain(track, playbackInstrumentId) {
     if (firstSampleEntry) {
         console.info(`[Audio] ${playbackInstrumentId} sample bufferUrl: ${baseUrl}${firstSampleEntry[1]}`);
         console.info(
-            `[Audio] ${playbackInstrumentId} original asset path: ${getInstrumentBaseUrl(config)}${Object.values(getInstrumentUrls(config))[0] || ''}`
+            `[Audio] ${playbackInstrumentId} original asset path: ${getInstrumentBaseUrl(config)}${Object.values(selectedUrls)[0] || ''}`
         );
     }
 
@@ -231,6 +314,7 @@ function createPlaybackChain(track, playbackInstrumentId) {
     const chain = {
         trackId: track.id,
         playbackInstrumentId,
+        sampleKey: buildSampleKey(urls),
         sampler,
         sourceTrim,
         preHighpass,
@@ -246,17 +330,27 @@ function createPlaybackChain(track, playbackInstrumentId) {
     return chain;
 }
 
-function ensurePlaybackChain(track, playbackInstrumentId) {
+function ensurePlaybackChain(track, playbackInstrumentId, requiredNotes = []) {
     if (track?.id == null || !playbackInstrumentId) return null;
 
     const config = INSTRUMENT_CONFIG_MAP[playbackInstrumentId];
     if (!config?.sampleType) return null;
+    const selectedUrls = selectInstrumentUrls(config, requiredNotes);
+    const expectedSampleKey = buildSampleKey(
+        Object.fromEntries(
+            Object.entries(selectedUrls).map(([note, fileName]) => [note, `${fileName}.bin`])
+        )
+    );
 
     const chainKey = getPlaybackChainKey(track.id, playbackInstrumentId);
     let chain = playbackChains.get(chainKey);
-    if (!chain || chain.playbackInstrumentId !== playbackInstrumentId) {
+    if (
+        !chain
+        || chain.playbackInstrumentId !== playbackInstrumentId
+        || chain.sampleKey !== expectedSampleKey
+    ) {
         disposePlaybackChain(chainKey);
-        chain = createPlaybackChain(track, playbackInstrumentId);
+        chain = createPlaybackChain(track, playbackInstrumentId, requiredNotes);
         if (!chain) return null;
         playbackChains.set(chainKey, chain);
     }
@@ -266,7 +360,7 @@ function ensurePlaybackChain(track, playbackInstrumentId) {
     return chain;
 }
 
-export function syncTrackPlaybackChains(tracks = []) {
+export function syncTrackPlaybackChains(tracks = [], { requiredNotesByChain = new Map() } = {}) {
     const activeChainKeys = new Set();
 
     tracks.forEach((track) => {
@@ -274,7 +368,11 @@ export function syncTrackPlaybackChains(tracks = []) {
             const chainKey = getPlaybackChainKey(track.id, playbackInstrumentId);
             activeChainKeys.add(chainKey);
 
-            ensurePlaybackChain(track, playbackInstrumentId);
+            ensurePlaybackChain(
+                track,
+                playbackInstrumentId,
+                getRequiredNotesForChain(requiredNotesByChain, chainKey)
+            );
         });
     });
 
@@ -299,9 +397,9 @@ export function getTrackPlaybackInstrument(trackId, instrumentId) {
     return chain?.sampler || null;
 }
 
-export async function prepareTrackPlaybackInstrument(track, playbackInstrumentId) {
+export async function prepareTrackPlaybackInstrument(track, playbackInstrumentId, requiredNotes = []) {
     if (track?.id == null || !playbackInstrumentId) return null;
-    const chain = ensurePlaybackChain(track, playbackInstrumentId);
+    const chain = ensurePlaybackChain(track, playbackInstrumentId, requiredNotes);
     if (!chain?.sampler) return null;
     const loaded = await waitForToneLoaded(PREVIEW_PREPARE_TIMEOUT_MS);
     if (!loaded) {

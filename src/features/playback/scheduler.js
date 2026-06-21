@@ -32,6 +32,35 @@ function getToneDraw() {
     return Tone.getDraw?.() || Tone.Draw;
 }
 
+function getPlaybackChainKey(trackId, playbackInstrumentId) {
+    return `${trackId}:${playbackInstrumentId}`;
+}
+
+function addRequiredNotes(requiredNotesByChain, trackId, playbackInstrumentId, notes) {
+    if (trackId == null || !playbackInstrumentId) return;
+    const noteArray = Array.isArray(notes) ? notes : [notes];
+    const normalizedNotes = noteArray.filter((note) => typeof note === 'string' && note.trim());
+    if (normalizedNotes.length === 0) return;
+    const chainKey = getPlaybackChainKey(trackId, playbackInstrumentId);
+    const noteSet = requiredNotesByChain.get(chainKey) || new Set();
+    normalizedNotes.forEach((note) => noteSet.add(note));
+    requiredNotesByChain.set(chainKey, noteSet);
+}
+
+function collectRequiredNotesForScore(score = [], startStep = 0, endStepExclusive = score.length) {
+    const requiredNotesByChain = new Map();
+    const normalizedStart = Math.max(0, Math.min(startStep, score.length));
+    const normalizedEnd = Math.max(normalizedStart, Math.min(endStepExclusive, score.length));
+    for (let idx = normalizedStart; idx < normalizedEnd; idx++) {
+        const step = score[idx];
+        if (!Array.isArray(step)) continue;
+        step.forEach(({ trackId, instrument, notes }) => {
+            addRequiredNotes(requiredNotesByChain, trackId, instrument, notes);
+        });
+    }
+    return requiredNotesByChain;
+}
+
 async function waitForSamplerReady(sampler, timeoutMs = PREVIEW_SAMPLER_READY_TIMEOUT_MS) {
     if (!sampler) return false;
     if (sampler.loaded) return true;
@@ -144,7 +173,8 @@ export async function play(score, {
 
     const transport = getToneTransport();
     transport.bpm.value = bpm;
-    syncTrackPlaybackChains(tracks);
+    const requiredNotesByChain = collectRequiredNotesForScore(score, startStep, endStepExclusive);
+    syncTrackPlaybackChains(tracks, { requiredNotesByChain });
     if (typeof Tone.loaded === 'function') {
         try {
             await Tone.loaded();
@@ -237,7 +267,7 @@ export async function previewDrumSample({
 
     let sampler = null;
     try {
-        sampler = await prepareTrackPlaybackInstrument(previewTrack, sampleInstrumentId);
+        sampler = await prepareTrackPlaybackInstrument(previewTrack, sampleInstrumentId, [sampleDefinition.note]);
     } catch (error) {
         console.error('[Audio] ドラム試聴用の音源ロードに失敗しました。', error);
         return false;
@@ -278,7 +308,7 @@ export async function previewTrackNote({
 
     let sampler = null;
     try {
-        sampler = await prepareTrackPlaybackInstrument(track, playbackInstrumentId);
+        sampler = await prepareTrackPlaybackInstrument(track, playbackInstrumentId, [note]);
     } catch (error) {
         console.error('[Audio] 音試聴用の音源ロードに失敗しました。', error);
         return false;
