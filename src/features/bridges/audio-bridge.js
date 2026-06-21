@@ -4,6 +4,7 @@ import { appState } from '../../core/state.js';
 import {
     play as playSchedulerScore,
     markWebPlaybackRecoveryNeeded,
+    prepareWebPlaybackForUserGesture,
     previewDrumSample as previewSchedulerDrumSample,
     previewTrackNote as previewSchedulerTrackNote,
     resetWebPlayback,
@@ -11,7 +12,6 @@ import {
     warmupPlaybackInstrument as warmupSchedulerInstrument,
     warmupPlaybackTracks as warmupSchedulerTracks,
 } from '../playback/scheduler.js';
-import { ensureToneAudioReadyWithTimeout } from '../playback/tone-runtime.js';
 import { buildNativePlaybackManifest, buildNativePlaybackManifestForInstrumentIds } from '../playback/score-serializer.js';
 import { getDrumSampleDefinition } from '../tracks/instrument-map.js';
 import { canUseIosNativePlayback } from './device-bridge.js';
@@ -142,7 +142,7 @@ export async function prepareAudioPlayback(tracks = []) {
 export async function prepareAudioContextForUserGesture() {
     if (canUseNativePlayback()) return true;
     try {
-        const ready = await ensureToneAudioReadyWithTimeout(WEB_AUDIO_CONTEXT_WARMUP_TIMEOUT_MS);
+        const ready = await prepareWebPlaybackForUserGesture(WEB_AUDIO_CONTEXT_WARMUP_TIMEOUT_MS);
         if (!ready) {
             console.warn('[Audio] Web Audio context warmup timed out.');
         }

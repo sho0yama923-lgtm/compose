@@ -105,6 +105,11 @@ function resetPlaybackChainsIfNeeded() {
     webPlaybackRecoveryNeeded = false;
 }
 
+export async function prepareWebPlaybackForUserGesture(timeoutMs = WEB_AUDIO_CONTEXT_WARMUP_TIMEOUT_MS) {
+    resetPlaybackChainsIfNeeded();
+    return ensureToneAudioReadyWithTimeout(timeoutMs);
+}
+
 /**
  * Web Audio でスコアを再生する。
  * @param {Array} score - ステップ単位のスコア配列

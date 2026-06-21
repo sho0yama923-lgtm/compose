@@ -2,10 +2,9 @@
 
 import { appState, STEPS_PER_MEASURE, totalSteps, callbacks, getNormalizedPlayRangeMeasures } from '../../core/state.js';
 import { getCurrentBpm } from '../../core/bpm.js';
-import { playScore, stopScorePlayback } from '../bridges/audio-bridge.js';
+import { playScore, prepareAudioContextForUserGesture, stopScorePlayback } from '../bridges/audio-bridge.js';
 import { serializeScoreForNativePlayback } from './score-serializer.js';
 import { buildPlaybackScore, resolvePlaybackWindow } from './score-builder.js';
-import { ensureToneAudioReady } from './tone-runtime.js';
 import { canUseIosNativePlayback } from '../bridges/device-bridge.js';
 import { emitTutorialAction } from '../../core/tutorial-events.js';
 import { runExclusiveAction } from '../../core/action-guard.js';
@@ -53,7 +52,7 @@ export function initPlayback() {
         if (appState.isBooting) return;
         const audioReadyPromise = canUseIosNativePlayback()
             ? null
-            : ensureToneAudioReady();
+            : prepareAudioContextForUserGesture();
         if (appState.isPlaying) {
             void togglePlayback(audioReadyPromise);
             return;

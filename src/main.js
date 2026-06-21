@@ -153,6 +153,11 @@ async function warmupAudioForPlayback({ refreshNativePreparation = false, resume
         } catch (error) {
             console.warn('[Audio] playback warmup failed:', error);
         } finally {
+            if (resumeWebAudio) {
+                // Safari は復帰直後の自動再開が running でも無音になることがある。
+                // 次のユーザー操作内で AudioContext と音源チェーンをもう一度作り直す。
+                markWebAudioPlaybackRecoveryNeeded();
+            }
             appState.isBooting = false;
             audioWarmupPromise = null;
             hideBootOverlay();
