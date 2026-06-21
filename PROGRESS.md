@@ -43,6 +43,7 @@
 
 ## 変更履歴
 
+- 2026-06-21: Netlify の build credit 切れで `ezmelon.com` が古いデプロイに残るため、GitHub Pages へ向ける準備として `public/CNAME` に `ezmelon.com` を追加した。配信設定の小変更としてバージョンを `1.0.2` へ更新した
 - 2026-06-21: `AGENTS.md` に、修正を入れたら `package.json` の `version` を更新し、小さい修正やUI微調整は三桁目のpatch versionを上げ、`package-lock.json` のルートversionもそろえるルールを追記した
 - 2026-06-21: プロジェクト一覧の下部に小さく `v${APP_VERSION}` を表示するようにした。表示はフォント `11px`、行高 `16px`、上余白 `2px` をCSS変数へ集約した。小さい変更は今後patch番号を更新する方針にし、今回のバージョンを `1.0.1` へ更新した。`npm run build` が成功した
 - 2026-06-21: Safari版で他アプリ復帰後のログに `The AudioContext is "suspended"` と `InvalidStateError: Context is closed` が出る原因を追加調査した。復帰時のWeb Audio warmupがタイムアウトした後も裏で古い `Tone.start()` / `resume()` が残り、次の復旧で旧AudioContextをcloseしたことで遅延処理が閉じたcontextへ触っていた。復旧時は旧contextを即closeせず参照から外すだけにし、context世代チェックで差し替え済みの遅延処理を無効化、timeout後の遅延エラーも握るようにした。`npm run build` が成功した
