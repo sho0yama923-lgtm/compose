@@ -11,8 +11,12 @@ import {
 } from '../../tracks/instrument-map.js';
 import {
     CHROMATIC,
+    CHORD_ROOTS,
+    CHORD_TYPES,
     DURATION_CELLS,
     DEFAULT_SONG_SETTINGS,
+    MAX_PROJECT_MEASURES,
+    MAX_PROJECT_TRACKS,
     normalizeChordCustomNotes,
     normalizeSongSettings,
 } from '../../../core/constants.js';
@@ -23,11 +27,12 @@ export const STORAGE_KEY = 'compose_save';
 export const DATA_VERSION = 11;
 export const VALID_DURATIONS = new Set(Object.keys(DURATION_CELLS));
 export const MAX_PROJECT_FILE_BYTES = 5 * 1024 * 1024;
-export const MAX_PROJECT_MEASURES = 128;
-export const MAX_PROJECT_TRACKS = 64;
+export { MAX_PROJECT_MEASURES, MAX_PROJECT_TRACKS } from '../../../core/constants.js';
 const MAX_DRUM_ROWS = 64;
 const MAX_REPEAT_STATES = MAX_PROJECT_TRACKS;
 const VALID_INSTRUMENT_IDS = new Set(Object.keys(INST_TYPE));
+const MIN_CHORD_OCTAVE = 1;
+const MAX_CHORD_OCTAVE = 6;
 
 function isPlainObject(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
@@ -35,25 +40,48 @@ function isPlainObject(value) {
     return prototype === Object.prototype || prototype === null;
 }
 
+function isValidStepValue(value) {
+    return value === null || value === '_tie' || VALID_DURATIONS.has(value);
+}
+
+function isValidStepArray(steps, length) {
+    return Array.isArray(steps)
+        && steps.length === length
+        && steps.every(isValidStepValue);
+}
+
+function isValidChordEntry(entry) {
+    return entry === null || (
+        isPlainObject(entry)
+        && CHORD_ROOTS.includes(entry.root)
+        && Object.prototype.hasOwnProperty.call(CHORD_TYPES, entry.type)
+        && Number.isInteger(entry.octave)
+        && entry.octave >= MIN_CHORD_OCTAVE
+        && entry.octave <= MAX_CHORD_OCTAVE
+        && (entry.customNotes === undefined
+            || entry.customNotes === null
+            || normalizeChordCustomNotes(entry.customNotes) !== null)
+    );
+}
+
 function isValidTrackShape(track, length) {
     if (!isPlainObject(track) || !VALID_INSTRUMENT_IDS.has(track.instrument)) return false;
-    if (!Number.isInteger(track.id) || track.id < 0) return false;
+    if (!Number.isSafeInteger(track.id) || track.id < 0) return false;
 
     const type = INST_TYPE[track.instrument];
     if (type === 'rhythm') {
         if (!Array.isArray(track.rows) || track.rows.length > MAX_DRUM_ROWS) return false;
         return track.rows.every((row) => (
             isPlainObject(row)
-            && Array.isArray(row.steps)
-            && row.steps.length === length
+            && isValidStepArray(row.steps, length)
         ));
     }
 
     if (type === 'chord') {
-        return Array.isArray(track.chordMap)
+        return isValidStepArray(track.soundSteps, length)
+            && Array.isArray(track.chordMap)
             && track.chordMap.length === length
-            && Array.isArray(track.soundSteps)
-            && track.soundSteps.length === length;
+            && track.chordMap.every(isValidChordEntry);
     }
 
     if (!isPlainObject(track.stepsMap)) return false;
@@ -61,13 +89,15 @@ function isValidTrackShape(track, length) {
     return stepEntries.length <= CHROMATIC.length * 7
         && stepEntries.every(([note, steps]) => (
             /^[A-G]#?[1-7]$/.test(note)
-            && Array.isArray(steps)
-            && steps.length === length
+            && isValidStepArray(steps, length)
         ));
 }
 
 function isValidSaveDataShape(data) {
     if (!isPlainObject(data) || data.version !== DATA_VERSION) return false;
+    if (data.nextId !== undefined && (!Number.isSafeInteger(data.nextId) || data.nextId < 0)) {
+        return false;
+    }
     if (!Number.isInteger(data.numMeasures)
         || data.numMeasures < 1
         || data.numMeasures > MAX_PROJECT_MEASURES) {
@@ -102,7 +132,7 @@ function normalizeStepArray(steps, length) {
     for (let i = 0; i < length; i++) {
         const value = normalized[i];
         if (value === true) normalized[i] = '16n';
-        else if (value === false || value === undefined) normalized[i] = null;
+        else if (value === false || value === undefined || !isValidStepValue(value)) normalized[i] = null;
     }
     if (normalized.length < length) {
         normalized.push(...Array(length - normalized.length).fill(null));
@@ -314,7 +344,8 @@ export function restoreFromData(data, options = {}) {
     if (!isValidSaveDataShape(data)) return false;
 
     appState.numMeasures = data.numMeasures ?? 4;
-    appState.nextId = data.nextId ?? 0;
+    const nextTrackId = Math.max(0, ...data.tracks.map((track) => track.id + 1));
+    appState.nextId = Math.max(nextTrackId, data.nextId ?? 0);
     appState.currentMeasure = 0;
     appState.activeTrackId = null;
     appState.lastTouchedTrackId = null;

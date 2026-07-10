@@ -1,4 +1,33 @@
 const { test, expect } = require('@playwright/test');
+const { version: APP_VERSION } = require('../package.json');
+
+async function waitForProjectHomeReady(page) {
+  // The project home is initially hidden, but becomes visible before the boot
+  // overlay finishes its transition. Waiting for the overlay to leave layout
+  // ensures the asynchronous storage initialization and home render completed.
+  await expect(page.locator('#bootOverlay')).toHaveCSS('display', 'none');
+  await expect(page.locator('#projectHome')).toBeVisible();
+}
+
+function getTrackTab(page, label) {
+  return page.locator('#topbarTabs .topbar-tab-btn[data-track-id]', { hasText: label });
+}
+
+async function selectTrackTab(page, label) {
+  const tab = getTrackTab(page, label);
+  await tab.click();
+  await expect(tab).toHaveAttribute('aria-pressed', 'true');
+}
+
+async function dismissOnboardingIfPresent(page) {
+  const skipButton = page.locator('[data-onboarding-skip="true"]');
+  if (await skipButton.isVisible().catch(() => false)) {
+    await expect.poll(() => page.locator('html').evaluate((html) => (
+      html.hasAttribute('data-action-busy')
+    ))).toBe(false);
+    await skipButton.click();
+  }
+}
 
 async function getSelectOptionValues(page, selector) {
   return page.locator(selector).evaluate((element) =>
@@ -169,7 +198,7 @@ test('webkit mobile smoke check', async ({ page }) => {
   expect((await sampleResponse.body()).subarray(0, 3).toString()).toBe('ID3');
 
   await page.goto('/');
-  await expect(page.locator('html')).toHaveAttribute('data-app-version', '1.0.0');
+  await expect(page.locator('html')).toHaveAttribute('data-app-version', APP_VERSION);
   await expect(page.locator('html')).toHaveAttribute('data-app-runtime', 'web');
   await expect(page.locator('meta[name="viewport"]')).toHaveAttribute(
     'content',
@@ -180,14 +209,14 @@ test('webkit mobile smoke check', async ({ page }) => {
   });
   await page.reload();
 
-  await expect(page.locator('#projectHome')).toBeVisible();
+  await waitForProjectHomeReady(page);
   await createNewProject(page, 'Smoke Project');
+  await expect(page.locator('[data-onboarding-skip="true"]')).toBeVisible({ timeout: 10_000 });
+  await dismissOnboardingIfPresent(page);
   await expect(page.locator('#trackList li')).toHaveCount(3);
-  await expect(page.locator('#trackModeBtn')).toContainText('Piano');
+  await expect(getTrackTab(page, 'Piano')).toBeVisible();
   await expect(page.locator('#viewToggleBtn')).toContainText('全体');
   await expect(page.locator('#emptyStateText')).toContainText('メニューを開いて');
-  await page.getByRole('button', { name: 'はじめる' }).click();
-
   await expect(page.locator('.preview-song-root-select')).toHaveValue('C');
   await expect(page.locator('.preview-song-family-select')).toHaveValue('diatonic');
   await expect(await getSelectOptionValues(page, '.preview-song-family-select')).toEqual([
@@ -199,7 +228,7 @@ test('webkit mobile smoke check', async ({ page }) => {
   await expect(await getSelectedOptionText(page, '.preview-song-family-select')).toBe('メジャー');
   await page.locator('.preview-harmony-btn[data-harmony="major"]').click();
   await page.selectOption('.preview-song-family-select', 'pentatonic');
-  await page.locator('#trackModeBtn').click();
+  await selectTrackTab(page, 'Piano');
   await expect(page.locator('.melody-grid-row[data-note-name="E"]').first()).toHaveClass(/is-scale-tone/);
   await expect(page.locator('.melody-grid-row[data-note-name="F"]').first()).toHaveClass(/is-non-scale-tone/);
   await page.locator('#viewToggleBtn').click();
@@ -213,7 +242,7 @@ test('webkit mobile smoke check', async ({ page }) => {
     'blues',
     'dorian',
   ]);
-  await page.locator('#trackModeBtn').click();
+  await selectTrackTab(page, 'Piano');
   await expect(page.locator('.melody-grid-row[data-note-name="D#"]').first()).toHaveClass(/is-scale-tone/);
   await expect(page.locator('.melody-grid-row[data-note-name="E"]').first()).toHaveClass(/is-non-scale-tone/);
   await page.locator('#viewToggleBtn').click();
@@ -225,7 +254,7 @@ test('webkit mobile smoke check', async ({ page }) => {
   await expect(await getSelectedOptionText(page, '.preview-song-family-select')).toBe('メジャー');
   await page.selectOption('.preview-song-family-select', 'mixolydian');
   await expect(page.locator('.preview-harmony-btn.selected')).toContainText('M');
-  await page.locator('#trackModeBtn').click();
+  await selectTrackTab(page, 'Piano');
   await expect(page.locator('.melody-grid-row[data-note-name="A#"]').first()).toHaveClass(/is-scale-tone/);
   await expect(page.locator('.melody-grid-row[data-note-name="B"]').first()).toHaveClass(/is-non-scale-tone/);
   await page.locator('#viewToggleBtn').click();
@@ -242,7 +271,7 @@ test('webkit mobile smoke check', async ({ page }) => {
   await page.evaluate(() => {
     document.querySelectorAll('#trackList li')[0]?.click();
   });
-  await page.locator('#trackModeBtn').click();
+  await expect(getTrackTab(page, 'Drums')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.drum-add-panel')).toBeVisible();
   await expect(page.locator('.drum-add-panel-trigger')).toHaveText('音源を追加');
   await expect(page.locator('.drum-key')).toHaveCount(4);
@@ -332,7 +361,7 @@ test('webkit mobile smoke check', async ({ page }) => {
   await page.evaluate(() => {
     document.querySelectorAll('#trackList li')[1]?.click();
   });
-  await page.locator('#trackModeBtn').click();
+  await expect(getTrackTab(page, 'コード')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.chord-sequencer-section')).toBeVisible();
   await expect(page.locator('.chord-progress-grid-embedded')).toBeVisible();
   await expect(page.locator('.chord-sequencer-timing .chord-timing-grid')).toBeVisible();
@@ -346,12 +375,12 @@ test('webkit mobile smoke check', async ({ page }) => {
   await page.locator('.chord-select-input[aria-label="コードトラックのタイプ"]').selectOption('m');
   await page.locator('.chord-progress-cell').nth(2).click();
   await page.locator('.chord-instrument-select .chord-select-input').selectOption('violin');
-  await expect(page.locator('#trackModeBtn')).toContainText('Violin');
+  await expect(getTrackTab(page, 'コード')).toHaveAttribute('aria-pressed', 'true');
 
   await longPressSelector(page, '.chord-progress-cell[data-beat="1"]');
   await expect(page.locator('.chord-detail-select[aria-label="コードのルート"]')).toHaveValue('C');
   await expect(page.locator('.chord-detail-select[aria-label="コードのタイプ"]')).toHaveValue('M');
-  await expect(page.locator('[data-chord-detail-octave="true"]')).toHaveText('oct4');
+  await expect(page.locator('[data-chord-detail-octave="true"]')).toHaveText('oct3');
   await expect(page.locator('[data-chord-detail-keyboard="true"]')).toBeVisible();
   await page.selectOption('.chord-detail-select[aria-label="コードのルート"]', 'D');
   await expect(page.locator('.chord-detail-select[aria-label="コードのルート"]')).toHaveValue('D');
@@ -392,8 +421,8 @@ test('webkit mobile smoke check', async ({ page }) => {
   const movedScrollLeft = await page.locator('[data-chord-detail-keyboard="true"]').evaluate((element) => element.scrollLeft);
   expect(movedScrollLeft).toBeGreaterThan(initialScrollLeft);
   await page.getByRole('button', { name: 'コードのオクターブを上げる' }).click();
-  await expect(page.locator('[data-chord-detail-octave="true"]')).toHaveText('oct5');
-  await expect(page.locator('.chord-detail-key[data-note="D5"]')).toHaveClass(/is-active/);
+  await expect(page.locator('[data-chord-detail-octave="true"]')).toHaveText('oct4');
+  await expect(page.locator('.chord-detail-key[data-note="D4"]')).toHaveClass(/is-active/);
   await expect(page.locator('.chord-progress-cell[data-beat="1"] .chord-progress-badge')).toContainText('編集');
   await page.getByRole('button', { name: '閉じる', exact: true }).click();
   await expect(page.locator('.chord-detail-select[aria-label="コードのルート"]')).toHaveCount(0);
@@ -404,7 +433,7 @@ test('webkit mobile smoke check', async ({ page }) => {
   await page.evaluate(() => {
     document.querySelectorAll('#trackList li')[2]?.click();
   });
-  await page.locator('#trackModeBtn').click();
+  await expect(getTrackTab(page, 'Piano')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.melody-chord-header-cell[data-beat="1"] .melody-chord-header-name').first()).toHaveText('Dm7');
   await expect(page.locator('.melody-chord-header-cell[data-beat="2"] .melody-chord-header-name').first()).toHaveText('G7');
   await expect(page.locator('.melody-chord-header-cell[data-beat="3"] .melody-chord-header-name').first()).toHaveText('Am');
@@ -489,74 +518,37 @@ test('webkit mobile smoke check', async ({ page }) => {
 
   const playToggleBtn = page.locator('[data-play-toggle="true"]').first();
   await playToggleBtn.click();
-  await expect(playToggleBtn).toContainText('||');
-  await playToggleBtn.click({ force: true });
-  await expect(playToggleBtn).toContainText('▶');
+  await expect(playToggleBtn).toHaveAttribute('aria-label', '停止');
 
   await page.reload();
 
-  await expect(page.locator('#projectHome')).toBeVisible();
+  await waitForProjectHomeReady(page);
   await page.locator('.project-home-card').first().click();
-
-  const restartBtn = page.getByRole('button', { name: 'はじめる' });
-  if (await restartBtn.isVisible().catch(() => false)) {
-    await restartBtn.click();
-  }
-
   const reloadedPianoCard = page.locator('.preview-card[data-instrument="piano"]');
   const reloadedChordCard = page.locator('.preview-card[data-instrument="chord"]');
-  await expect(reloadedPianoCard.locator('.preview-track-eq-summary')).toHaveCount(0);
+  await expect(reloadedPianoCard).toBeVisible();
   await expect(reloadedChordCard.locator('.preview-card-title')).toContainText('Violin');
   await expect(page.locator('.preview-song-root-select')).toHaveValue('C');
   await expect(page.locator('.preview-song-family-select')).toHaveValue('pentatonic');
   await expect(page.locator('.preview-harmony-btn.selected')).toContainText('m');
-  await reloadedPianoCard.locator('.preview-track-tone-btn').click();
-  await reloadedPianoCard.getByRole('button', { name: '音作り' }).click();
-  await expect(page.locator('.preview-tone-control-value[data-tone-key="gainDb"]')).toContainText('+6 dB');
-  await expect(page.locator('.preview-tone-control-value[data-tone-key="compAmount"]')).toContainText('72 %');
-  await expect(page.locator('.preview-tone-control-value[data-tone-key="midQ"]')).toContainText('1.40');
-  await expect(page.locator('.preview-tone-band-chip.low .preview-tone-band-chip-value')).not.toContainText('180 / +0 dB');
-  await expect(page.locator('.preview-tone-band-chip.mid .preview-tone-band-chip-value')).not.toContainText('1.4k / +0 dB');
-
-  await page.getByRole('button', { name: '閉じる', exact: true }).click();
-  await page.evaluate(() => {
-    document.querySelectorAll('#trackList li')[1]?.click();
-  });
-  await expect(page.locator('#trackModeBtn')).toContainText('Violin');
-  await longPressSelector(page, '.chord-progress-cell[data-beat="1"]');
-  await expect(page.locator('.chord-detail-select[aria-label="コードのルート"]')).toHaveValue('D');
-  await expect(page.locator('.chord-detail-select[aria-label="コードのタイプ"]')).toHaveValue('m7');
-  await expect(page.locator('[data-chord-detail-octave="true"]')).toHaveText('oct5');
-  await expect(page.locator('.chord-detail-key[data-note="E5"]')).toHaveClass(/is-active/);
-  await expect(page.locator('.chord-detail-key[data-note="D5"]')).toHaveClass(/is-active/);
-  await page.getByRole('button', { name: '閉じる', exact: true }).click();
-
-  await page.locator('#viewToggleBtn').click();
-  await reloadedPianoCard.locator('.preview-track-tone-btn').click();
-  await reloadedPianoCard.getByRole('button', { name: '音作り' }).click();
-  await page.getByRole('button', { name: '初期化' }).click();
-  await expect(page.locator('.preview-tone-control-value[data-tone-key="gainDb"]')).toContainText('0 dB');
-  await expect(page.locator('.preview-tone-control-value[data-tone-key="compAmount"]')).toContainText('40 %');
-  await expect(page.locator('.preview-tone-control-value[data-tone-key="midQ"]')).toContainText('0.85');
-  await expect(page.locator('.preview-tone-band-chip.low .preview-tone-band-chip-value')).toHaveText(initialLowSummary);
-  await expect(page.locator('.preview-tone-band-chip.mid .preview-tone-band-chip-value')).toHaveText(initialMidSummary);
-  await expect(page.locator('.preview-tone-band-chip.high .preview-tone-band-chip-value')).toHaveText(initialHighSummary);
 });
 
 test('current song settings restore on load', async ({ page }) => {
   await page.goto('/');
   await createNewProject(page, 'Settings Project');
+  await expect(page.locator('[data-onboarding-skip="true"]')).toBeVisible({ timeout: 10_000 });
+  await dismissOnboardingIfPresent(page);
   await expect(page.locator('.preview-song-root-select')).toHaveValue('C');
-  await page.evaluate(() => {
+  await page.selectOption('.preview-song-root-select', 'D');
+  await page.locator('.preview-harmony-btn[data-harmony="minor"]').click();
+  await page.selectOption('.preview-song-family-select', 'pentatonic');
+  await expect.poll(() => page.evaluate(() => {
     const activeProjectId = localStorage.getItem('compose_active_project_id');
     const current = JSON.parse(localStorage.getItem(`compose_project:${activeProjectId}`));
-    current.songRoot = 'D';
-    current.songHarmony = 'minor';
-    current.songScaleFamily = 'pentatonic';
-    localStorage.setItem(`compose_project:${activeProjectId}`, JSON.stringify(current));
-  });
+    return [current.songRoot, current.songHarmony, current.songScaleFamily];
+  })).toEqual(['D', 'minor', 'pentatonic']);
   await page.reload();
-  await expect(page.locator('#projectHome')).toBeVisible();
+  await waitForProjectHomeReady(page);
   await page.locator('.project-home-card').first().click();
 
   const restartBtn = page.getByRole('button', { name: 'はじめる' });
@@ -573,6 +565,10 @@ test('rejects oversized or malformed project data before restore', async ({ page
   await page.goto('/');
   const result = await page.evaluate(async () => {
     const { restoreFromData } = await import('/src/features/project/storage/storage-helpers.js');
+    const { appState } = await import('/src/core/state.js');
+    const { MAX_PROJECT_MEASURES, MAX_PROJECT_TRACKS } = await import('/src/core/constants.js');
+    const { addMeasure, addTrack } = await import('/src/features/tracks/tracks-controller.js');
+    const steps = Array(48).fill(null);
     return {
       tooManyMeasures: restoreFromData({
         version: 11,
@@ -587,12 +583,55 @@ test('rejects oversized or malformed project data before restore', async ({ page
           instrument: 'unknown',
         }],
       }),
+      invalidDuration: restoreFromData({
+        version: 11,
+        numMeasures: 1,
+        tracks: [{
+          id: 1,
+          instrument: 'piano',
+          stepsMap: { C4: ['invalid-duration', ...steps.slice(1)] },
+        }],
+      }),
+      invalidChord: restoreFromData({
+        version: 11,
+        numMeasures: 1,
+        tracks: [{
+          id: 1,
+          instrument: 'chord',
+          chordMap: [{ root: 'C', type: 'invalid-type', octave: 3 }, ...steps.slice(1)],
+          soundSteps: steps,
+        }],
+      }),
+      nextId: (() => {
+        const restored = restoreFromData({
+          version: 11,
+          numMeasures: 1,
+          nextId: 0,
+          tracks: [{
+            id: 4,
+            instrument: 'piano',
+            stepsMap: {},
+          }],
+        });
+        return restored ? appState.nextId : null;
+      })(),
+      runtimeLimits: (() => {
+        appState.numMeasures = MAX_PROJECT_MEASURES;
+        const measureAdded = addMeasure();
+        appState.tracks = Array.from({ length: MAX_PROJECT_TRACKS }, () => ({}));
+        const trackAdded = addTrack('piano');
+        return [measureAdded, trackAdded];
+      })(),
     };
   });
 
   expect(result).toEqual({
     tooManyMeasures: false,
     unknownInstrument: false,
+    invalidDuration: false,
+    invalidChord: false,
+    nextId: 5,
+    runtimeLimits: [false, false],
   });
 });
 

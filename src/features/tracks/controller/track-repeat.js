@@ -79,7 +79,7 @@ export function pasteTrackMeasureRange(track, startMeasure, clipboard, options =
         : (repeatUntilMeasure - startMeasure + 1) * STEPS_PER_MEASURE;
     const requiredMeasures = Math.ceil((startStep + targetLength) / STEPS_PER_MEASURE);
 
-    ensureMeasureCount(requiredMeasures);
+    if (!ensureMeasureCount(requiredMeasures)) return false;
 
     if (trackType === 'rhythm') {
         track.rows.forEach((row, rowIndex) => {

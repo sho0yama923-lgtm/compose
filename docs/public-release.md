@@ -47,9 +47,9 @@ Netlify の build credit 切れを避けるため、本番配信は GitHub Pages
 - production build と成果物検査
 - 外部 script 混入なし
 - 音源ファイルの MP3 payload
-- WebKit smoke
+- build済みの`dist/`を配信するpreview serverでのWebKit smoke
 
-WebKit は音源を含む初回bundle処理でCI負荷が上がるため、2 workers・1 test 60秒で実行する。
+WebKit は音源を含む初回bundle処理でCI負荷が上がるため、2 workers・1 test 60秒で実行する。日常の回帰確認は `npm run test:e2e:webkit`、release artifactの確認は `npm run release:build && npm run test:e2e:webkit:preview` を使う。
 
 ## Release Verification
 

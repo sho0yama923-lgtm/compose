@@ -29,8 +29,6 @@
   - `vite build` と `cap sync android` を連続実行する
 - `npm run mobile:open:android`
   - Android Studio プロジェクトを開く
-- `npm run android:buildprep`
-  - 旧 alias。内部では `mobile:sync:android` を呼ぶ
 
 ## このアプリで特に見る点
 

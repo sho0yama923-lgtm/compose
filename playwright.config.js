@@ -1,6 +1,7 @@
 const { defineConfig, devices } = require('@playwright/test');
 
 const WEBKIT_DEV_PORT = 41234;
+const usePreviewServer = process.env.PLAYWRIGHT_SERVER === 'preview';
 
 module.exports = defineConfig({
   testDir: './tests',
@@ -13,12 +14,14 @@ module.exports = defineConfig({
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL: `http://127.0.0.1:${WEBKIT_DEV_PORT}`,
-    trace: 'on-first-retry',
+    trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
   },
   webServer: {
-    command: `npm run dev -- --host 127.0.0.1 --port ${WEBKIT_DEV_PORT}`,
+    command: usePreviewServer
+      ? `npm run preview -- --host 127.0.0.1 --port ${WEBKIT_DEV_PORT}`
+      : `npm run dev -- --host 127.0.0.1 --port ${WEBKIT_DEV_PORT}`,
     url: `http://127.0.0.1:${WEBKIT_DEV_PORT}`,
     reuseExistingServer: !process.env.CI,
     stdout: 'pipe',

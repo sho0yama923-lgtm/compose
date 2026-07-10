@@ -356,7 +356,9 @@ function stopPlayback({ emitTutorial = true } = {}) {
 
 function setPlaybackButtonState() {
     document.querySelectorAll('[data-play-toggle="true"]').forEach((playToggleBtn) => {
-        playToggleBtn.textContent = appState.isPlaying ? '||' : '▶';
+        if (!playToggleBtn.querySelector('.ui-icon')) {
+            playToggleBtn.textContent = appState.isPlaying ? '||' : '▶';
+        }
         playToggleBtn.setAttribute('aria-label', appState.isPlaying ? '停止' : '再生');
         playToggleBtn.setAttribute('aria-pressed', String(appState.isPlaying));
         playToggleBtn.classList.toggle('is-playing', appState.isPlaying);

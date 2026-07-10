@@ -55,6 +55,8 @@ html[data-app-runtime="web"] body {
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: 4px;
 }
 .topbar-tabs::-webkit-scrollbar {
     display: none;
@@ -72,16 +74,23 @@ html[data-app-runtime="web"] body {
     -webkit-overflow-scrolling: auto;
 }
 .btn-menu {
-    font-size: 20px;
+    width: 44px;
+    min-width: 44px;
+    min-height: 44px;
     background: none;
     border: none;
     color: #fff;
     cursor: pointer;
-    padding: 8px;
+    padding: 10px;
     border-radius: 4px;
     line-height: 1;
     flex-shrink: 0;
     touch-action: manipulation;
+}
+.btn-menu .ui-icon {
+    display: block;
+    width: 24px;
+    height: 24px;
 }
 .btn-menu:active { background: #222; }
 .topbar-right {
@@ -134,7 +143,7 @@ html[data-app-runtime="web"] body {
     background: transparent;
     color: #d6d6d6;
     border: 1px solid #4a4a4a;
-    min-width: 72px;
+    min-width: 76px;
     min-height: 36px;
     padding: 0 12px;
     font-size: 12px;
@@ -146,6 +155,7 @@ html[data-app-runtime="web"] body {
     text-overflow: ellipsis;
     user-select: none;
     -webkit-user-select: none;
+    scroll-snap-align: start;
 }
 .topbar-preview-slot .topbar-tab-btn {
     min-width: 72px;

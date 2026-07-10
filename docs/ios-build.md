@@ -27,11 +27,9 @@
 ## npm scripts
 
 - `npm run mobile:sync:ios`
-  - `vite build` と `cap sync ios` を連続実行する
+  - version同期、`vite build`、`cap sync ios` を連続実行する
 - `npm run mobile:open:ios`
   - Xcode プロジェクトを開く
-- `npm run ios:buildprep`
-  - 旧 alias。内部では `mobile:sync:ios` を呼ぶ
 
 ## Xcode で確認すること
 

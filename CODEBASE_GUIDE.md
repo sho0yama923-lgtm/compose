@@ -11,7 +11,7 @@
 4. 変更対象の入口ファイル
 5. 必要になった時だけ `docs/coding-rules.md`
 
-スマホ開発や native ビルド運用だけを触る場合は、追加で `docs/mobile-dev.md` を読んでください。
+スマホ開発や native ビルド運用だけを触る場合は、追加で `docs/mobile-dev.md` を読んでください。確認コマンドの選択と失敗時の調査は `docs/codex-workflow.md` を正本にします。
 
 ## ファイル区分
 
@@ -42,7 +42,7 @@
 - `.codex/environments/environment.toml`
   - Codex app の project actions。Run / Build / WebKit smoke / iOS sync などの共有導線
 - `.github/workflows/web-release-check.yml`
-  - Web公開前の依存監査、成果物検査、WebKit smoke
+  - Web公開前の依存監査、成果物検査、`dist/`に対するWebKit smoke
 - `public/CNAME`
   - GitHub Pages artifact に同梱する custom domain 設定。root 直下の `CNAME` は追跡しない
 - `scripts/verify-web-release.mjs`
@@ -209,7 +209,7 @@
 - `tests/webkit-smoke.spec.js`
 - `package.json`
 
-Codex app では `Run` action または `npm run dev -- --host 127.0.0.1` で dev server を起動し、in-app Browser / Browser plugin でローカル URL を確認する。ユーザーが別URLを指定していなければ、既定で `http://127.0.0.1:5173` を開く。具体手順は `docs/codex-workflow.md` の「UI 確認」を参照する。
+局所確認は `Run` action または `npm run dev:codex` とBrowserを使う。`dev:codex` は `127.0.0.1:5173` を固定し、使用中なら別ポートへ逃げずに停止する。Web回帰は `npm run test:e2e:webkit`、release artifactは `npm run release:build && npm run test:e2e:webkit:preview` を使う。具体的な選択と失敗時の調査は `docs/codex-workflow.md` を参照する。
 
 ### iPhone アプリ
 

@@ -8,7 +8,7 @@ script = ""
 [[actions]]
 name = "Run"
 icon = "run"
-command = "npm run dev -- --host 127.0.0.1"
+command = "npm run dev:codex"
 
 [[actions]]
 name = "Build"
@@ -19,6 +19,11 @@ command = "npm run build"
 name = "WebKit Smoke"
 icon = "test"
 command = "npm run test:e2e:webkit"
+
+[[actions]]
+name = "Web Release Smoke"
+icon = "test"
+command = "npm run release:build && npm run test:e2e:webkit:preview"
 
 [[actions]]
 name = "Web Release Check"

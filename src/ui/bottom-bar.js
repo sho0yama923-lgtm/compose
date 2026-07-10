@@ -6,6 +6,7 @@ import { clampNumber } from '../core/number-utils.js';
 import { emitTutorialAction } from '../core/tutorial-events.js';
 import { runExclusiveAction } from '../core/action-guard.js';
 import { addMeasure, clearTrackMeasure, removeMeasure } from '../features/tracks/tracks-controller.js';
+import { createIcon } from './icon.js';
 
 let isSeekBarExpanded = false;
 
@@ -44,7 +45,6 @@ export function buildSeekBar(renderEditor) {
 
     const seekPrev = buildSeekNavButton({
         direction: -1,
-        icon: '|◀',
         label: '前小節',
         renderEditor,
     });
@@ -56,13 +56,12 @@ export function buildSeekBar(renderEditor) {
     playToggleBtn.dataset.actionGuardAllowWhileBusy = 'true';
     playToggleBtn.setAttribute('aria-label', appState.isPlaying ? '停止' : '再生');
     playToggleBtn.setAttribute('aria-pressed', String(appState.isPlaying));
-    playToggleBtn.textContent = appState.isPlaying ? '||' : '▶';
+    playToggleBtn.append(createIcon('play'), createIcon('pause'));
     playToggleBtn.classList.toggle('is-playing', appState.isPlaying);
     playToggleBtn.disabled = appState.isBooting;
 
     const seekNext = buildSeekNavButton({
         direction: 1,
-        icon: '▶|',
         label: '次小節',
         renderEditor,
     });
@@ -487,12 +486,12 @@ function openMeasureActionsSheet(renderEditor) {
     document.body.appendChild(overlay);
 }
 
-function buildSeekNavButton({ direction, icon, label, renderEditor }) {
+function buildSeekNavButton({ direction, label, renderEditor }) {
     const button = document.createElement('button');
     button.className = 'mb-btn mb-nav-btn';
     button.dataset.direction = String(direction);
-    button.title = icon;
-    button.appendChild(buildMeasureNavIcon(direction));
+    button.title = label;
+    button.appendChild(createIcon(direction < 0 ? 'previous' : 'next'));
     button.setAttribute('aria-label', label);
     button.disabled = isCopyRangeEditing()
         ? !canMoveCopyRangeEnd(direction)
@@ -523,25 +522,6 @@ function buildSeekNavButton({ direction, icon, label, renderEditor }) {
     button.addEventListener('pointerleave', clearHold);
     button.addEventListener('pointercancel', clearHold);
     return button;
-}
-
-function buildMeasureNavIcon(direction) {
-    const iconEl = document.createElement('span');
-    iconEl.className = `mb-nav-icon ${direction < 0 ? 'prev' : 'next'}`;
-    iconEl.setAttribute('aria-hidden', 'true');
-
-    const barEl = document.createElement('span');
-    barEl.className = 'mb-nav-icon-bar';
-
-    const triangleEl = document.createElement('span');
-    triangleEl.className = 'mb-nav-icon-triangle';
-
-    if (direction < 0) {
-        iconEl.append(barEl, triangleEl);
-    } else {
-        iconEl.append(triangleEl, barEl);
-    }
-    return iconEl;
 }
 
 function moveCurrentMeasure(direction, renderEditor) {

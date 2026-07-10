@@ -89,6 +89,7 @@ body.project-home-active .main {
 }
 
 .project-home-item {
+    position: relative;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: stretch;
@@ -174,9 +175,9 @@ body.project-home-active .main {
 }
 
 .project-home-card-tools {
+    position: relative;
     display: flex;
-    flex-direction: column;
-    gap: 6px;
+    align-items: center;
 }
 
 .project-home-icon-btn {
@@ -186,15 +187,65 @@ body.project-home-active .main {
     border-radius: 8px;
     background: #fff;
     color: #334155;
-    font-size: 20px;
-    font-weight: 800;
-    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
     touch-action: manipulation;
 }
 
 .project-home-icon-btn.danger {
     color: #b91c1c;
+}
+
+.project-home-icon-btn .ui-icon,
+.project-home-menu-trigger .ui-icon {
+    width: 21px;
+    height: 21px;
+}
+
+.project-home-card-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 8;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 156px;
+    padding: 6px;
+    border: 1px solid #d8dee8;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.16);
+}
+
+.project-home-card-menu[hidden] {
+    display: none;
+}
+
+.project-home-card-menu .project-home-icon-btn {
+    width: 100%;
+    min-height: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 10px;
+    text-align: left;
+}
+
+.project-home-card-menu .project-home-icon-btn::after {
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.project-home-card-menu .project-home-icon-btn[aria-label$="名前を変更"]::after {
+    content: '名前を変更';
+}
+
+.project-home-card-menu .project-home-icon-btn[aria-label$="を削除"]::after {
+    content: '削除';
 }
 
 .project-home-menu-trigger {
@@ -204,6 +255,9 @@ body.project-home-active .main {
     border-radius: 8px;
     background: #fff;
     color: #0f172a;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     font-size: 24px;
     font-weight: 900;
     line-height: 1;
@@ -312,6 +366,19 @@ body.project-home-active .main {
     background: #111;
     border-color: #111;
     color: #fff;
+}
+
+.project-home-action-icon {
+    display: inline-flex;
+    width: 20px;
+    height: 20px;
+    margin-right: 6px;
+    vertical-align: -4px;
+}
+
+.project-home-action-icon .ui-icon {
+    width: 20px;
+    height: 20px;
 }
 
 .project-home-action.danger {

@@ -1,17 +1,20 @@
 import { appState, STEPS_PER_MEASURE, callbacks, clampPlayRangeMeasures } from '../../../core/state.js';
+import { MAX_PROJECT_MEASURES } from '../../../core/constants.js';
 import { INST_TYPE } from '../instrument-map.js';
 
 export function addMeasure() {
-    addMeasureInternal(true);
+    return addMeasureInternal(true);
 }
 
 export function ensureMeasureCount(minMeasures) {
     while (appState.numMeasures < minMeasures) {
-        addMeasureInternal(false);
+        if (!addMeasureInternal(false)) return false;
     }
+    return true;
 }
 
 function addMeasureInternal(shouldRender) {
+    if (appState.numMeasures >= MAX_PROJECT_MEASURES) return false;
     appState.numMeasures++;
     if (appState.beatConfig.length < appState.numMeasures) {
         appState.beatConfig.push([4, 4, 4, 4]);
@@ -35,6 +38,7 @@ function addMeasureInternal(shouldRender) {
     });
     clampPlayRangeMeasures();
     if (shouldRender) callbacks.renderEditor();
+    return true;
 }
 
 export function removeMeasure() {

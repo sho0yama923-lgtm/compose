@@ -11,6 +11,10 @@ export const DURATION_CELLS = {
     '1n':  48,
 };
 
+// 保存・読込ともに扱えるプロジェクト規模。編集時にもこの上限を守る。
+export const MAX_PROJECT_MEASURES = 128;
+export const MAX_PROJECT_TRACKS = 64;
+
 // ツールバー表示順。3連は通常モードでは非表示になる。
 export const DURATION_LIST = [
     { value: '8t',  label: '1拍3連' },

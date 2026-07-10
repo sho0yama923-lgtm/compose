@@ -1,5 +1,6 @@
 import { appState, callbacks } from '../core/state.js';
 import { INST_LABEL, INST_TYPE } from '../features/tracks/instrument-map.js';
+import { createIcon } from './icon.js';
 
 const TAB_REORDER_HOLD_MS = 420;
 
@@ -186,6 +187,10 @@ export function setTopbarTitle() {
 }
 
 export function renderTopbarTabs() {
+    const menuButton = document.getElementById('menuBtn');
+    if (menuButton && !menuButton.querySelector('.ui-icon')) {
+        menuButton.replaceChildren(createIcon('menu'));
+    }
     const previewSlotEl = document.getElementById('topbarPreviewSlot');
     const tabsEl = document.getElementById('topbarTabs');
     if (!previewSlotEl || !tabsEl) return;

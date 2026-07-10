@@ -1,5 +1,5 @@
 import { appState, STEPS_PER_MEASURE, totalSteps, callbacks } from '../../../core/state.js';
-import { CHROMATIC } from '../../../core/constants.js';
+import { CHROMATIC, MAX_PROJECT_TRACKS } from '../../../core/constants.js';
 import {
     INST_TYPE,
     OCTAVE_DEFAULT_BASE,
@@ -52,6 +52,7 @@ export function deleteTrack(id) {
 }
 
 export function addTrack(instrument) {
+    if (!INST_TYPE[instrument] || appState.tracks.length >= MAX_PROJECT_TRACKS) return false;
     const id = appState.nextId++;
     let track;
 
@@ -110,4 +111,5 @@ export function addTrack(instrument) {
 
     appState.tracks.push(track);
     selectTrack(id);
+    return true;
 }
