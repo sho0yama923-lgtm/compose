@@ -409,11 +409,25 @@
     letter-spacing: 0.08em;
 }
 .melody-key-octave-divider {
-    justify-content: flex-end;
-    padding-right: 4px;
-    color: #777;
-    background: #efefef;
+    justify-content: center;
+    padding: 0;
+    color: #fff;
+    background: #eef2f6;
     border-bottom: 1px solid #dbdbdb;
+}
+.melody-octave-marker {
+    display: grid;
+    place-items: center;
+    width: 17px;
+    height: 17px;
+    border-radius: 5px;
+    background: var(--workspace-ink);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 850;
+    line-height: 1;
+    letter-spacing: 0;
+    font-variant-numeric: tabular-nums;
 }
 .melody-grid-octave-divider {
     padding-left: 0;
@@ -585,23 +599,87 @@
     border-left: 1px solid var(--workspace-line);
 }
 .melodic-track-editor .melody-topbar .melody-oct-row {
-    min-height: 44px;
+    min-height: 56px;
     padding: 0;
     border: 0;
     border-top: 1px solid var(--workspace-line);
     border-radius: 0;
     background: transparent;
 }
+.melodic-track-editor .melody-topbar .oct-range-ctrl {
+    gap: 8px;
+    justify-content: center;
+}
 .melodic-track-editor .melody-topbar .oct-range-btn {
     width: 44px;
+    height: 44px;
     min-height: 44px;
-    border: 0;
+    border: 1px solid var(--workspace-line);
     border-radius: 8px;
-    background: transparent;
+    background: rgba(255, 255, 255, 0.82);
+    color: var(--workspace-ink);
+    font-size: 25px;
+    font-weight: 500;
+    line-height: 1;
+    transition: background-color 120ms ease, transform 120ms ease;
 }
 .melodic-track-editor .melody-topbar .oct-range-label {
-    font-size: 11px;
-    color: #475569;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 1 210px;
+    gap: 10px;
+    height: 44px;
+    min-width: 0;
+    padding: 0 12px;
+    overflow: hidden;
+    border-radius: 8px;
+    background: var(--workspace-ink);
+    color: #fff;
+    cursor: grab;
+    touch-action: pan-y;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: transform 140ms var(--motion-ease-out);
+}
+.melodic-track-editor .melody-topbar .oct-range-label.is-swiping {
+    cursor: grabbing;
+    transition: none;
+}
+.melodic-track-editor .melody-topbar .oct-range-prefix {
+    color: rgba(255, 255, 255, 0.58);
+    font-size: 9px;
+    font-weight: 850;
+    letter-spacing: 0.16em;
+}
+.melodic-track-editor .melody-topbar .oct-range-track {
+    display: grid;
+    grid-template-columns: repeat(3, 30px);
+    align-items: center;
+    gap: 0;
+}
+.melodic-track-editor .melody-topbar .oct-range-step {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 24px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 850;
+    font-variant-numeric: tabular-nums;
+}
+.melodic-track-editor .melody-topbar .oct-range-step + .oct-range-step {
+    border-left: 1px solid rgba(255, 255, 255, 0.24);
+}
+.melodic-track-editor .melody-topbar .oct-range-btn:not(:disabled):active {
+    background: #eef1f5;
+    transform: scale(0.95);
+}
+@media (prefers-reduced-motion: reduce) {
+    .melodic-track-editor .melody-topbar .oct-range-btn,
+    .melodic-track-editor .melody-topbar .oct-range-label {
+        transition: none;
+    }
 }
 .drum-track-editor .melody-topbar .duration-mode-row,
 .chord-track-editor .melody-topbar .duration-mode-row {
@@ -618,14 +696,14 @@
 .melodic-track-editor .melody-topbar .grid-mode-tabs,
 .drum-track-editor .melody-topbar .grid-mode-tabs,
 .chord-track-editor .melody-topbar .grid-mode-tabs {
-    gap: 3px;
+    gap: 0;
 }
 .melodic-track-editor .melody-topbar .grid-mode-tab,
 .drum-track-editor .melody-topbar .grid-mode-tab,
 .chord-track-editor .melody-topbar .grid-mode-tab {
     min-width: 44px;
     height: 44px;
-    border-radius: 8px;
+    border-radius: 0;
     font-size: 10px;
 }
 .melodic-track-editor .melody-topbar .duration-value-buttons,
@@ -635,7 +713,7 @@
     grid-template-rows: 44px;
     grid-auto-flow: column;
     grid-auto-columns: 44px;
-    gap: 3px;
+    gap: 0;
     overflow-x: auto;
 }
 .melodic-track-editor .melody-topbar .dur-btn,
@@ -643,8 +721,8 @@
 .chord-track-editor .melody-topbar .dur-btn {
     min-width: 0;
     height: 44px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.82);
+    border-radius: 0;
+    background: transparent;
 }
 .melodic-track-editor .melody-topbar .grid-mode-tab.selected,
 .melodic-track-editor .melody-topbar .dur-btn.selected,
@@ -652,9 +730,9 @@
 .drum-track-editor .melody-topbar .dur-btn.selected,
 .chord-track-editor .melody-topbar .grid-mode-tab.selected,
 .chord-track-editor .melody-topbar .dur-btn.selected {
-    background: var(--workspace-ink);
-    border-color: var(--workspace-ink);
-    color: #fff;
+    background: transparent;
+    border-color: transparent;
+    color: var(--workspace-ink);
 }
 
 .drum-track-editor .drum-editor .timeline-header {

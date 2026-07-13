@@ -1,6 +1,6 @@
 {
   "name": "compose",
-  "version": "1.0.22",
+  "version": "1.0.27",
   "private": true,
   "scripts": {
     "dev": "vite",

@@ -27,6 +27,9 @@ import { beginNoteDragInteraction } from './note-drag-session.js';
 import { emitTutorialAction } from '../core/tutorial-events.js';
 
 const NOTE_DRAG_HOLD_MS = 380;
+const OCTAVE_RANGE_SWIPE_LOCK_PX = 8;
+const OCTAVE_RANGE_SWIPE_STEP_PX = 32;
+const OCTAVE_RANGE_DRAG_LIMIT_PX = 16;
 
 export function renderMelodicEditor(track, editorEl) {
     const measureIndex = appState.currentMeasure;
@@ -62,29 +65,43 @@ export function renderMelodicEditor(track, editorEl) {
     const downBtn = document.createElement('button');
     downBtn.className = 'oct-range-btn';
     downBtn.type = 'button';
-    downBtn.textContent = '<';
+    downBtn.textContent = '‹';
+    downBtn.setAttribute('aria-label', '低い音域へ移動');
     downBtn.disabled = track.viewBase <= 1;
     downBtn.addEventListener('click', () => {
-        track.viewBase = Math.max(1, track.viewBase - 1);
-        track.activeOctave = track.viewBase + 1;
-        track.melodyScrollTop = 0;
-        callbacks.renderEditor();
+        shiftMelodyOctaveRange(track, -1);
     });
 
-    const rangeLabel = document.createElement('span');
+    const rangeTop = Math.min(track.viewBase + 2, 7);
+    const rangeLabel = document.createElement('div');
     rangeLabel.className = 'oct-range-label';
-    rangeLabel.textContent = `${track.viewBase}オクターブ - ${Math.min(track.viewBase + 2, 7)}オクターブ`;
+    rangeLabel.setAttribute('aria-label', `表示中の音域: オクターブ${track.viewBase}から${rangeTop}`);
+    bindOctaveRangeSwipe(rangeLabel, track);
+
+    const rangePrefix = document.createElement('span');
+    rangePrefix.className = 'oct-range-prefix';
+    rangePrefix.textContent = 'OCT';
+    rangePrefix.setAttribute('aria-hidden', 'true');
+
+    const rangeTrack = document.createElement('span');
+    rangeTrack.className = 'oct-range-track';
+    rangeTrack.setAttribute('aria-hidden', 'true');
+    for (let octave = track.viewBase; octave <= rangeTop; octave += 1) {
+        const stepEl = document.createElement('span');
+        stepEl.className = 'oct-range-step';
+        stepEl.textContent = String(octave);
+        rangeTrack.appendChild(stepEl);
+    }
+    rangeLabel.append(rangePrefix, rangeTrack);
 
     const upBtn = document.createElement('button');
     upBtn.className = 'oct-range-btn';
     upBtn.type = 'button';
-    upBtn.textContent = '>';
+    upBtn.textContent = '›';
+    upBtn.setAttribute('aria-label', '高い音域へ移動');
     upBtn.disabled = track.viewBase >= 5;
     upBtn.addEventListener('click', () => {
-        track.viewBase = Math.min(5, track.viewBase + 1);
-        track.activeOctave = track.viewBase + 1;
-        track.melodyScrollTop = 0;
-        callbacks.renderEditor();
+        shiftMelodyOctaveRange(track, 1);
     });
 
     const octTitle = document.createElement('span');
@@ -112,9 +129,15 @@ export function renderMelodicEditor(track, editorEl) {
 
         const keyDividerEl = document.createElement('div');
         keyDividerEl.className = 'melody-key-octave-divider';
-        keyDividerEl.textContent = `Oct ${octave}`;
+        keyDividerEl.setAttribute('aria-label', `オクターブ${octave}`);
         keyDividerEl.style.width = '28px';
         keyDividerEl.style.minWidth = '28px';
+
+        const octaveMarkerEl = document.createElement('span');
+        octaveMarkerEl.className = 'melody-octave-marker';
+        octaveMarkerEl.textContent = String(octave);
+        octaveMarkerEl.setAttribute('aria-hidden', 'true');
+        keyDividerEl.appendChild(octaveMarkerEl);
 
         const gridDividerEl = buildChordHeaderStrip(chordsByBeat);
         gridDividerEl.classList.add('melody-grid-octave-divider');
@@ -278,6 +301,75 @@ function getVisibleOctaves(viewBase) {
     const octaves = [];
     for (let octave = top; octave >= bottom; octave--) octaves.push(octave);
     return octaves;
+}
+
+function shiftMelodyOctaveRange(track, delta) {
+    const nextViewBase = Math.max(1, Math.min(5, track.viewBase + delta));
+    if (nextViewBase === track.viewBase) return false;
+    track.viewBase = nextViewBase;
+    track.activeOctave = nextViewBase + 1;
+    track.melodyScrollTop = 0;
+    callbacks.renderEditor();
+    return true;
+}
+
+function bindOctaveRangeSwipe(rangeEl, track) {
+    let gesture = null;
+
+    const releasePointer = (pointerId) => {
+        try {
+            if (rangeEl.hasPointerCapture?.(pointerId)) rangeEl.releasePointerCapture(pointerId);
+        } catch {}
+    };
+    const resetVisual = () => {
+        rangeEl.classList.remove('is-swiping');
+        rangeEl.style.transform = '';
+    };
+    const finishGesture = (event, cancelled = false) => {
+        if (!gesture || event.pointerId !== gesture.pointerId) return;
+        const { pointerId, startX, axis } = gesture;
+        const distanceX = event.clientX - startX;
+        gesture = null;
+        releasePointer(pointerId);
+        resetVisual();
+        if (cancelled || axis !== 'horizontal' || Math.abs(distanceX) < OCTAVE_RANGE_SWIPE_STEP_PX) return;
+        shiftMelodyOctaveRange(track, distanceX < 0 ? 1 : -1);
+    };
+
+    rangeEl.addEventListener('pointerdown', (event) => {
+        if (!event.isPrimary || (event.pointerType === 'mouse' && event.button !== 0) || gesture) return;
+        gesture = {
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            axis: null,
+        };
+        try {
+            rangeEl.setPointerCapture?.(event.pointerId);
+        } catch {}
+    });
+    rangeEl.addEventListener('pointermove', (event) => {
+        if (!gesture || event.pointerId !== gesture.pointerId) return;
+        const distanceX = event.clientX - gesture.startX;
+        const distanceY = event.clientY - gesture.startY;
+        if (!gesture.axis) {
+            if (Math.max(Math.abs(distanceX), Math.abs(distanceY)) < OCTAVE_RANGE_SWIPE_LOCK_PX) return;
+            gesture.axis = Math.abs(distanceX) > Math.abs(distanceY) ? 'horizontal' : 'vertical';
+        }
+        if (gesture.axis !== 'horizontal') return;
+        event.preventDefault();
+        const isPastBoundary = (distanceX > 0 && track.viewBase <= 1)
+            || (distanceX < 0 && track.viewBase >= 5);
+        const resistance = isPastBoundary ? 0.08 : 0.24;
+        const dragX = Math.max(
+            -OCTAVE_RANGE_DRAG_LIMIT_PX,
+            Math.min(OCTAVE_RANGE_DRAG_LIMIT_PX, distanceX * resistance)
+        );
+        rangeEl.classList.add('is-swiping');
+        rangeEl.style.transform = `translateX(${dragX}px)`;
+    });
+    rangeEl.addEventListener('pointerup', (event) => finishGesture(event));
+    rangeEl.addEventListener('pointercancel', (event) => finishGesture(event, true));
 }
 
 function rebuildMelodyToolbar(toolbarEl, octCtrlEl) {

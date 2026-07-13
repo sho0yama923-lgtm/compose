@@ -27,13 +27,13 @@
 }
 .grid-mode-tabs {
     display: inline-flex;
-    gap: 4px;
+    gap: 0;
     margin-right: 0;
     flex: 0 0 auto;
 }
 .duration-value-buttons {
     display: inline-flex;
-    gap: 4px;
+    gap: 0;
     overflow-x: auto;
     scrollbar-width: none;
     min-width: 0;
@@ -42,11 +42,13 @@
     display: none;
 }
 .grid-mode-tab {
+    position: relative;
+    overflow: hidden;
     min-width: 56px;
     height: 36px;
-    border: 1px solid var(--workspace-line);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.72);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
     color: #4b5563;
     font-size: 12px;
     font-weight: 700;
@@ -54,16 +56,17 @@
     transition: transform 100ms ease-out, background-color 140ms ease-out, color 140ms ease-out;
 }
 .grid-mode-tab.selected {
-    background: #111;
-    color: #fff;
-    border-color: #111;
+    background: transparent;
+    color: var(--workspace-ink);
 }
 .dur-btn {
+    position: relative;
+    overflow: hidden;
     min-width: 48px;
     height: 40px;
-    border: 1px solid var(--workspace-line);
-    border-radius: 8px;
-    background: #fff;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
     font-size: 13px;
     cursor: pointer;
     touch-action: manipulation;
@@ -77,9 +80,20 @@
     flex: 0 0 auto;
 }
 .dur-btn.selected {
-    background: #111;
-    color: #fff;
-    border-color: #111;
+    background: transparent;
+    color: var(--workspace-ink);
+}
+.grid-mode-tab.selected::after,
+.dur-btn.selected::after {
+    content: '';
+    position: absolute;
+    right: 10px;
+    bottom: 0;
+    left: 10px;
+    height: 3px;
+    border-radius: 0;
+    background: var(--workspace-accent);
+    pointer-events: none;
 }
 .dur-btn.dotted {
     margin-left: 2px;
@@ -118,7 +132,7 @@
     height: 18px;
 }
 .dur-btn.selected .note-svg-icon {
-    filter: invert(1);
+    filter: none;
 }
 .dur-badge {
     position: absolute;
