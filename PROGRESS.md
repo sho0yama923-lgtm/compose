@@ -22,18 +22,22 @@
 
 ## 次の作業予定
 
-1. `Run` actionから固定URLでin-app Browserを開き、Safari対象UI（プロジェクト操作メニュー、上部タブ横スクロール、プレビューカード、下部プレイヤー）を確認する。
-2. Xcode OrganizerでarchiveをApp Store Connect用署名へ切り替え、Validate / Distributeを通す。
-3. Privacy Nutrition Labelsと `ios/App/PrivacyInfo.xcprivacy` を一致させ、Version / Build / Bundle ID / Team / app recordを提出値へそろえる。
+1. GitHub Pages のCDNキャッシュ更新後、`https://ezmelon.com/` が HTTPS 200 になることを確認する。
+2. `Run` actionから固定URLでin-app Browserを開き、Safari対象UI（プロジェクト操作メニュー、上部タブ横スクロール、プレビューカード、下部プレイヤー）を確認する。
+3. Xcode OrganizerでarchiveをApp Store Connect用署名へ切り替え、Validate / Distributeを通す。
+4. Privacy Nutrition Labelsと `ios/App/PrivacyInfo.xcprivacy` を一致させ、Version / Build / Bundle ID / Team / app recordを提出値へそろえる。
 
 ## 現在の注意点
 
+- `ezmelon.com` は Pages API 上で custom domain、GitHub Actions配信、HTTPS強制、証明書承認まで反映済み。`/index.html` は 200 だが、ルート `/` は設定変更前の404がGitHub CDNに一時キャッシュされている。
 - Web UIの確認は `docs/codex-workflow.md` のBrowser手順を優先する。WebKit smokeはWeb回帰用で、iOS nativeの代替ではない。
 - Safari / 復帰後の音声は、ユーザー操作内でWeb Audioを復旧する設計。復帰イベントで自動的にTone contextを再開しない。
 - 保存データの上限は128小節・64トラック。編集時とインポート時の両方で守る。
 
 ## 変更履歴
 
+- 2026-07-13: GitHub Pages を再確認し、`cname: ezmelon.com`、`build_type: workflow`、HTTPS強制、証明書承認済みへの更新を確認。`/index.html` は HTTPS 200、ルートは旧404のCDNキャッシュ（HIT）が残っているため時間経過後の再確認が必要。コード変更なし。
+- 2026-07-13: `ezmelon.com` の公開障害を実環境で診断。DNSとデプロイ成果物は正常、Pages のリポジトリ設定が legacy branch 配信かつ custom domain 未設定であることを確認した。診断のみのためコード・Pages設定は未変更。
 - 2026-07-13: 通常/3連と音符を上部トラック選択と同じフラットな選択バーへ変更。個別ボタンの枠・背景・間隔をなくし、透明な44px以上の操作領域と青い3px下線だけを残した。モード群と音符群の間は既存の1px縦線と8px余白を維持。Pianoで通常/3連を切り替え、390×844pxと1280×720pxの実ブラウザで枠0px・背景透明・group gap 0px・縦線1px・横溢れなし・console errorなしを確認し、`npm run build` 成功。WebKit smoke / nativeは未実施。version `1.0.27`。
 - 2026-07-13: 通常/3連と音符ボタン、選択中の青い下線を `border-radius: 0` へ変更し、直角のステップシーケンサー表現へ統一。オクターブ操作など他部品の角丸は維持した。Pianoで通常/3連を切り替え、390×844pxと1280×720pxの実ブラウザでボタン・下線とも0px、操作領域44px以上、横溢れなし、console errorなしを確認し、`npm run build` 成功。WebKit smoke / nativeは未実施。version `1.0.26`。
 - 2026-07-13: 通常/3連と全音符ボタンの選択表現を黒背景から白背景＋青い3pxアンダーラインへ統一。未選択と同じ枠・黒文字/黒い音符を保ち、`src/styles/components/duration-toolbar.css` の `--workspace-accent` で選択だけを示す。Pianoで通常→3連、1拍3連→半拍3連、通常への復帰を実ブラウザ確認し、390×844pxと1280×720pxで白背景・3px下線・横溢れなし、console errorなし、`npm run build` 成功。WebKit smoke / nativeは未実施。version `1.0.25`。
