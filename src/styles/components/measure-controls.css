@@ -245,9 +245,37 @@
     line-height: 1;
     white-space: nowrap;
 }
-.mb-nav-btn .ui-icon {
+.mb-nav-icon {
     width: 24px;
     height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    flex: 0 0 auto;
+    line-height: 1;
+}
+.mb-nav-icon-bar {
+    width: 2px;
+    height: 22px;
+    border-radius: 999px;
+    background: currentColor;
+    flex: 0 0 auto;
+}
+.mb-nav-icon-triangle {
+    width: 0;
+    height: 0;
+    flex: 0 0 auto;
+}
+.mb-nav-icon.prev .mb-nav-icon-triangle {
+    border-top: 9px solid transparent;
+    border-bottom: 9px solid transparent;
+    border-right: 14px solid currentColor;
+}
+.mb-nav-icon.next .mb-nav-icon-triangle {
+    border-top: 9px solid transparent;
+    border-bottom: 9px solid transparent;
+    border-left: 14px solid currentColor;
 }
 .mb-play-btn {
     justify-self: center;
@@ -268,17 +296,6 @@
 }
 .mb-play-btn:not(:disabled):active {
     transform: scale(0.95);
-}
-.mb-play-btn .ui-icon {
-    width: 30px;
-    height: 30px;
-}
-.mb-play-btn .ui-icon-pause,
-.mb-play-btn.is-playing .ui-icon-play {
-    display: none;
-}
-.mb-play-btn.is-playing .ui-icon-pause {
-    display: block;
 }
 .measure-range-editor {
     display: flex;

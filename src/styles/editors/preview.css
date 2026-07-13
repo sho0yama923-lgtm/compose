@@ -6,7 +6,7 @@
     overflow-anchor: none;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
     min-height: 0;
 }
 .preview-help {
@@ -48,8 +48,16 @@
     gap: 8px;
     padding: 10px 12px;
     background: #fff;
-    border: 1px solid #dbe2ec;
-    border-radius: 10px;
+    border: 1px solid var(--workspace-line);
+    border-radius: var(--workspace-radius);
+    box-shadow: 0 2px 8px rgba(23, 32, 51, 0.035);
+}
+.preview-song-settings::before {
+    content: '曲の設定';
+    color: var(--workspace-muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
 }
 .preview-song-settings strong {
     font-size: 11px;
@@ -122,13 +130,13 @@
     --preview-repeat-rail-width: 12px;
     --preview-repeat-rail-overhang: 0px;
     --preview-grid-side-gap: 14px;
-    --preview-header-small-button-size: 32px;
-    --preview-header-small-icon-size: 17px;
+    --preview-header-small-button-size: 20px;
+    --preview-header-small-icon-size: 15px;
     --preview-header-icon-button-size: 30px;
     --preview-header-icon-glyph-size: 20px;
     --preview-header-checkbox-size: 20px;
     --preview-header-touch-size: 44px;
-    --preview-header-controls-width: 118px;
+    --preview-header-controls-width: 92px;
     --preview-header-left-gap: 8px;
     --preview-header-right-gap: 8px;
     --preview-repeat-rail-bg: #bfdbfe;
@@ -139,8 +147,9 @@
     --preview-copy-range-border: #ef4444;
     position: relative;
     background: #fff;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
+    border: 1px solid var(--workspace-line);
+    border-radius: var(--workspace-radius);
+    box-shadow: 0 2px 8px rgba(23, 32, 51, 0.04);
     overflow: visible;
     flex-shrink: 0;
     user-select: none;
@@ -181,10 +190,10 @@
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 8px;
-    padding: 8px var(--preview-header-right-gap) 8px var(--preview-header-left-gap);
+    gap: 10px;
+    padding: 6px var(--preview-header-right-gap) 6px var(--preview-header-left-gap);
     color: #fff;
-    background: #111;
+    background: var(--workspace-ink);
     cursor: pointer;
     touch-action: manipulation;
     letter-spacing: 0.04em;
@@ -192,7 +201,7 @@
 .preview-card-header:active { opacity: 0.75; }
 .preview-card-title {
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 800;
     line-height: 1.4;
 }
 .preview-card-title-group {
@@ -206,7 +215,7 @@
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 4px;
+    gap: 6px;
     min-width: var(--preview-header-controls-width);
 }
 .preview-track-toggle-row {
@@ -215,7 +224,7 @@
     justify-content: space-between;
     gap: 8px;
     width: 100%;
-    min-height: 32px;
+    min-height: 24px;
 }
 .preview-track-toggle {
     display: inline-flex;
@@ -235,7 +244,7 @@
 }
 .preview-track-repeat-slot {
     flex: 0 0 auto;
-    min-height: var(--preview-header-small-button-size);
+    min-height: var(--preview-header-icon-button-size);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -249,12 +258,12 @@
 }
 .preview-track-volume-label {
     flex: 0 0 auto;
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
     white-space: nowrap;
 }
 .preview-track-volume-slider {
-    width: 72px;
+    width: 68px;
     margin: 0;
 }
 .preview-track-repeat-btn {
@@ -301,7 +310,8 @@
     border: 1px solid #d8dee8;
     border-radius: 8px;
     background: #fff;
-    font-size: 0;
+    font-size: var(--preview-header-small-icon-size);
+    font-weight: 800;
     color: #111;
     display: inline-flex;
     align-items: center;
@@ -310,10 +320,6 @@
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
     cursor: pointer;
     touch-action: manipulation;
-}
-.preview-track-tone-btn .ui-icon {
-    width: var(--preview-header-small-icon-size);
-    height: var(--preview-header-small-icon-size);
 }
 .preview-track-tone-btn:active,
 .preview-track-repeat-btn:active {

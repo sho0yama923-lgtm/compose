@@ -4,12 +4,19 @@
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
     --app-viewport-height: 100dvh;
+    --workspace-ink: #172033;
+    --workspace-muted: #637083;
+    --workspace-canvas: #f3f5f8;
+    --workspace-surface: #fff;
+    --workspace-line: #d9e0e9;
+    --workspace-accent: #2f6feb;
+    --workspace-radius: 12px;
 }
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
-    background: #f0f0f0;
-    color: #111;
+    background: var(--workspace-canvas);
+    color: var(--workspace-ink);
     margin: 0;
     height: var(--app-viewport-height);
     overflow: hidden;
@@ -40,7 +47,7 @@ html[data-app-runtime="web"] body {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: #0a0a0a;
+    background: var(--workspace-ink);
     padding: var(--safe-top) 12px 0;
     flex-shrink: 0;
     min-height: calc(56px + var(--safe-top));
@@ -55,8 +62,6 @@ html[data-app-runtime="web"] body {
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    scroll-snap-type: x proximity;
-    scroll-padding-inline: 4px;
 }
 .topbar-tabs::-webkit-scrollbar {
     display: none;
@@ -77,20 +82,16 @@ html[data-app-runtime="web"] body {
     width: 44px;
     min-width: 44px;
     min-height: 44px;
+    font-size: 20px;
     background: none;
     border: none;
     color: #fff;
     cursor: pointer;
-    padding: 10px;
-    border-radius: 4px;
+    padding: 8px;
+    border-radius: 10px;
     line-height: 1;
     flex-shrink: 0;
     touch-action: manipulation;
-}
-.btn-menu .ui-icon {
-    display: block;
-    width: 24px;
-    height: 24px;
 }
 .btn-menu:active { background: #222; }
 .topbar-right {
@@ -109,11 +110,12 @@ html[data-app-runtime="web"] body {
 }
 .bpm-input {
     width: 50px;
+    min-height: 40px;
     font-size: 16px;
     padding: 5px 6px;
-    border-radius: 3px;
-    border: 1px solid #444;
-    background: #1a1a1a;
+    border-radius: 9px;
+    border: 1px solid #536078;
+    background: #222d43;
     color: #fff;
     text-align: center;
 }
@@ -142,9 +144,9 @@ html[data-app-runtime="web"] body {
 .topbar-tab-btn {
     background: transparent;
     color: #d6d6d6;
-    border: 1px solid #4a4a4a;
-    min-width: 76px;
-    min-height: 36px;
+    border: 1px solid #536078;
+    min-width: 72px;
+    min-height: 44px;
     padding: 0 12px;
     font-size: 12px;
     letter-spacing: 0.04em;
@@ -155,14 +157,13 @@ html[data-app-runtime="web"] body {
     text-overflow: ellipsis;
     user-select: none;
     -webkit-user-select: none;
-    scroll-snap-align: start;
 }
 .topbar-preview-slot .topbar-tab-btn {
     min-width: 72px;
 }
 .topbar-tab-btn.is-active {
     background: #fff;
-    color: #111;
+    color: var(--workspace-ink);
     border-color: #fff;
 }
 .topbar-tab-btn.is-dragging {
@@ -311,7 +312,14 @@ html[data-app-runtime="web"] body {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     padding: 10px 12px;
-    background: #f0f0f0;
+    background: var(--workspace-canvas);
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+    outline: 3px solid rgba(47, 111, 235, 0.45);
+    outline-offset: 2px;
 }
 
 .topbar,

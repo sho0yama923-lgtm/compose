@@ -34,6 +34,7 @@
 
 ## 変更履歴
 
+- 2026-07-13: 作曲ソフト初心者向けにWeb UIの情報階層を整理。ホームへ用途説明を加え、ワークスペース共通の色・余白・角丸・focus表示を定義し、全体プレビューの「曲の設定」とトラックカードを統一した。390×844pxと1280×720pxで横溢れなし、新規作成・reload後の再読込、`npm run build`、WebKit smoke 4件成功。既存のローカル一覧だけが残った2件は本体欠損のため読込不可だが、新規保存経路は正常。version `1.0.8`。
 - 2026-07-10: CodexのBrowser確認導線を固定化。`Run` actionを`npm run dev:codex`へ切り替え、`127.0.0.1:5173`を`--strictPort`で固定した。Browserの古いタブ、ポート競合、タブ接続喪失ごとの復旧順をrunbookへ追加。`npm run build`とスクリプト定義確認が成功。version `1.0.7`。
 - 2026-07-10: Safari向けのUI視認性と操作導線を改善。プロジェクトカードの常時表示していた編集・削除を1つのSVG操作メニューへ集約し、上部タブに横スクロールのsnap、全体プレビューの操作ボタン・文字・音量表示を拡大した。下部プレイヤー、メニュー、追加、編集、削除、オプションをSVGアイコンへ統一。`npm run build` とWebKit smoke 4件成功。version `1.0.6`。
 - 2026-07-10: エージェント作業契約、短い復帰記録、Web / nativeのデバッグrunbookを再編。作業種別ごとに最小確認を選ぶ表、サブエージェント / skillの分担基準、失敗artifactの読み方を追加した。release CIは`dist/`をpreview serverで検証し、失敗時はreport・trace・videoをartifact化する。dev WebKit smokeは4件、release artifact smokeは2件成功。version `1.0.5`。

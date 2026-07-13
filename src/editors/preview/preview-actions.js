@@ -4,7 +4,6 @@ import { copyTrackMeasureRange, pasteTrackMeasureRange } from '../../features/tr
 import repeatLoopIconUrl from '../../assets/repeat_loop_icon.svg';
 import { handleRepeatButton, isRepeatButtonActive, isRepeatButtonDisabled, shouldShowRepeatButton } from './preview-repeat.js';
 import { emitTutorialAction } from '../../core/tutorial-events.js';
-import { createIcon } from '../../ui/icon.js';
 
 export function buildPreviewActionMenu(track) {
     const menuEl = document.createElement('div');
@@ -199,7 +198,7 @@ export function buildTrackControls(track) {
     const toneBtn = document.createElement('button');
     toneBtn.type = 'button';
     toneBtn.className = 'preview-track-tone-btn';
-    toneBtn.appendChild(createIcon('more'));
+    toneBtn.textContent = '…';
     toneBtn.title = 'オプション';
     toneBtn.setAttribute('aria-label', 'オプション');
     toneBtn.addEventListener('click', () => {
