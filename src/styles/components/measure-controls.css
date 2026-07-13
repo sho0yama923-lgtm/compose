@@ -132,6 +132,8 @@
     background: #fff;
     border: 1px solid #e7ebf2;
     box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
     transition: height 220ms ease, min-height 220ms ease, border-radius 220ms ease;
 }
 .measure-seek-card.is-expanded {
@@ -236,7 +238,11 @@
     touch-action: manipulation;
 }
 .mb-btn:disabled { opacity: 0.25; cursor: default; }
-.mb-btn:not(:disabled):active { opacity: 0.72; }
+.mb-btn:not(:disabled):active {
+    opacity: 1;
+    transform: scale(0.9);
+    transition: transform 100ms ease-out;
+}
 .mb-nav-btn {
     width: 44px;
     height: 44px;
@@ -295,7 +301,7 @@
     background: transparent;
 }
 .mb-play-btn:not(:disabled):active {
-    transform: scale(0.95);
+    transform: scale(0.9);
 }
 .measure-range-editor {
     display: flex;

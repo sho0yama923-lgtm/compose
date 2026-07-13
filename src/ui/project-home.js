@@ -28,6 +28,7 @@ function createProjectCard(project, handlers) {
         ${appState.projectSelectionMode ? '<span class="project-home-check" aria-hidden="true"></span>' : ''}
         <span class="project-home-card-title"></span>
         <span class="project-home-card-meta"></span>
+        ${appState.projectSelectionMode ? '' : '<span class="project-home-card-chevron" aria-hidden="true">›</span>'}
     `;
     openButton.querySelector('.project-home-card-title').textContent = project.name;
     openButton.querySelector('.project-home-card-meta').textContent = `最終更新 ${formatProjectUpdatedAt(project.updatedAt)}`;
@@ -42,13 +43,40 @@ function createProjectCard(project, handlers) {
     const tools = document.createElement('div');
     tools.className = 'project-home-card-tools';
 
+    const menuTrigger = document.createElement('button');
+    menuTrigger.className = 'project-home-icon-btn project-home-card-menu-trigger';
+    menuTrigger.type = 'button';
+    menuTrigger.setAttribute('aria-label', `${project.name} の操作`);
+    menuTrigger.setAttribute('aria-expanded', 'false');
+    menuTrigger.textContent = '…';
+
+    const menu = document.createElement('div');
+    menu.className = 'project-home-card-menu';
+    menu.hidden = true;
+
+    const closeMenu = () => {
+        menu.hidden = true;
+        menuTrigger.setAttribute('aria-expanded', 'false');
+    };
+    menuTrigger.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const nextOpen = menu.hidden;
+        item.dispatchEvent(new CustomEvent('project-card-menu-open', {
+            bubbles: true,
+            detail: { currentMenu: menu },
+        }));
+        menu.hidden = !nextOpen;
+        menuTrigger.setAttribute('aria-expanded', String(nextOpen));
+    });
+
     const renameButton = document.createElement('button');
     renameButton.className = 'project-home-icon-btn';
     renameButton.type = 'button';
     renameButton.setAttribute('aria-label', `${project.name} の名前を変更`);
-    renameButton.textContent = '✎';
+    renameButton.textContent = '名前を変更';
     renameButton.addEventListener('click', (event) => {
         event.stopPropagation();
+        closeMenu();
         handlers.onRenameProject(project);
     });
 
@@ -56,13 +84,15 @@ function createProjectCard(project, handlers) {
     deleteButton.className = 'project-home-icon-btn danger';
     deleteButton.type = 'button';
     deleteButton.setAttribute('aria-label', `${project.name} を削除`);
-    deleteButton.textContent = '×';
+    deleteButton.textContent = '削除';
     deleteButton.addEventListener('click', (event) => {
         event.stopPropagation();
+        closeMenu();
         handlers.onDeleteProject(project);
     });
 
-    tools.append(renameButton, deleteButton);
+    menu.append(renameButton, deleteButton);
+    tools.append(menuTrigger, menu);
     item.append(openButton);
     if (!appState.projectSelectionMode) {
         item.append(tools);
@@ -140,7 +170,7 @@ export function renderProjectHome(handlers) {
         <div class="project-home-shell">
             <div class="project-home-header">
                 <div>
-                    <p class="project-home-kicker">ezmelo workspace</p>
+                    <p class="project-home-kicker">ezmelo</p>
                     <h1>プロジェクト一覧</h1>
                     <p class="project-home-lead">プロジェクトを開くか、新しく作成します。</p>
                 </div>
@@ -187,6 +217,16 @@ export function renderProjectHome(handlers) {
         list.appendChild(createProjectCard(project, handlers));
     });
 
+    home.addEventListener('project-card-menu-open', (event) => {
+        const currentMenu = event.detail?.currentMenu;
+        home.querySelectorAll('.project-home-card-menu').forEach((cardMenu) => {
+            if (cardMenu !== currentMenu) cardMenu.hidden = true;
+        });
+        home.querySelectorAll('.project-home-card-menu-trigger').forEach((button) => {
+            if (button.nextElementSibling !== currentMenu) button.setAttribute('aria-expanded', 'false');
+        });
+    });
+
     home.querySelectorAll('[data-project-new="true"]').forEach((button) => {
         button.addEventListener('click', () => openCreateProjectDialog(home, handlers));
     });
@@ -213,8 +253,14 @@ export function renderProjectHome(handlers) {
     });
     shell?.addEventListener('click', (event) => {
         const target = event.target;
-        if (target instanceof Element && target.closest('.project-home-header-actions')) return;
+        if (target instanceof Element && target.closest('.project-home-header-actions, .project-home-card-tools')) return;
         closeMenu();
+        home.querySelectorAll('.project-home-card-menu').forEach((cardMenu) => {
+            cardMenu.hidden = true;
+        });
+        home.querySelectorAll('.project-home-card-menu-trigger').forEach((button) => {
+            button.setAttribute('aria-expanded', 'false');
+        });
     });
     home.querySelector('[data-project-tutorial="true"]')?.addEventListener('click', () => {
         runMenuAction(handlers.onStartTutorial);
