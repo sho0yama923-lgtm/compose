@@ -50,6 +50,10 @@ function isValidStepArray(steps, length) {
         && steps.every(isValidStepValue);
 }
 
+function isCompatibleStepArray(steps, length) {
+    return Array.isArray(steps) && steps.length === length;
+}
+
 function isValidChordEntry(entry) {
     return entry === null || (
         isPlainObject(entry)
@@ -93,6 +97,35 @@ function isValidTrackShape(track, length) {
         ));
 }
 
+function getCompatibleTrackIssue(track, length) {
+    if (!isPlainObject(track)) return 'not-an-object';
+    if (!VALID_INSTRUMENT_IDS.has(track.instrument)) return 'unknown-instrument';
+    if (!Number.isSafeInteger(track.id) || track.id < 0) return 'invalid-id';
+
+    const type = INST_TYPE[track.instrument];
+    if (type === 'rhythm') {
+        if (!Array.isArray(track.rows) || track.rows.length > MAX_DRUM_ROWS) return 'invalid-drum-rows';
+        const invalidRowIndex = track.rows.findIndex((row) => !(
+            isPlainObject(row) && isCompatibleStepArray(row.steps, length)
+        ));
+        return invalidRowIndex === -1 ? null : `invalid-drum-row:${invalidRowIndex}`;
+    }
+
+    if (type === 'chord') {
+        if (!isCompatibleStepArray(track.soundSteps, length)) return 'invalid-chord-sound-steps';
+        if (!Array.isArray(track.chordMap) || track.chordMap.length !== length) return 'invalid-chord-map';
+        return null;
+    }
+
+    if (!isPlainObject(track.stepsMap)) return 'invalid-melody-map';
+    const stepEntries = Object.entries(track.stepsMap);
+    if (stepEntries.length > CHROMATIC.length * 7) return 'too-many-melody-rows';
+    const invalidEntry = stepEntries.find(([note, steps]) => (
+        !/^[A-G]#?[1-7]$/.test(note) || !isCompatibleStepArray(steps, length)
+    ));
+    return invalidEntry ? `invalid-melody-row:${invalidEntry[0]}` : null;
+}
+
 function isValidSaveDataShape(data) {
     if (!isPlainObject(data) || data.version !== DATA_VERSION) return false;
     if (data.nextId !== undefined && (!Number.isSafeInteger(data.nextId) || data.nextId < 0)) {
@@ -124,6 +157,37 @@ function isValidSaveDataShape(data) {
     });
 }
 
+function getCompatibleSaveDataIssue(data) {
+    if (!isPlainObject(data) || data.version !== DATA_VERSION) return 'invalid-envelope';
+    if (!Number.isInteger(data.numMeasures)
+        || data.numMeasures < 1
+        || data.numMeasures > MAX_PROJECT_MEASURES) {
+        return 'invalid-measure-count';
+    }
+    if (!Array.isArray(data.tracks)
+        || data.tracks.length === 0
+        || data.tracks.length > MAX_PROJECT_TRACKS) {
+        return 'invalid-track-count';
+    }
+    if (data.repeatStates !== undefined) {
+        if (!isPlainObject(data.repeatStates)
+            || Object.keys(data.repeatStates).length > MAX_REPEAT_STATES) {
+            return 'invalid-repeat-state-count';
+        }
+    }
+
+    const length = STEPS_PER_MEASURE * data.numMeasures;
+    const trackIds = new Set();
+    for (let index = 0; index < data.tracks.length; index++) {
+        const track = data.tracks[index];
+        const trackIssue = getCompatibleTrackIssue(track, length);
+        if (trackIssue) return `invalid-track:${index}:${trackIssue}`;
+        if (trackIds.has(track.id)) return `duplicate-track-id:${index}`;
+        trackIds.add(track.id);
+    }
+    return null;
+}
+
 function normalizeStepArray(steps, length) {
     if (Array.isArray(steps) && steps.length !== length) {
         return null;
@@ -144,6 +208,28 @@ function normalizeStepArray(steps, length) {
 
 function normalizeStepsOrEmpty(steps, length) {
     return normalizeStepArray(steps, length) ?? Array(length).fill(null);
+}
+
+function normalizeChordArray(chordMap, length) {
+    if (!Array.isArray(chordMap) || chordMap.length !== length) {
+        return Array(length).fill(null);
+    }
+    return chordMap.map((entry) => {
+        if (!isPlainObject(entry)) return null;
+        const root = CHORD_ROOTS.includes(entry.root) ? entry.root : 'C';
+        const type = Object.prototype.hasOwnProperty.call(CHORD_TYPES, entry.type) ? entry.type : 'M';
+        const octave = Number.isInteger(entry.octave)
+            && entry.octave >= MIN_CHORD_OCTAVE
+            && entry.octave <= MAX_CHORD_OCTAVE
+            ? entry.octave
+            : 3;
+        return {
+            root,
+            type,
+            octave,
+            customNotes: normalizeChordCustomNotes(entry.customNotes),
+        };
+    });
 }
 
 function normalizeBeatConfig(numMeasures, beatConfig) {
@@ -184,16 +270,7 @@ function normalizeTrack(track, length) {
     }
 
     if (type === 'chord') {
-        track.chordMap = normalizeStepsOrEmpty(track.chordMap, length);
-        track.chordMap = track.chordMap.map((entry) => {
-            if (!entry || typeof entry !== 'object') return null;
-            return {
-                root: entry.root ?? 'C',
-                type: entry.type ?? 'M',
-                octave: typeof entry.octave === 'number' ? entry.octave : 3,
-                customNotes: normalizeChordCustomNotes(entry.customNotes),
-            };
-        });
+        track.chordMap = normalizeChordArray(track.chordMap, length);
         track.soundSteps = normalizeStepsOrEmpty(track.soundSteps, length);
         track.playbackInstrument = INST_TYPE[track.playbackInstrument] === 'melody'
             ? track.playbackInstrument
@@ -341,11 +418,28 @@ export function createSaveData() {
 }
 
 export function restoreFromData(data, options = {}) {
-    if (!isValidSaveDataShape(data)) return false;
+    if (!isPlainObject(data)
+        || !Number.isInteger(data.version)
+        || data.version < 1
+        || data.version > DATA_VERSION) return false;
+    const migratedData = { ...data, version: DATA_VERSION };
+    const compatibleIssue = options.allowCompatibleShape
+        ? getCompatibleSaveDataIssue(migratedData)
+        : null;
+    const isValidShape = options.allowCompatibleShape
+        ? compatibleIssue === null
+        : isValidSaveDataShape(migratedData);
+    if (compatibleIssue) {
+        console.warn(`[Project] compatible restore rejected: ${compatibleIssue}`);
+    }
+    if (!isValidShape) return false;
 
-    appState.numMeasures = data.numMeasures ?? 4;
-    const nextTrackId = Math.max(0, ...data.tracks.map((track) => track.id + 1));
-    appState.nextId = Math.max(nextTrackId, data.nextId ?? 0);
+    appState.numMeasures = migratedData.numMeasures ?? 4;
+    const nextTrackId = Math.max(0, ...migratedData.tracks.map((track) => track.id + 1));
+    const savedNextId = Number.isSafeInteger(migratedData.nextId) && migratedData.nextId >= 0
+        ? migratedData.nextId
+        : 0;
+    appState.nextId = Math.max(nextTrackId, savedNextId);
     appState.currentMeasure = 0;
     appState.activeTrackId = null;
     appState.lastTouchedTrackId = null;
@@ -369,14 +463,14 @@ export function restoreFromData(data, options = {}) {
     appState.clipboard = null;
     options.clearRepeatState?.();
     appState.chordDrumSheetOpen = false;
-    appState.drumHintDismissed = data.drumHintDismissed === true;
-    appState.chordHintDismissed = data.chordHintDismissed === true;
-    appState.melodicHintDismissed = data.melodicHintDismissed === true;
-    appState.previewHintDismissed = data.previewHintDismissed === true;
+    appState.drumHintDismissed = migratedData.drumHintDismissed === true;
+    appState.chordHintDismissed = migratedData.chordHintDismissed === true;
+    appState.melodicHintDismissed = migratedData.melodicHintDismissed === true;
+    appState.previewHintDismissed = migratedData.previewHintDismissed === true;
     const songSettings = normalizeSongSettings(
-        data.songRoot ?? DEFAULT_SONG_SETTINGS.root,
-        data.songHarmony ?? DEFAULT_SONG_SETTINGS.harmony,
-        data.songScaleFamily ?? DEFAULT_SONG_SETTINGS.scaleFamily
+        migratedData.songRoot ?? migratedData.songKeyRoot ?? DEFAULT_SONG_SETTINGS.root,
+        migratedData.songHarmony ?? DEFAULT_SONG_SETTINGS.harmony,
+        migratedData.songScaleFamily ?? DEFAULT_SONG_SETTINGS.scaleFamily
     );
     appState.songRoot = songSettings.root;
     appState.songHarmony = songSettings.harmony;
@@ -386,19 +480,19 @@ export function restoreFromData(data, options = {}) {
     appState.lastNormalDuration = '16n';
     appState.lastTripletDuration = '8t';
     appState.dottedMode = false;
-    appState.beatConfig = normalizeBeatConfig(appState.numMeasures, data.beatConfig);
+    appState.beatConfig = normalizeBeatConfig(appState.numMeasures, migratedData.beatConfig);
 
     const length = totalSteps();
-    appState.tracks = data.tracks.map((track) => normalizeTrack({ ...track }, length));
+    appState.tracks = migratedData.tracks.map((track) => normalizeTrack({ ...track }, length));
     appState.repeatStates = normalizeRepeatStates(
-        data.repeatStates,
+        migratedData.repeatStates,
         appState.tracks.map((track) => track.id)
     );
     appState.activeTrackId = appState.tracks[0]?.id ?? null;
     appState.lastTouchedTrackId = appState.activeTrackId;
 
-    if (data.bpm !== undefined && data.bpm !== null) {
-        document.getElementById('bpmInput').value = String(normalizeBpmValue(data.bpm));
+    if (migratedData.bpm !== undefined && migratedData.bpm !== null) {
+        document.getElementById('bpmInput').value = String(normalizeBpmValue(migratedData.bpm));
     }
 
     return true;

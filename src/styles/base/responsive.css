@@ -108,10 +108,13 @@
 .drum-track-editor .melody-topbar .duration-toolbar,
 .chord-track-editor .melody-topbar .duration-toolbar {
     display: flex;
-    flex-wrap: wrap;
-    gap: 2px;
-    padding: 0;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 6px;
+    padding: 8px 12px;
     align-items: stretch;
+    background: var(--workspace-canvas);
+    border-bottom: 1px solid var(--workspace-line);
 }
 .melodic-track-editor .melody-topbar .duration-mode-row,
 .melodic-track-editor .melody-topbar .duration-value-row,
@@ -124,10 +127,10 @@
     gap: 5px;
     min-width: 0;
     margin: 0;
-    padding: 4px 6px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.82);
-    border: 1px solid #dce3ef;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    border: 0;
 }
 .melodic-track-editor .melody-topbar .duration-mode-row,
 .drum-track-editor .melody-topbar .duration-mode-row,
@@ -138,9 +141,11 @@
 .drum-track-editor .melody-topbar .duration-value-row,
 .chord-track-editor .melody-topbar .duration-value-row {
     flex: 1 1 240px;
+    padding-top: 6px;
+    border-top: 1px solid var(--workspace-line);
 }
 .melodic-track-editor .melody-topbar .duration-toolbar {
-    gap: 2px;
+    gap: 6px;
 }
 .melodic-track-editor .melody-topbar .melody-toolbar-primary {
     display: flex;
@@ -546,4 +551,173 @@
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 6px;
+}
+
+/* ======= Compact editor workstation ======= */
+.drum-track-editor .melody-topbar .duration-toolbar,
+.chord-track-editor .melody-topbar .duration-toolbar {
+    min-height: 56px;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: #f7f9fc;
+    border-bottom: 1px solid var(--workspace-line);
+}
+.melodic-track-editor .melody-topbar .duration-toolbar {
+    gap: 6px;
+    padding: 6px 10px;
+    background: #f7f9fc;
+}
+.melodic-track-editor .melody-topbar .melody-toolbar-primary {
+    min-height: 44px;
+    align-items: center;
+    gap: 8px;
+}
+.melodic-track-editor .melody-topbar .duration-mode-row {
+    flex: 0 0 auto;
+}
+.melodic-track-editor .melody-topbar .duration-value-row {
+    flex: 1 1 auto;
+    width: auto;
+    padding: 0 0 0 8px;
+    border-top: 0;
+    border-left: 1px solid var(--workspace-line);
+}
+.melodic-track-editor .melody-topbar .melody-oct-row {
+    min-height: 44px;
+    padding: 0;
+    border: 0;
+    border-top: 1px solid var(--workspace-line);
+    border-radius: 0;
+    background: transparent;
+}
+.melodic-track-editor .melody-topbar .oct-range-btn {
+    width: 44px;
+    min-height: 44px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+}
+.melodic-track-editor .melody-topbar .oct-range-label {
+    font-size: 11px;
+    color: #475569;
+}
+.drum-track-editor .melody-topbar .duration-mode-row,
+.chord-track-editor .melody-topbar .duration-mode-row {
+    flex: 0 0 auto;
+}
+.drum-track-editor .melody-topbar .duration-value-row,
+.chord-track-editor .melody-topbar .duration-value-row {
+    flex: 1 1 auto;
+    width: auto;
+    padding: 0 0 0 8px;
+    border-top: 0;
+    border-left: 1px solid var(--workspace-line);
+}
+.melodic-track-editor .melody-topbar .grid-mode-tabs,
+.drum-track-editor .melody-topbar .grid-mode-tabs,
+.chord-track-editor .melody-topbar .grid-mode-tabs {
+    gap: 3px;
+}
+.melodic-track-editor .melody-topbar .grid-mode-tab,
+.drum-track-editor .melody-topbar .grid-mode-tab,
+.chord-track-editor .melody-topbar .grid-mode-tab {
+    min-width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    font-size: 10px;
+}
+.melodic-track-editor .melody-topbar .duration-value-buttons,
+.drum-track-editor .melody-topbar .duration-value-buttons,
+.chord-track-editor .melody-topbar .duration-value-buttons {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-rows: 44px;
+    grid-auto-flow: column;
+    grid-auto-columns: 44px;
+    gap: 3px;
+    overflow-x: auto;
+}
+.melodic-track-editor .melody-topbar .dur-btn,
+.drum-track-editor .melody-topbar .dur-btn,
+.chord-track-editor .melody-topbar .dur-btn {
+    min-width: 0;
+    height: 44px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.82);
+}
+.melodic-track-editor .melody-topbar .grid-mode-tab.selected,
+.melodic-track-editor .melody-topbar .dur-btn.selected,
+.drum-track-editor .melody-topbar .grid-mode-tab.selected,
+.drum-track-editor .melody-topbar .dur-btn.selected,
+.chord-track-editor .melody-topbar .grid-mode-tab.selected,
+.chord-track-editor .melody-topbar .dur-btn.selected {
+    background: var(--workspace-ink);
+    border-color: var(--workspace-ink);
+    color: #fff;
+}
+
+.drum-track-editor .drum-editor .timeline-header {
+    border-left-color: var(--editor-grid-measure);
+    border-bottom: 1px solid var(--editor-grid-beat);
+    background:
+        repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            var(--editor-grid-beat) calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            var(--editor-grid-beat) calc(100% / (var(--timeline-columns) / var(--timeline-major, 4)))
+        ),
+        repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent calc((100% / var(--timeline-columns)) - 1px),
+            var(--editor-grid-minor) calc((100% / var(--timeline-columns)) - 1px),
+            var(--editor-grid-minor) calc(100% / var(--timeline-columns))
+        ),
+        #f7f9fc;
+}
+.drum-track-editor .drum-editor .timeline-header-cell {
+    color: #9aa4b2;
+    font-variant-numeric: tabular-nums;
+}
+.drum-track-editor .drum-editor .timeline-header-cell.beat {
+    color: #596579;
+    font-weight: 800;
+}
+.drum-track-editor .drum-editor .timeline-row {
+    border-left-color: var(--editor-grid-measure);
+    background:
+        repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            var(--editor-grid-beat) calc((100% / (var(--timeline-columns) / var(--timeline-major, 4))) - 1px),
+            var(--editor-grid-beat) calc(100% / (var(--timeline-columns) / var(--timeline-major, 4)))
+        ),
+        repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent calc((100% / var(--timeline-columns)) - 1px),
+            var(--editor-grid-minor) calc((100% / var(--timeline-columns)) - 1px),
+            var(--editor-grid-minor) calc(100% / var(--timeline-columns))
+        ),
+        linear-gradient(to bottom, transparent calc(100% - 1px), #e3e8ee calc(100% - 1px)),
+        var(--editor-lane);
+}
+.drum-track-editor .drum-editor .drum-lane:nth-child(even) .timeline-row {
+    --editor-lane: #f7f9fb;
+}
+.drum-track-editor .drum-editor .piano-key.drum-key {
+    color: #3f4a5a;
+    background: #f7f9fc;
+    border-bottom-color: #e3e8ee;
+}
+.drum-track-editor .drum-editor .drum-kit-band-spacer,
+.drum-track-editor .drum-editor .drum-kit-band {
+    background: #edf3fa;
+    border-bottom-color: #d5dfeb;
+}
+.drum-track-editor .drum-editor .drum-kit-band {
+    color: #53647a;
 }

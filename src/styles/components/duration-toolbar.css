@@ -44,13 +44,14 @@
 .grid-mode-tab {
     min-width: 56px;
     height: 36px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    background: #f5f5f5;
-    color: #444;
+    border: 1px solid var(--workspace-line);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.72);
+    color: #4b5563;
     font-size: 12px;
     font-weight: 700;
     cursor: pointer;
+    transition: transform 100ms ease-out, background-color 140ms ease-out, color 140ms ease-out;
 }
 .grid-mode-tab.selected {
     background: #111;
@@ -60,13 +61,13 @@
 .dur-btn {
     min-width: 48px;
     height: 40px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
+    border: 1px solid var(--workspace-line);
+    border-radius: 8px;
     background: #fff;
     font-size: 13px;
     cursor: pointer;
     touch-action: manipulation;
-    transition: background 0.15s, color 0.15s;
+    transition: transform 100ms ease-out, background-color 140ms ease-out, color 140ms ease-out, border-color 140ms ease-out;
     display: inline-flex;
     flex-direction: row;
     align-items: center;

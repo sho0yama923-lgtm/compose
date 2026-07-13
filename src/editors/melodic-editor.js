@@ -292,8 +292,8 @@ function rebuildMelodyToolbar(toolbarEl, octCtrlEl) {
     octRow.className = 'melody-oct-row';
     octRow.appendChild(octCtrlEl);
 
-    primaryRow.append(modeRow, octRow);
-    toolbarEl.replaceChildren(primaryRow, valueRow);
+    primaryRow.append(modeRow, valueRow);
+    toolbarEl.replaceChildren(primaryRow, octRow);
 }
 
 function buildChordToneSegment(beat, chord) {

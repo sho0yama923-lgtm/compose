@@ -27,6 +27,7 @@ const MAX_PROJECT_NAME_LENGTH = 40;
 const MAX_PROJECT_INDEX_BYTES = 512 * 1024;
 const PROJECT_ID_PATTERN = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|project-\d+-\d+)$/i;
 let latestUnsavedProjectJson = null;
+let writableProjectId = null;
 
 function createProjectId() {
     if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
@@ -107,6 +108,7 @@ function updateProjectMeta(projectId, updates) {
 }
 
 export async function initProjectStorage() {
+    writableProjectId = null;
     setProjectList(parseProjectIndex(await loadProjectIndexData()));
     const activeProjectId = await loadActiveProjectId();
     appState.activeProjectId = appState.projectList.some((project) => project.id === activeProjectId)
@@ -124,6 +126,7 @@ export async function createProject(name = null) {
         updatedAt: now,
     };
     appState.activeProjectId = project.id;
+    writableProjectId = null;
     setProjectList([project, ...appState.projectList]);
     await persistProjectList();
     await saveActiveProjectId(project.id);
@@ -138,9 +141,14 @@ export async function openProject(projectId) {
         if (!raw || raw.length > MAX_PROJECT_FILE_BYTES) return false;
 
         const data = JSON.parse(raw);
-        if (!restoreFromData(data, { clearPreviewCopyState, clearRepeatState })) return false;
+        if (!restoreFromData(data, {
+            clearPreviewCopyState,
+            clearRepeatState,
+            allowCompatibleShape: true,
+        })) return false;
 
         appState.activeProjectId = normalizedProjectId;
+        writableProjectId = normalizedProjectId;
         appState.projectHomeVisible = false;
         appState.previewMode = true;
         appState.chordDrumSheetOpen = false;
@@ -166,6 +174,7 @@ export async function deleteProject(projectId) {
     setProjectList(appState.projectList.filter((project) => project.id !== projectId));
     if (appState.activeProjectId === projectId) {
         appState.activeProjectId = null;
+        writableProjectId = null;
         await saveActiveProjectId(null);
     }
     await persistProjectList();
@@ -182,6 +191,7 @@ export async function deleteProjects(projectIds) {
     setProjectList(appState.projectList.filter((project) => !idSet.has(project.id)));
     if (idSet.has(appState.activeProjectId)) {
         appState.activeProjectId = null;
+        writableProjectId = null;
         await saveActiveProjectId(null);
     }
     appState.selectedProjectIds = [];
@@ -217,8 +227,13 @@ async function exportLatestProjectBackup() {
     return false;
 }
 
-export async function saveState({ notifyOnError = true } = {}) {
+export async function saveState({ notifyOnError = true, allowUnloaded = false } = {}) {
     if (!appState.activeProjectId) return true;
+    if (!allowUnloaded && writableProjectId !== appState.activeProjectId) return true;
+    if (!Array.isArray(appState.tracks) || appState.tracks.length === 0) {
+        console.warn('[Project] skipped saving an empty project state.');
+        return false;
+    }
     try {
         const serialized = JSON.stringify(createSaveData());
         latestUnsavedProjectJson = serialized;
@@ -232,6 +247,7 @@ export async function saveState({ notifyOnError = true } = {}) {
             callbacks.renderProjectHome?.();
         }
         latestUnsavedProjectJson = null;
+        writableProjectId = appState.activeProjectId;
         hideSaveErrorNotice();
         return true;
     } catch (e) {
@@ -253,7 +269,11 @@ export async function loadState() {
         if (!raw || raw.length > MAX_PROJECT_FILE_BYTES) return false;
 
         const data = JSON.parse(raw);
-        return restoreFromData(data, { clearPreviewCopyState, clearRepeatState });
+        return restoreFromData(data, {
+            clearPreviewCopyState,
+            clearRepeatState,
+            allowCompatibleShape: true,
+        });
     } catch (e) {
         console.warn('loadState failed:', e);
         return false;
@@ -319,7 +339,7 @@ export async function importJSON(file) {
         await createProject(fileName || null);
         appState.previewMode = true;
         appState.chordDrumSheetOpen = false;
-        await saveState();
+        await saveState({ allowUnloaded: true });
         callbacks.showProjectEditor?.();
         callbacks.renderEditor?.();
         callbacks.renderSidebar?.();

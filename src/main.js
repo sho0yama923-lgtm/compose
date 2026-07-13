@@ -282,7 +282,7 @@ async function createDefaultProject(name, {
     addTrack('chord');
     addTrack('piano');
     appState.previewMode = true;
-    await saveState();
+    await saveState({ allowUnloaded: true });
     await showProjectEditor({
         offerOnboarding: true,
         forceOnboarding,

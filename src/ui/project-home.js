@@ -28,7 +28,6 @@ function createProjectCard(project, handlers) {
         ${appState.projectSelectionMode ? '<span class="project-home-check" aria-hidden="true"></span>' : ''}
         <span class="project-home-card-title"></span>
         <span class="project-home-card-meta"></span>
-        ${appState.projectSelectionMode ? '' : '<span class="project-home-card-chevron" aria-hidden="true">›</span>'}
     `;
     openButton.querySelector('.project-home-card-title').textContent = project.name;
     openButton.querySelector('.project-home-card-meta').textContent = `最終更新 ${formatProjectUpdatedAt(project.updatedAt)}`;
@@ -48,7 +47,7 @@ function createProjectCard(project, handlers) {
     menuTrigger.type = 'button';
     menuTrigger.setAttribute('aria-label', `${project.name} の操作`);
     menuTrigger.setAttribute('aria-expanded', 'false');
-    menuTrigger.textContent = '…';
+    menuTrigger.textContent = '⋮';
 
     const menu = document.createElement('div');
     menu.className = 'project-home-card-menu';
@@ -170,12 +169,10 @@ export function renderProjectHome(handlers) {
         <div class="project-home-shell">
             <div class="project-home-header">
                 <div>
-                    <p class="project-home-kicker">ezmelo</p>
-                    <h1>プロジェクト一覧</h1>
-                    <p class="project-home-lead">プロジェクトを開くか、新しく作成します。</p>
+                    <p class="project-home-kicker">EZMELO</p>
                 </div>
                 <div class="project-home-header-actions">
-                    <button class="project-home-menu-trigger" type="button" data-project-menu-trigger="true" aria-label="プロジェクトメニュー" aria-expanded="false">…</button>
+                    <button class="project-home-menu-trigger" type="button" data-project-menu-trigger="true" aria-label="プロジェクトメニュー" aria-expanded="false">☰</button>
                     <div class="project-home-menu" data-project-menu="true" hidden>
                         <button type="button" data-project-tutorial="true">チュートリアル</button>
                         <button type="button" data-project-import="true">インポート</button>

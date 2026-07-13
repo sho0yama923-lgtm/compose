@@ -17,18 +17,23 @@ import sixteenthNoteIconUrl from '../assets/十六分音符.svg';
 export function renderDurationToolbar(containerEl, onUpdate) {
     const toolbar = document.createElement('div');
     toolbar.className = 'duration-toolbar';
+    toolbar.dataset.gridMode = appState.editorGridMode;
 
     const modeRow = document.createElement('div');
     modeRow.className = 'duration-mode-row';
 
     const modeTabs = document.createElement('div');
     modeTabs.className = 'grid-mode-tabs';
+    modeTabs.setAttribute('role', 'group');
+    modeTabs.setAttribute('aria-label', 'グリッドの分割');
     [
         { value: 'normal', label: '通常' },
         { value: 'triplet', label: '3連' },
     ].forEach(({ value, label }) => {
         const btn = document.createElement('button');
         btn.className = 'grid-mode-tab' + (appState.editorGridMode === value ? ' selected' : '');
+        btn.type = 'button';
+        btn.setAttribute('aria-pressed', String(appState.editorGridMode === value));
         btn.textContent = label;
         btn.addEventListener('click', () => {
             if (appState.editorGridMode === 'normal' && !appState.selectedDuration.endsWith('t')) {

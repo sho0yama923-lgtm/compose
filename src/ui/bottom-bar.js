@@ -95,9 +95,6 @@ function buildSeekHandle(seekCard) {
         isSeekBarExpanded = expanded;
         syncState();
         emitTutorialAction(expanded ? 'seek-bar-expanded' : 'seek-bar-collapsed');
-        if (expanded && document.documentElement.dataset.appRuntime === 'web') {
-            window.scrollBy({ top: 2, behavior: 'smooth' });
-        }
     };
 
     button.addEventListener('click', () => {

@@ -50,7 +50,6 @@ body.project-home-active .main {
     align-items: center;
     justify-content: space-between;
     gap: 14px;
-    align-items: flex-start;
     margin-bottom: 12px;
 }
 
@@ -62,11 +61,12 @@ body.project-home-active .main {
 }
 
 .project-home-kicker {
-    margin: 0 0 7px;
+    margin: 0;
     color: var(--workspace-accent);
-    font-size: 12px;
+    font-size: clamp(24px, 8vw, 32px);
     font-weight: 800;
     letter-spacing: 0.08em;
+    line-height: 1;
     text-transform: uppercase;
 }
 
@@ -127,7 +127,7 @@ body.project-home-active .main {
 .project-home-card {
     position: relative;
     min-height: var(--project-card-min-height);
-    padding: 12px 28px 12px 16px;
+    padding: 12px 12px 12px 16px;
     border: 0;
     border-radius: 0;
     background: transparent;
@@ -203,17 +203,6 @@ body.project-home-active .main {
     font-weight: 500;
 }
 
-.project-home-card-chevron {
-    position: absolute;
-    top: 50%;
-    right: 8px;
-    color: #aeaeb2;
-    font-size: 26px;
-    font-weight: 400;
-    line-height: 1;
-    transform: translateY(-50%);
-}
-
 .project-home-card-tools {
     position: relative;
     display: flex;
@@ -228,7 +217,7 @@ body.project-home-active .main {
     border-radius: 10px;
     background: transparent;
     color: var(--workspace-ink);
-    font-size: 15px;
+    font-size: 21px;
     font-weight: 600;
     line-height: 1;
     cursor: pointer;
@@ -240,9 +229,11 @@ body.project-home-active .main {
 }
 
 .project-home-card-menu-trigger {
-    background: rgba(118, 118, 128, 0.12);
-    color: #3a3a3c;
+    border-radius: 0;
+    background: transparent;
+    color: #111111;
     font-size: 21px;
+    font-weight: 800;
 }
 
 .project-home-card-menu {
@@ -285,9 +276,9 @@ body.project-home-active .main {
 .project-home-menu-trigger {
     width: var(--project-icon-size);
     height: var(--project-icon-size);
-    border: 1px solid var(--workspace-line);
-    border-radius: 10px;
-    background: #fff;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
     color: #0f172a;
     font-size: 24px;
     font-weight: 900;

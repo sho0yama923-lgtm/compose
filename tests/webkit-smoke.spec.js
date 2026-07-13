@@ -602,6 +602,50 @@ test('rejects oversized or malformed project data before restore', async ({ page
           soundSteps: steps,
         }],
       }),
+      olderSchemaVersion: restoreFromData({
+        version: 10,
+        numMeasures: 1,
+        tracks: [{
+          id: 2,
+          instrument: 'piano',
+          stepsMap: { C4: Array(48).fill(null) },
+        }],
+      }),
+      compatibleLocalShape: (() => {
+        const restored = restoreFromData({
+          version: 11,
+          numMeasures: 1,
+          tracks: [{
+            id: 3,
+            instrument: 'piano',
+            stepsMap: { C4: [true, ...steps.slice(1)] },
+          }],
+        }, { allowCompatibleShape: true });
+        return restored ? appState.tracks[0].stepsMap.C4[0] : null;
+      })(),
+      preservedChord: (() => {
+        const restored = restoreFromData({
+          version: 11,
+          numMeasures: 1,
+          tracks: [{
+            id: 3,
+            instrument: 'chord',
+            chordMap: [{ root: 'D', type: 'm', octave: 3 }, ...steps.slice(1)],
+            soundSteps: steps,
+          }],
+        });
+        const chord = restored ? appState.tracks[0].chordMap[0] : null;
+        return chord ? `${chord.root}${chord.type}${chord.octave}` : null;
+      })(),
+      legacy16StepShape: restoreFromData({
+        version: 10,
+        numMeasures: 1,
+        tracks: [{
+          id: 3,
+          instrument: 'piano',
+          stepsMap: { C4: Array(16).fill(null) },
+        }],
+      }, { allowCompatibleShape: true }),
       nextId: (() => {
         const restored = restoreFromData({
           version: 11,
@@ -630,9 +674,41 @@ test('rejects oversized or malformed project data before restore', async ({ page
     unknownInstrument: false,
     invalidDuration: false,
     invalidChord: false,
+    olderSchemaVersion: true,
+    compatibleLocalShape: '16n',
+    preservedChord: 'Dm3',
+    legacy16StepShape: false,
     nextId: 5,
     runtimeLimits: [false, false],
   });
+});
+
+test('does not overwrite an active project before this tab restores it', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await createNewProject(page, 'Reload Save Guard');
+
+  const before = await page.evaluate(() => {
+    const index = JSON.parse(localStorage.getItem('compose_project_index') || '{"projects":[]}');
+    const projectId = index.projects?.[0]?.id;
+    const raw = projectId ? localStorage.getItem(`compose_project:${projectId}`) : null;
+    return { projectId, raw, trackCount: raw ? JSON.parse(raw).tracks?.length : 0 };
+  });
+  expect(before.trackCount).toBeGreaterThan(0);
+
+  await page.reload();
+  await page.evaluate(async () => {
+    const { callbacks } = await import('/src/core/state.js');
+    callbacks.renderSidebar?.();
+    callbacks.renderEditor?.();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  });
+
+  const after = await page.evaluate((projectId) => (
+    localStorage.getItem(`compose_project:${projectId}`)
+  ), before.projectId);
+  expect(after).toBe(before.raw);
 });
 
 test('shows a backup action when browser storage save fails', async ({ page }) => {

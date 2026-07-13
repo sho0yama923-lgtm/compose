@@ -12,6 +12,12 @@
     --workspace-accent: #2f6feb;
     --workspace-radius: 16px;
     --workspace-material: rgba(248, 248, 250, 0.78);
+    --editor-grid-minor: #e8ecf1;
+    --editor-grid-beat: #cbd3dd;
+    --editor-grid-measure: #8d98a8;
+    --editor-lane: #fbfcfd;
+    --motion-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --motion-ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 body {
@@ -48,12 +54,12 @@ html[data-app-runtime="web"] body {
 .topbar {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
     background: var(--workspace-ink);
     border-bottom: 0;
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
-    padding: var(--safe-top) 12px 0;
+    padding: var(--safe-top) 10px 0;
     flex-shrink: 0;
     min-height: calc(56px + var(--safe-top));
 }
@@ -62,7 +68,7 @@ html[data-app-runtime="web"] body {
     min-width: 0;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 2px;
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
@@ -102,7 +108,9 @@ html[data-app-runtime="web"] body {
 .topbar-right {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
+    padding-left: 4px;
+    border-left: 1px solid rgba(255, 255, 255, 0.16);
     flex-shrink: 0;
 }
 .bpm-wrap {
@@ -114,15 +122,17 @@ html[data-app-runtime="web"] body {
     letter-spacing: 0.08em;
 }
 .bpm-input {
-    width: 50px;
-    min-height: 40px;
-    font-size: 16px;
-    padding: 5px 6px;
-    border-radius: 9px;
-    border: 1px solid #536078;
-    background: #222d43;
+    width: 52px;
+    min-height: 44px;
+    font-size: 18px;
+    padding: 5px 4px;
+    border-radius: 0;
+    border: 0;
+    background: transparent;
     color: #fff;
     text-align: center;
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
 }
 .bpm-input::-webkit-outer-spin-button,
 .bpm-input::-webkit-inner-spin-button {
@@ -148,11 +158,12 @@ html[data-app-runtime="web"] body {
 .btn-play { background: #fff; color: #111; }
 .topbar-tab-btn {
     background: transparent;
-    color: #d6d6d6;
-    border: 1px solid #536078;
-    min-width: 72px;
+    color: #aeb6c3;
+    border: 0;
+    border-radius: 0;
+    min-width: 66px;
     min-height: 44px;
-    padding: 0 12px;
+    padding: 0 10px;
     font-size: 12px;
     letter-spacing: 0.04em;
     flex-shrink: 0;
@@ -162,15 +173,30 @@ html[data-app-runtime="web"] body {
     text-overflow: ellipsis;
     user-select: none;
     -webkit-user-select: none;
+    position: relative;
+    transition: color 140ms ease-out, transform 100ms ease-out;
 }
 .topbar-preview-slot .topbar-tab-btn {
-    min-width: 72px;
+    min-width: 66px;
 }
 .topbar-tab-btn.is-active {
-    background: #fff;
-    color: var(--workspace-ink);
-    border-color: #fff;
+    background: transparent;
+    color: #fff;
     box-shadow: none;
+}
+.topbar-tab-btn.is-active::after {
+    content: "";
+    position: absolute;
+    right: 10px;
+    bottom: 2px;
+    left: 10px;
+    height: 3px;
+    border-radius: 999px;
+    background: var(--workspace-accent);
+}
+.topbar-tab-btn:active {
+    opacity: 1;
+    transform: scale(0.97);
 }
 .topbar-tab-btn.is-dragging {
     opacity: 0.72;
