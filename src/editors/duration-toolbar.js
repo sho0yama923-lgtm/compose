@@ -97,14 +97,15 @@ export function renderDurationToolbar(containerEl, onUpdate) {
         valueButtons.appendChild(btn);
     });
 
-    // 付点ボタン
-    const canDot = appState.editorGridMode === 'normal' && ['8n', '4n', '2n'].includes(appState.selectedDuration);
-    if (canDot) {
+    // 通常モードでは付点ボタンの位置を固定し、非対応音価ではロックする。
+    if (appState.editorGridMode === 'normal') {
+        const canDot = ['8n', '4n', '2n'].includes(appState.selectedDuration);
         const dotBtn = document.createElement('button');
         dotBtn.className = 'dur-btn dotted' + (appState.dottedMode ? ' selected' : '');
         dotBtn.type = 'button';
-        dotBtn.title = '付点';
-        dotBtn.setAttribute('aria-label', '付点');
+        dotBtn.disabled = !canDot;
+        dotBtn.title = canDot ? '付点' : 'この音価では付点を使用できません';
+        dotBtn.setAttribute('aria-label', canDot ? '付点' : '付点（この音価では使用できません）');
         dotBtn.innerHTML = '<span class="dur-icon-wrap"><span class="dur-icon">.</span></span>';
         dotBtn.addEventListener('click', () => {
             appState.dottedMode = !appState.dottedMode;

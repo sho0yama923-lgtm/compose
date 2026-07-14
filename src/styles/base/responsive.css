@@ -418,12 +418,12 @@
 .melody-octave-marker {
     display: grid;
     place-items: center;
-    width: 17px;
+    width: 28px;
     height: 17px;
-    border-radius: 5px;
-    background: var(--workspace-ink);
-    color: #fff;
-    font-size: 9px;
+    border-radius: 0;
+    background: transparent;
+    color: var(--workspace-muted);
+    font-size: 7px;
     font-weight: 850;
     line-height: 1;
     letter-spacing: 0;
@@ -600,6 +600,8 @@
 }
 .melodic-track-editor .melody-topbar .melody-oct-row {
     min-height: 56px;
+    width: calc(100% + 20px);
+    margin-inline: -10px;
     padding: 0;
     border: 0;
     border-top: 1px solid var(--workspace-line);
@@ -607,35 +609,36 @@
     background: transparent;
 }
 .melodic-track-editor .melody-topbar .oct-range-ctrl {
-    gap: 8px;
+    width: 100%;
+    gap: 0;
     justify-content: center;
 }
 .melodic-track-editor .melody-topbar .oct-range-btn {
     width: 44px;
     height: 44px;
     min-height: 44px;
-    border: 1px solid var(--workspace-line);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.82);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
     color: var(--workspace-ink);
     font-size: 25px;
     font-weight: 500;
     line-height: 1;
-    transition: background-color 120ms ease, transform 120ms ease;
+    transition: background-color 120ms var(--motion-ease-out), transform 120ms var(--motion-ease-out);
 }
 .melodic-track-editor .melody-topbar .oct-range-label {
     display: flex;
     align-items: center;
     justify-content: center;
-    flex: 0 1 210px;
-    gap: 10px;
+    flex: 1 1 auto;
+    gap: 8px;
     height: 44px;
     min-width: 0;
-    padding: 0 12px;
+    padding: 0 8px;
     overflow: hidden;
-    border-radius: 8px;
-    background: var(--workspace-ink);
-    color: #fff;
+    border-radius: 0;
+    background: transparent;
+    color: var(--workspace-ink);
     cursor: grab;
     touch-action: pan-y;
     user-select: none;
@@ -647,32 +650,44 @@
     transition: none;
 }
 .melodic-track-editor .melody-topbar .oct-range-prefix {
-    color: rgba(255, 255, 255, 0.58);
-    font-size: 9px;
+    color: var(--workspace-muted);
+    font-size: 10px;
     font-weight: 850;
-    letter-spacing: 0.16em;
+    letter-spacing: 0.04em;
 }
 .melodic-track-editor .melody-topbar .oct-range-track {
+    position: relative;
     display: grid;
-    grid-template-columns: repeat(3, 30px);
+    grid-template-columns: repeat(5, 28px);
     align-items: center;
     gap: 0;
+}
+.melodic-track-editor .melody-topbar .oct-range-track::after {
+    content: '';
+    position: absolute;
+    right: 28px;
+    bottom: -4px;
+    left: 28px;
+    height: 3px;
+    background: var(--workspace-accent);
+    pointer-events: none;
 }
 .melodic-track-editor .melody-topbar .oct-range-step {
     display: grid;
     place-items: center;
-    width: 30px;
+    width: 28px;
     height: 24px;
-    color: #fff;
+    color: var(--workspace-ink);
     font-size: 12px;
     font-weight: 850;
     font-variant-numeric: tabular-nums;
 }
-.melodic-track-editor .melody-topbar .oct-range-step + .oct-range-step {
-    border-left: 1px solid rgba(255, 255, 255, 0.24);
+.melodic-track-editor .melody-topbar .oct-range-step.is-context {
+    color: var(--workspace-muted);
+    opacity: 0.42;
 }
 .melodic-track-editor .melody-topbar .oct-range-btn:not(:disabled):active {
-    background: #eef1f5;
+    background: rgba(47, 111, 235, 0.08);
     transform: scale(0.95);
 }
 @media (prefers-reduced-motion: reduce) {
@@ -684,6 +699,9 @@
 .drum-track-editor .melody-topbar .duration-mode-row,
 .chord-track-editor .melody-topbar .duration-mode-row {
     flex: 0 0 auto;
+}
+.chord-track-editor .melody-topbar .duration-mode-row {
+    padding: 0;
 }
 .drum-track-editor .melody-topbar .duration-value-row,
 .chord-track-editor .melody-topbar .duration-value-row {
@@ -704,7 +722,7 @@
     min-width: 44px;
     height: 44px;
     border-radius: 0;
-    font-size: 10px;
+    font-size: 12px;
 }
 .melodic-track-editor .melody-topbar .duration-value-buttons,
 .drum-track-editor .melody-topbar .duration-value-buttons,

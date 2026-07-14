@@ -28,8 +28,9 @@ import { emitTutorialAction } from '../core/tutorial-events.js';
 
 const NOTE_DRAG_HOLD_MS = 380;
 const OCTAVE_RANGE_SWIPE_LOCK_PX = 8;
-const OCTAVE_RANGE_SWIPE_STEP_PX = 32;
-const OCTAVE_RANGE_DRAG_LIMIT_PX = 16;
+const OCTAVE_RANGE_SWIPE_STEP_PX = 28;
+const OCTAVE_RANGE_PREVIEW_PX = 4;
+const octaveRangeSnapDirections = new Map();
 
 export function renderMelodicEditor(track, editorEl) {
     const measureIndex = appState.currentMeasure;
@@ -80,19 +81,23 @@ export function renderMelodicEditor(track, editorEl) {
 
     const rangePrefix = document.createElement('span');
     rangePrefix.className = 'oct-range-prefix';
-    rangePrefix.textContent = 'OCT';
+    rangePrefix.textContent = 'オクターブ';
     rangePrefix.setAttribute('aria-hidden', 'true');
 
     const rangeTrack = document.createElement('span');
     rangeTrack.className = 'oct-range-track';
     rangeTrack.setAttribute('aria-hidden', 'true');
-    for (let octave = track.viewBase; octave <= rangeTop; octave += 1) {
+    for (let octave = track.viewBase - 1; octave <= rangeTop + 1; octave += 1) {
         const stepEl = document.createElement('span');
-        stepEl.className = 'oct-range-step';
-        stepEl.textContent = String(octave);
+        const isActive = octave >= track.viewBase && octave <= rangeTop;
+        const isAvailable = octave >= 1 && octave <= 7;
+        stepEl.className = `oct-range-step ${isActive ? 'is-active' : 'is-context'}`;
+        stepEl.textContent = isAvailable ? String(octave) : '';
         rangeTrack.appendChild(stepEl);
     }
     rangeLabel.append(rangePrefix, rangeTrack);
+    animateOctaveRangeSnap(rangeTrack, octaveRangeSnapDirections.get(track.id));
+    octaveRangeSnapDirections.delete(track.id);
 
     const upBtn = document.createElement('button');
     upBtn.className = 'oct-range-btn';
@@ -135,7 +140,7 @@ export function renderMelodicEditor(track, editorEl) {
 
         const octaveMarkerEl = document.createElement('span');
         octaveMarkerEl.className = 'melody-octave-marker';
-        octaveMarkerEl.textContent = String(octave);
+        octaveMarkerEl.textContent = `オク${octave}`;
         octaveMarkerEl.setAttribute('aria-hidden', 'true');
         keyDividerEl.appendChild(octaveMarkerEl);
 
@@ -306,6 +311,7 @@ function getVisibleOctaves(viewBase) {
 function shiftMelodyOctaveRange(track, delta) {
     const nextViewBase = Math.max(1, Math.min(5, track.viewBase + delta));
     if (nextViewBase === track.viewBase) return false;
+    octaveRangeSnapDirections.set(track.id, delta);
     track.viewBase = nextViewBase;
     track.activeOctave = nextViewBase + 1;
     track.melodyScrollTop = 0;
@@ -358,18 +364,32 @@ function bindOctaveRangeSwipe(rangeEl, track) {
         }
         if (gesture.axis !== 'horizontal') return;
         event.preventDefault();
+        const direction = distanceX < 0 ? 1 : -1;
         const isPastBoundary = (distanceX > 0 && track.viewBase <= 1)
             || (distanceX < 0 && track.viewBase >= 5);
-        const resistance = isPastBoundary ? 0.08 : 0.24;
-        const dragX = Math.max(
-            -OCTAVE_RANGE_DRAG_LIMIT_PX,
-            Math.min(OCTAVE_RANGE_DRAG_LIMIT_PX, distanceX * resistance)
-        );
         rangeEl.classList.add('is-swiping');
-        rangeEl.style.transform = `translateX(${dragX}px)`;
+        rangeEl.style.transform = `translateX(${Math.sign(distanceX) * (isPastBoundary ? 2 : OCTAVE_RANGE_PREVIEW_PX)}px)`;
+        if (!isPastBoundary && Math.abs(distanceX) >= OCTAVE_RANGE_SWIPE_STEP_PX) {
+            const pointerId = gesture.pointerId;
+            gesture = null;
+            releasePointer(pointerId);
+            shiftMelodyOctaveRange(track, direction);
+        }
     });
     rangeEl.addEventListener('pointerup', (event) => finishGesture(event));
     rangeEl.addEventListener('pointercancel', (event) => finishGesture(event, true));
+}
+
+function animateOctaveRangeSnap(rangeTrack, direction) {
+    if (!direction || typeof rangeTrack.animate !== 'function') return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    rangeTrack.animate([
+        { transform: `translateX(${direction > 0 ? 6 : -6}px)`, opacity: 0.72 },
+        { transform: 'translateX(0)', opacity: 1 },
+    ], {
+        duration: 120,
+        easing: 'cubic-bezier(0.23, 1, 0.32, 1)',
+    });
 }
 
 function rebuildMelodyToolbar(toolbarEl, octCtrlEl) {

@@ -129,7 +129,13 @@
 }
 .note-svg-icon.whole-note-icon {
     width: 18px;
-    height: 18px;
+    height: 14px;
+}
+.melodic-track-editor .melody-topbar .note-svg-icon.whole-note-icon,
+.drum-track-editor .melody-topbar .note-svg-icon.whole-note-icon,
+.chord-track-editor .melody-topbar .note-svg-icon.whole-note-icon {
+    min-width: 0;
+    min-height: 0;
 }
 .dur-btn.selected .note-svg-icon {
     filter: none;

@@ -214,7 +214,7 @@ test('webkit mobile smoke check', async ({ page }) => {
   await expect(page.locator('[data-onboarding-skip="true"]')).toBeVisible({ timeout: 10_000 });
   await dismissOnboardingIfPresent(page);
   await expect(page.locator('#trackList li')).toHaveCount(3);
-  await expect(getTrackTab(page, 'Piano')).toBeVisible();
+  await expect(getTrackTab(page, 'ピアノ')).toBeVisible();
   await expect(page.locator('#viewToggleBtn')).toContainText('全体');
   await expect(page.locator('#emptyStateText')).toContainText('メニューを開いて');
   await expect(page.locator('.preview-song-root-select')).toHaveValue('C');
@@ -228,7 +228,7 @@ test('webkit mobile smoke check', async ({ page }) => {
   await expect(await getSelectedOptionText(page, '.preview-song-family-select')).toBe('メジャー');
   await page.locator('.preview-harmony-btn[data-harmony="major"]').click();
   await page.selectOption('.preview-song-family-select', 'pentatonic');
-  await selectTrackTab(page, 'Piano');
+  await selectTrackTab(page, 'ピアノ');
   await expect(page.locator('.melody-grid-row[data-note-name="E"]').first()).toHaveClass(/is-scale-tone/);
   await expect(page.locator('.melody-grid-row[data-note-name="F"]').first()).toHaveClass(/is-non-scale-tone/);
   await page.locator('#viewToggleBtn').click();
@@ -242,7 +242,7 @@ test('webkit mobile smoke check', async ({ page }) => {
     'blues',
     'dorian',
   ]);
-  await selectTrackTab(page, 'Piano');
+  await selectTrackTab(page, 'ピアノ');
   await expect(page.locator('.melody-grid-row[data-note-name="D#"]').first()).toHaveClass(/is-scale-tone/);
   await expect(page.locator('.melody-grid-row[data-note-name="E"]').first()).toHaveClass(/is-non-scale-tone/);
   await page.locator('#viewToggleBtn').click();
@@ -254,7 +254,7 @@ test('webkit mobile smoke check', async ({ page }) => {
   await expect(await getSelectedOptionText(page, '.preview-song-family-select')).toBe('メジャー');
   await page.selectOption('.preview-song-family-select', 'mixolydian');
   await expect(page.locator('.preview-harmony-btn.selected')).toContainText('M');
-  await selectTrackTab(page, 'Piano');
+  await selectTrackTab(page, 'ピアノ');
   await expect(page.locator('.melody-grid-row[data-note-name="A#"]').first()).toHaveClass(/is-scale-tone/);
   await expect(page.locator('.melody-grid-row[data-note-name="B"]').first()).toHaveClass(/is-non-scale-tone/);
   await page.locator('#viewToggleBtn').click();
@@ -271,7 +271,7 @@ test('webkit mobile smoke check', async ({ page }) => {
   await page.evaluate(() => {
     document.querySelectorAll('#trackList li')[0]?.click();
   });
-  await expect(getTrackTab(page, 'Drums')).toHaveAttribute('aria-pressed', 'true');
+  await expect(getTrackTab(page, 'ドラム')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.drum-add-panel')).toBeVisible();
   await expect(page.locator('.drum-add-panel-trigger')).toHaveText('音源を追加');
   await expect(page.locator('.drum-key')).toHaveCount(4);
@@ -380,7 +380,7 @@ test('webkit mobile smoke check', async ({ page }) => {
   await longPressSelector(page, '.chord-progress-cell[data-beat="1"]');
   await expect(page.locator('.chord-detail-select[aria-label="コードのルート"]')).toHaveValue('C');
   await expect(page.locator('.chord-detail-select[aria-label="コードのタイプ"]')).toHaveValue('M');
-  await expect(page.locator('[data-chord-detail-octave="true"]')).toHaveText('oct3');
+  await expect(page.locator('[data-chord-detail-octave="true"]')).toHaveText('オクターブ3');
   await expect(page.locator('[data-chord-detail-keyboard="true"]')).toBeVisible();
   await page.selectOption('.chord-detail-select[aria-label="コードのルート"]', 'D');
   await expect(page.locator('.chord-detail-select[aria-label="コードのルート"]')).toHaveValue('D');
@@ -421,7 +421,7 @@ test('webkit mobile smoke check', async ({ page }) => {
   const movedScrollLeft = await page.locator('[data-chord-detail-keyboard="true"]').evaluate((element) => element.scrollLeft);
   expect(movedScrollLeft).toBeGreaterThan(initialScrollLeft);
   await page.getByRole('button', { name: 'コードのオクターブを上げる' }).click();
-  await expect(page.locator('[data-chord-detail-octave="true"]')).toHaveText('oct4');
+  await expect(page.locator('[data-chord-detail-octave="true"]')).toHaveText('オクターブ4');
   await expect(page.locator('.chord-detail-key[data-note="D4"]')).toHaveClass(/is-active/);
   await expect(page.locator('.chord-progress-cell[data-beat="1"] .chord-progress-badge')).toContainText('編集');
   await page.getByRole('button', { name: '閉じる', exact: true }).click();
@@ -429,11 +429,11 @@ test('webkit mobile smoke check', async ({ page }) => {
 
   await page.locator('#viewToggleBtn').click();
   const chordCard = page.locator('.preview-card[data-instrument="chord"]');
-  await expect(chordCard.locator('.preview-card-title')).toContainText('Violin');
+  await expect(chordCard.locator('.preview-card-title')).toContainText('バイオリン');
   await page.evaluate(() => {
     document.querySelectorAll('#trackList li')[2]?.click();
   });
-  await expect(getTrackTab(page, 'Piano')).toHaveAttribute('aria-pressed', 'true');
+  await expect(getTrackTab(page, 'ピアノ')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.melody-chord-header-cell[data-beat="1"] .melody-chord-header-name').first()).toHaveText('Dm7');
   await expect(page.locator('.melody-chord-header-cell[data-beat="2"] .melody-chord-header-name').first()).toHaveText('G7');
   await expect(page.locator('.melody-chord-header-cell[data-beat="3"] .melody-chord-header-name').first()).toHaveText('Am');
@@ -458,7 +458,7 @@ test('webkit mobile smoke check', async ({ page }) => {
   await expect(pianoCard.locator('.preview-track-eq-slider')).toHaveCount(0);
 
   await pianoCard.getByRole('button', { name: '音作り' }).click();
-  await expect(page.locator('.preview-tone-sheet-title')).toContainText('Piano の音作り');
+  await expect(page.locator('.preview-tone-sheet-title')).toContainText('ピアノ の音作り');
   await expect(page.locator('.preview-tone-graph-svg')).toBeVisible();
 
   const initialLowSummary = (await page.locator('.preview-tone-band-chip.low .preview-tone-band-chip-value').textContent())?.trim() || '';
@@ -527,7 +527,7 @@ test('webkit mobile smoke check', async ({ page }) => {
   const reloadedPianoCard = page.locator('.preview-card[data-instrument="piano"]');
   const reloadedChordCard = page.locator('.preview-card[data-instrument="chord"]');
   await expect(reloadedPianoCard).toBeVisible();
-  await expect(reloadedChordCard.locator('.preview-card-title')).toContainText('Violin');
+  await expect(reloadedChordCard.locator('.preview-card-title')).toContainText('バイオリン');
   await expect(page.locator('.preview-song-root-select')).toHaveValue('C');
   await expect(page.locator('.preview-song-family-select')).toHaveValue('pentatonic');
   await expect(page.locator('.preview-harmony-btn.selected')).toContainText('m');

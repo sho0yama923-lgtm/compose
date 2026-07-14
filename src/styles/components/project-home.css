@@ -96,9 +96,10 @@ body.project-home-active .main {
     padding: 0;
     overflow: visible;
     border: 0.5px solid var(--workspace-line);
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.88);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    border-width: 0.5px 0;
+    border-radius: 0;
+    background: rgba(255, 255, 255, 0.7);
+    box-shadow: none;
 }
 
 .project-home-shell:has(.project-home-actions.is-selecting) .project-home-list {
@@ -144,8 +145,8 @@ body.project-home-active .main {
 }
 
 .project-home-card.is-selected {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18);
+    border-color: transparent;
+    box-shadow: inset 0 -3px 0 var(--workspace-accent);
 }
 
 .project-home-item.is-selecting {
@@ -244,7 +245,7 @@ body.project-home-active .main {
     width: 172px;
     padding: 6px;
     border: 0.5px solid rgba(60, 60, 67, 0.2);
-    border-radius: 14px;
+    border-radius: 8px;
     background: rgba(248, 248, 250, 0.88);
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
@@ -299,7 +300,7 @@ body.project-home-active .main {
     width: 164px;
     padding: 6px;
     border: 0.5px solid rgba(60, 60, 67, 0.2);
-    border-radius: 14px;
+    border-radius: 8px;
     background: rgba(248, 248, 250, 0.88);
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
     -webkit-backdrop-filter: blur(24px) saturate(180%);

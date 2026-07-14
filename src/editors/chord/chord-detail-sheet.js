@@ -149,7 +149,7 @@ function buildChordDetailOctaveControl(track, step, chord) {
     const valueEl = document.createElement('span');
     valueEl.className = 'chord-detail-oct-value';
     valueEl.dataset.chordDetailOctave = 'true';
-    valueEl.textContent = `oct${chord.octave}`;
+    valueEl.textContent = `オクターブ${chord.octave}`;
 
     const upBtn = document.createElement('button');
     upBtn.type = 'button';

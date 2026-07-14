@@ -13,7 +13,7 @@ export function buildPaletteOctaveControls(track) {
     const octDown = document.createElement('button');
     octDown.className = 'oct-range-btn';
     octDown.type = 'button';
-    octDown.setAttribute('aria-label', '上段octを下げる');
+    octDown.setAttribute('aria-label', '上段のオクターブを下げる');
     octDown.textContent = '◀';
     octDown.disabled = track.selectedChordOctave <= CHORD_OCTAVE_MIN;
     octDown.addEventListener('click', () => {
@@ -23,12 +23,12 @@ export function buildPaletteOctaveControls(track) {
 
     const octVal = document.createElement('span');
     octVal.className = 'oct-range-label';
-    octVal.textContent = `oct${track.selectedChordOctave}`;
+    octVal.textContent = `オクターブ${track.selectedChordOctave}`;
 
     const octUp = document.createElement('button');
     octUp.className = 'oct-range-btn';
     octUp.type = 'button';
-    octUp.setAttribute('aria-label', '上段octを上げる');
+    octUp.setAttribute('aria-label', '上段のオクターブを上げる');
     octUp.textContent = '▶';
     octUp.disabled = track.selectedChordOctave >= CHORD_OCTAVE_MAX;
     octUp.addEventListener('click', () => {

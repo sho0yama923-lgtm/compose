@@ -366,7 +366,7 @@ function buildQuickGuideSteps(session) {
         guideStep({
             section: 3,
             title: 'コード',
-            body: '「コード / Piano」を開きます。',
+            body: '「コード / ピアノ」を開きます。',
             target: '.preview-card[data-instrument="chord"] .preview-card-header',
             allowed: ['.preview-card[data-instrument="chord"] .preview-card-header'],
             action: 'track-selected',
@@ -489,7 +489,7 @@ function buildDetailGuideSteps(session) {
         guideStep({
             section: 1,
             title: 'トラックの詳細を見る',
-            body: 'トラックをタップすると編集画面を開けます。Drumsを開きます。',
+            body: 'トラックをタップすると編集画面を開けます。ドラムを開きます。',
             target: '.preview-card[data-instrument="drums"] .preview-card-header',
             allowed: ['.preview-card[data-instrument="drums"] .preview-card-header'],
             action: 'track-selected',
@@ -760,7 +760,7 @@ function buildDetailGuideSteps(session) {
     steps.push(guideStep({
         section: 4,
         title: 'コードエディタを開く',
-        body: '「コード / Piano」を開きます。',
+        body: '「コード / ピアノ」を開きます。',
         target: '.preview-card[data-instrument="chord"] .preview-card-header',
         allowed: ['.preview-card[data-instrument="chord"] .preview-card-header'],
         action: 'track-selected',

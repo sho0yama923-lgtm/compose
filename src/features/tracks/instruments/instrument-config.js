@@ -82,7 +82,7 @@ export const DRUM_ROW_CANDIDATES = [
 export const INSTRUMENT_LIST = [
     {
         id: 'drums',
-        label: '🥁 Drums',
+        label: '🥁 ドラム',
         instType: 'rhythm',
         octaveBase: null,
     },
@@ -95,7 +95,7 @@ export const INSTRUMENT_LIST = [
     },
     {
         id: 'piano',
-        label: '🎹 Piano',
+        label: '🎹 ピアノ',
         instType: 'melody',
         octaveBase: 3,
         sampleType: 'range',
@@ -117,7 +117,7 @@ export const INSTRUMENT_LIST = [
     },
     {
         id: 'bass',
-        label: '🎸 Bass',
+        label: '🎸 ベース',
         instType: 'melody',
         octaveBase: 1,
         sampleType: 'range',
@@ -131,7 +131,7 @@ export const INSTRUMENT_LIST = [
     },
     {
         id: 'aco_guitar',
-        label: '🎵 Acoustic Guitar',
+        label: '🎵 アコギ',
         instType: 'melody',
         octaveBase: 2,
         sampleType: 'range',
@@ -148,7 +148,7 @@ export const INSTRUMENT_LIST = [
     },
     {
         id: 'ele_guitar',
-        label: '⚡️ Electric Guitar',
+        label: '⚡️ エレキ',
         instType: 'melody',
         octaveBase: 2,
         sampleType: 'range',
@@ -163,7 +163,7 @@ export const INSTRUMENT_LIST = [
     },
     {
         id: 'violin',
-        label: '🎻 Violin',
+        label: '🎻 バイオリン',
         instType: 'melody',
         octaveBase: 3,
         sampleType: 'range',
@@ -177,7 +177,7 @@ export const INSTRUMENT_LIST = [
     },
     {
         id: 'trumpet',
-        label: '🎺 Trumpet',
+        label: '🎺 トランペット',
         instType: 'melody',
         octaveBase: 3,
         sampleType: 'range',

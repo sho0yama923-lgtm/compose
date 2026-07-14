@@ -308,15 +308,15 @@
     border-radius: 12px;
     border: 0;
     font-size: 32px;
-    color: #fff;
-    background: var(--workspace-ink);
+    color: var(--workspace-ink);
+    background: transparent;
     box-shadow: none;
     transition: transform 150ms ease-out;
 }
 .mb-play-btn.is-playing {
     border: 0;
-    color: #fff;
-    background: var(--workspace-ink);
+    color: var(--workspace-ink);
+    background: transparent;
 }
 .mb-play-btn:not(:disabled):active {
     transform: scale(0.9);

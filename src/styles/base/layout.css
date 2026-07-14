@@ -6,8 +6,12 @@
     --app-viewport-height: 100dvh;
     --workspace-ink: #111111;
     --workspace-muted: #637083;
-    --workspace-canvas: #f3f5f8;
+    --workspace-canvas: #f2f4f7;
     --workspace-surface: #fff;
+    --workspace-subtle: #f7f8fa;
+    --workspace-control: #e6eaf0;
+    --workspace-control-soft: #f8f9fb;
+    --workspace-panel-dark: #1e2024;
     --workspace-line: #d9e0e9;
     --workspace-accent: #2f6feb;
     --workspace-radius: 16px;
@@ -114,18 +118,33 @@ html[data-app-runtime="web"] body {
     flex-shrink: 0;
 }
 .bpm-wrap {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 11px;
-    color: #666;
-    letter-spacing: 0.08em;
+    position: relative;
+    display: block;
+    width: 52px;
+    height: 56px;
+    color: #fff;
+}
+.bpm-label {
+    position: absolute;
+    z-index: 1;
+    top: 7px;
+    left: 50%;
+    width: 34px;
+    transform: translateX(-50%);
+    color: rgba(255, 255, 255, 0.58);
+    font-size: 7px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0.1em;
+    text-align: center;
+    pointer-events: none;
 }
 .bpm-input {
     width: 52px;
-    min-height: 44px;
+    height: 56px;
+    min-height: 56px;
     font-size: 18px;
-    padding: 5px 4px;
+    padding: 11px 4px 0;
     border-radius: 0;
     border: 0;
     background: transparent;

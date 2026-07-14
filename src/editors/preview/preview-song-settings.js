@@ -35,7 +35,7 @@ export function buildSongSettingsCard() {
         appState.songScaleFamily = normalized.scaleFamily;
         callbacks.renderEditor?.();
     });
-    keyRow.appendChild(keyRootSelect);
+    keyRow.appendChild(buildSelectShell(keyRootSelect));
 
     const harmonyControls = document.createElement('div');
     harmonyControls.className = 'preview-harmony-segmented';
@@ -86,7 +86,7 @@ export function buildSongSettingsCard() {
         appState.songScaleFamily = normalized.scaleFamily;
         callbacks.renderEditor?.();
     });
-    scaleRow.appendChild(scaleSelect);
+    scaleRow.appendChild(buildSelectShell(scaleSelect));
     cardEl.appendChild(scaleRow);
 
     return cardEl;
@@ -97,4 +97,11 @@ function buildSettingsLabel(text) {
     labelEl.className = 'preview-song-settings-label';
     labelEl.textContent = text;
     return labelEl;
+}
+
+function buildSelectShell(selectEl) {
+    const shellEl = document.createElement('span');
+    shellEl.className = 'preview-select-shell';
+    shellEl.appendChild(selectEl);
+    return shellEl;
 }
